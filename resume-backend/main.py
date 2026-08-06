@@ -4,12 +4,15 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.api import drafts, templates
+from app.api import ai, drafts, templates
 from app.config import Settings, load_settings
 from app.db import initialize_database
 from app.repositories.drafts import DraftNotFoundError, DraftRepository
 from app.repositories.templates import TemplateRepository
 from app.schemas.common import error, success
+from app.services.ai_client import build_ai_client
+from app.services.job_cache import JobCache
+from app.services.rewrite_guard import RewriteFactViolation
 from app.services.template_service import TemplateService
 
 
@@ -21,6 +24,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.draft_repository = DraftRepository(settings.database_path)
     app.state.template_service = TemplateService(TemplateRepository(settings.database_path))
+    app.state.ai_client = build_ai_client(settings)
+    app.state.job_cache = JobCache(settings.database_path, settings.cache_expire_day)
 
     @app.exception_handler(DraftNotFoundError)
     def draft_not_found(_: Request, __: DraftNotFoundError):
@@ -30,10 +35,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def request_validation_error(_: Request, __: RequestValidationError):
         return JSONResponse(status_code=422, content=error("validation_error", "Request validation failed"))
 
+    @app.exception_handler(RewriteFactViolation)
+    def rewrite_fact_violation(_: Request, __: RewriteFactViolation):
+        return JSONResponse(
+            status_code=422,
+            content=error("rewrite_fact_violation", "AI rewrite changed immutable resume facts"),
+        )
+
     @app.get("/health")
     def health():
         return success({"status": "healthy"})
 
+    app.include_router(ai.router)
     app.include_router(drafts.router)
     app.include_router(templates.router)
     return app

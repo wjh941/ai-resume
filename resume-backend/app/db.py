@@ -42,11 +42,12 @@ def initialize_database(database_path: Path) -> None:
                 active INTEGER NOT NULL DEFAULT 1
             );
             CREATE TABLE IF NOT EXISTS job_cache (
-                normalized_role TEXT PRIMARY KEY,
+                normalized_role TEXT NOT NULL,
                 provider_mode TEXT NOT NULL,
                 payload_json TEXT NOT NULL,
                 expires_at TEXT NOT NULL,
-                created_at TEXT NOT NULL
+                created_at TEXT NOT NULL,
+                PRIMARY KEY (normalized_role, provider_mode)
             );
             """
         )
@@ -57,3 +58,33 @@ def initialize_database(database_path: Path) -> None:
             """,
             [(template_id, name, description, json.dumps(config)) for template_id, name, description, config in TEMPLATES],
         )
+        _migrate_legacy_job_cache(connection)
+
+
+def _migrate_legacy_job_cache(connection: sqlite3.Connection) -> None:
+    columns = connection.execute("PRAGMA table_info(job_cache)").fetchall()
+    primary_key_columns = [
+        row["name"] for row in sorted(columns, key=lambda row: row["pk"]) if row["pk"]
+    ]
+    if primary_key_columns != ["normalized_role"]:
+        return
+
+    connection.executescript(
+        """
+        ALTER TABLE job_cache RENAME TO job_cache_legacy;
+        CREATE TABLE job_cache (
+            normalized_role TEXT NOT NULL,
+            provider_mode TEXT NOT NULL,
+            payload_json TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            PRIMARY KEY (normalized_role, provider_mode)
+        );
+        INSERT INTO job_cache (
+            normalized_role, provider_mode, payload_json, expires_at, created_at
+        )
+        SELECT normalized_role, provider_mode, payload_json, expires_at, created_at
+        FROM job_cache_legacy;
+        DROP TABLE job_cache_legacy;
+        """
+    )
