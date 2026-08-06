@@ -77,3 +77,16 @@ def test_rewrite_rejects_changed_chinese_count_metric(api_client):
 
     assert result.status_code == 422
     assert result.json()["code"] == "rewrite_fact_violation"
+
+
+def test_rewrite_rejects_changed_metric_sign_and_unit(api_client):
+    payload = make_rewrite_payload()
+    payload["resume"]["projects"][0]["description"] = "Reduced latency by -20% over 120 hours."
+    changed = deepcopy(payload["resume"])
+    changed["projects"][0]["description"] = "Reduced latency by 20% over 120 days."
+    api_client.app.state.ai_client.rewrite_result = changed
+
+    result = api_client.post("/api/resume/ai-rewrite", json=payload)
+
+    assert result.status_code == 422
+    assert result.json()["code"] == "rewrite_fact_violation"

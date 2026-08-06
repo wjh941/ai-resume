@@ -5,7 +5,11 @@ import re
 from app.schemas.resume import ResumePayload
 
 
-_METRIC_PATTERN = re.compile(r"\d+(?:[.,]\d+)?")
+_METRIC_PATTERN = re.compile(
+    r"(?<![\d.])(?:[$¥￥]\s*)?[-+]?\d+(?:[.,]\d+)?"
+    r"(?:\s*[-/:]\s*[-+]?\d+(?:[.,]\d+)?)*"
+    r"(?:\s*(?:%|[A-Za-z]+|[\u4e00-\u9fff]+))?"
+)
 
 
 class RewriteFactViolation(ValueError):
