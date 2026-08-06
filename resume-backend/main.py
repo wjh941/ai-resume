@@ -7,7 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.api import ai, drafts, exports, templates
+from app.api import ai, consultation, drafts, exports, templates
 from app.config import Settings, load_settings
 from app.db import initialize_database
 from app.repositories.drafts import DraftNotFoundError, DraftRepository
@@ -86,6 +86,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return success({"status": "healthy"})
 
     app.include_router(ai.router)
+    app.include_router(consultation.router)
     app.include_router(drafts.router)
     app.include_router(exports.router)
     app.include_router(templates.router)

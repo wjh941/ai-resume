@@ -2,6 +2,7 @@ import { createSSRApp } from "vue"
 import { createPinia } from "pinia"
 
 import App from "./App.vue"
+import { useConsultationStore } from "./stores/consultation"
 import { useResumeStore } from "./stores/resume"
 
 export function createApp() {
@@ -9,5 +10,6 @@ export function createApp() {
   const pinia = createPinia()
   app.use(pinia)
   useResumeStore(pinia).restoreCheckpoint()
+  useConsultationStore(pinia).restore()
   return { app }
 }

@@ -7,8 +7,14 @@ from typing import Literal, Protocol
 import httpx
 
 from app.config import Settings
+from app.schemas.consultation import (
+    IdentityCode,
+    JobConsultationResponse,
+    ResumeReviewResponse,
+)
 from app.schemas.job import JobIntelligence
 from app.schemas.resume import ResumePayload
+from app.services.career_consultation import build_job_consultation, build_resume_review
 from app.services.job_cache import normalize_role_name
 
 MOCK_CACHE_KEY = "mock-v2"
@@ -16,6 +22,19 @@ MOCK_CACHE_KEY = "mock-v2"
 
 class AIClient(Protocol):
     async def query_job(self, role_name: str) -> JobIntelligence: ...
+
+    async def build_job_consultation(
+        self,
+        job: JobIntelligence,
+        identity_code: IdentityCode,
+    ) -> JobConsultationResponse: ...
+
+    async def review_resume_text(
+        self,
+        resume_text: str,
+        identity_code: IdentityCode,
+        role_name: str | None,
+    ) -> ResumeReviewResponse: ...
 
     async def rewrite_resume(
         self,
@@ -133,6 +152,21 @@ class MockAIClient:
         self.job_query_count += 1
         return mock_job_profile(role_name)
 
+    async def build_job_consultation(
+        self,
+        job: JobIntelligence,
+        identity_code: IdentityCode,
+    ) -> JobConsultationResponse:
+        return build_job_consultation(job, identity_code)
+
+    async def review_resume_text(
+        self,
+        resume_text: str,
+        identity_code: IdentityCode,
+        role_name: str | None,
+    ) -> ResumeReviewResponse:
+        return build_resume_review(resume_text, identity_code, role_name)
+
     async def rewrite_resume(
         self,
         resume: ResumePayload,
@@ -172,6 +206,68 @@ class OpenAICompatibleClient:
             ),
         )
         return JobIntelligence.model_validate_json(content)
+
+    async def build_job_consultation(
+        self,
+        job: JobIntelligence,
+        identity_code: IdentityCode,
+    ) -> JobConsultationResponse:
+        content = await self._chat_completion(
+            system_prompt=(
+                "You are an experienced Chinese career consultant. Return only valid JSON. "
+                "Provide exactly eight concise job-analysis sections ordered 1 through 8: "
+                "基础概况, 薪酬分层, 硬性门槛, 软性隐性要求, 完整晋升路线, 行业前景, "
+                "求职竞争, 岗位优缺点. Then provide an identity-specific practical plan. "
+                "Include copyable templates. Do not invent candidate facts."
+            ),
+            user_prompt=json.dumps(
+                {
+                    "identity_code": identity_code,
+                    "identity_label": {
+                        "1": "在校学生（寻找短期实习）",
+                        "2": "应届毕业生（秋招/春招）",
+                        "3": "在职人员（想跳槽）",
+                        "4": "无业待业（有工作经验空档期）",
+                        "5": "零基础跨行业转行",
+                    }[identity_code],
+                    "job_intelligence": job.model_dump(),
+                    "required_json_keys": [
+                        "identity_code",
+                        "identity_label",
+                        "job_intelligence",
+                        "job_analysis_sections",
+                        "identity_plan",
+                        "follow_up_question",
+                    ],
+                },
+                ensure_ascii=False,
+            ),
+        )
+        return JobConsultationResponse.model_validate_json(content)
+
+    async def review_resume_text(
+        self,
+        resume_text: str,
+        identity_code: IdentityCode,
+        role_name: str | None,
+    ) -> ResumeReviewResponse:
+        content = await self._chat_completion(
+            system_prompt=(
+                "You are an experienced Chinese career consultant. Return only valid JSON with "
+                "identity_code, identity_label, issues, rewrite_examples, and keywords. "
+                "Do not output job analysis. Never invent employers, schools, dates, projects, "
+                "certificates, or metrics. Mark unknown evidence as 待确认."
+            ),
+            user_prompt=json.dumps(
+                {
+                    "identity_code": identity_code,
+                    "role_name": role_name,
+                    "resume_text": resume_text,
+                },
+                ensure_ascii=False,
+            ),
+        )
+        return ResumeReviewResponse.model_validate_json(content)
 
     async def rewrite_resume(
         self,

@@ -1,10 +1,28 @@
 import { request } from "./http"
+import type { JobConsultation, ResumeReview } from "../types/consultation"
 import type { JobIntelligence, ResumeDraft, ResumePayload } from "../types/resume"
 
 type BackendJob = {
   version: 1; role_name: string; salary_by_experience: Record<string, string>
   responsibilities: string[]; hard_requirements: string[]; required_skills: string[]
   bonus_skills: string[]; career_route: string[]
+}
+
+type BackendConsultationSection = {
+  order: number; title: string; items: string[]
+}
+
+type BackendJobConsultation = {
+  identity_code: JobConsultation["identityCode"]; identity_label: string
+  job_intelligence: BackendJob
+  job_analysis_sections: BackendConsultationSection[]
+  identity_plan: { title: string; sections: BackendConsultationSection[] }
+  follow_up_question: string
+}
+
+type BackendResumeReview = {
+  identity_code: ResumeReview["identityCode"]; identity_label: string
+  issues: string[]; rewrite_examples: string[]; keywords: string[]
 }
 
 function fromBackendJob(job: BackendJob): JobIntelligence {
@@ -45,6 +63,43 @@ function toBackendResume(resume: ResumePayload) {
 
 export async function queryJob(roleName: string): Promise<JobIntelligence> {
   return fromBackendJob(await request<BackendJob>("/api/job/query", "POST", { role_name: roleName }))
+}
+
+export async function queryJobConsultation(
+  roleName: string,
+  identityCode: JobConsultation["identityCode"],
+): Promise<JobConsultation> {
+  const response = await request<BackendJobConsultation>("/api/consultation/job-analysis", "POST", {
+    role_name: roleName,
+    identity_code: identityCode,
+  })
+  return {
+    identityCode: response.identity_code,
+    identityLabel: response.identity_label,
+    jobIntelligence: fromBackendJob(response.job_intelligence),
+    jobAnalysisSections: response.job_analysis_sections,
+    identityPlan: response.identity_plan,
+    followUpQuestion: response.follow_up_question,
+  }
+}
+
+export async function reviewResumeText(
+  resumeText: string,
+  identityCode: ResumeReview["identityCode"],
+  roleName?: string,
+): Promise<ResumeReview> {
+  const response = await request<BackendResumeReview>("/api/consultation/resume-review", "POST", {
+    resume_text: resumeText,
+    identity_code: identityCode,
+    role_name: roleName || undefined,
+  })
+  return {
+    identityCode: response.identity_code,
+    identityLabel: response.identity_label,
+    issues: response.issues,
+    rewriteExamples: response.rewrite_examples,
+    keywords: response.keywords,
+  }
 }
 
 export async function saveDraft(clientId: string, draft: ResumeDraft): Promise<{ id: string }> {
