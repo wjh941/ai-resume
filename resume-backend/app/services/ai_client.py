@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 import json
-from typing import Protocol
+from typing import Literal, Protocol
 
 import httpx
 
@@ -19,7 +19,7 @@ class AIClient(Protocol):
         self,
         resume: ResumePayload,
         job: JobIntelligence,
-        mode: str,
+        mode: Literal["light", "deep"],
     ) -> ResumePayload: ...
 
 
@@ -53,7 +53,7 @@ class MockAIClient:
         self,
         resume: ResumePayload,
         job: JobIntelligence,
-        mode: str,
+        mode: Literal["light", "deep"],
     ) -> ResumePayload:
         if self.rewrite_result is not None:
             return ResumePayload.model_validate(self.rewrite_result)
@@ -93,7 +93,7 @@ class OpenAICompatibleClient:
         self,
         resume: ResumePayload,
         job: JobIntelligence,
-        mode: str,
+        mode: Literal["light", "deep"],
     ) -> ResumePayload:
         content = await self._chat_completion(
             system_prompt=(

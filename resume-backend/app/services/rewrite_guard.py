@@ -5,10 +5,7 @@ import re
 from app.schemas.resume import ResumePayload
 
 
-_METRIC_PATTERN = re.compile(
-    r"\b\d+(?:\.\d+)?\s*(?:%|percent|[kKwW]|hours?|days?|months?|years?)\b|"
-    r"\d+(?:\.\d+)?\s*(?:%|倍|个|项|人|万|千|小时|天|月|年)"
-)
+_METRIC_PATTERN = re.compile(r"\d+(?:[.,]\d+)?")
 
 
 class RewriteFactViolation(ValueError):
