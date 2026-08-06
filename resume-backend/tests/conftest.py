@@ -14,6 +14,7 @@ if str(BACKEND_ROOT) not in sys.path:
 @pytest.fixture
 def api_client(tmp_path, monkeypatch):
     monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "resume_demo.db"))
+    monkeypatch.setenv("TEMP_FILE_PATH", str(tmp_path / "temp"))
 
     from main import create_app
 

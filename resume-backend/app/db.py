@@ -49,6 +49,13 @@ def initialize_database(database_path: Path) -> None:
                 created_at TEXT NOT NULL,
                 PRIMARY KEY (normalized_role, provider_mode)
             );
+            CREATE TABLE IF NOT EXISTS download_file (
+                token TEXT PRIMARY KEY,
+                file_path TEXT NOT NULL,
+                filename TEXT NOT NULL,
+                expires_at TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
             """
         )
         connection.executemany(

@@ -1,31 +1,59 @@
 from __future__ import annotations
 
+import asyncio
+from contextlib import asynccontextmanager, suppress
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.api import ai, drafts, templates
+from app.api import ai, drafts, exports, templates
 from app.config import Settings, load_settings
 from app.db import initialize_database
 from app.repositories.drafts import DraftNotFoundError, DraftRepository
 from app.repositories.templates import TemplateRepository
 from app.schemas.common import error, success
 from app.services.ai_client import build_ai_client
+from app.services.downloads import DownloadNotFoundError, DownloadService
+from app.services.export_pdf import PdfRendererUnavailableError
 from app.services.job_cache import JobCache
 from app.services.rewrite_guard import RewriteFactViolation
 from app.services.template_service import TemplateService
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.download_service.cleanup_expired()
+    cleanup_task = asyncio.create_task(_cleanup_downloads_periodically(app.state.download_service))
+    try:
+        yield
+    finally:
+        cleanup_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await cleanup_task
+
+
+async def _cleanup_downloads_periodically(download_service: DownloadService) -> None:
+    while True:
+        await asyncio.sleep(15 * 60)
+        download_service.cleanup_expired()
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or load_settings()
     initialize_database(settings.database_path)
 
-    app = FastAPI(title="Resume Demo API")
+    app = FastAPI(title="Resume Demo API", lifespan=lifespan)
     app.state.settings = settings
     app.state.draft_repository = DraftRepository(settings.database_path)
     app.state.template_service = TemplateService(TemplateRepository(settings.database_path))
     app.state.ai_client = build_ai_client(settings)
     app.state.job_cache = JobCache(settings.database_path, settings.cache_expire_day)
+    app.state.download_service = DownloadService(
+        settings.database_path,
+        settings.temp_file_path,
+        settings.export_file_expire_minutes,
+    )
 
     @app.exception_handler(DraftNotFoundError)
     def draft_not_found(_: Request, __: DraftNotFoundError):
@@ -42,12 +70,24 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             content=error("rewrite_fact_violation", "AI rewrite changed immutable resume facts"),
         )
 
+    @app.exception_handler(DownloadNotFoundError)
+    def download_not_found(_: Request, __: DownloadNotFoundError):
+        return JSONResponse(status_code=404, content=error("not_found", "Download not found"))
+
+    @app.exception_handler(PdfRendererUnavailableError)
+    def pdf_renderer_unavailable(_: Request, __: PdfRendererUnavailableError):
+        return JSONResponse(
+            status_code=503,
+            content=error("pdf_renderer_unavailable", "PDF renderer is unavailable"),
+        )
+
     @app.get("/health")
     def health():
         return success({"status": "healthy"})
 
     app.include_router(ai.router)
     app.include_router(drafts.router)
+    app.include_router(exports.router)
     app.include_router(templates.router)
     return app
 
