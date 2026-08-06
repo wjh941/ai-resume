@@ -2,7 +2,7 @@
 import { computed } from "vue"
 
 import type { ResumePayload, TemplateId } from "../types/resume"
-import { previewContact } from "../utils/resume-preview"
+import { meaningfulEntries, previewContact } from "../utils/resume-preview"
 
 const props = defineProps<{
   resume: ResumePayload
@@ -10,6 +10,9 @@ const props = defineProps<{
 }>()
 
 const skills = computed(() => props.resume.skills.skills.filter(Boolean))
+const education = computed(() => meaningfulEntries(props.resume.education))
+const employment = computed(() => meaningfulEntries(props.resume.employment))
+const projects = computed(() => meaningfulEntries(props.resume.projects))
 
 function dateRange(startDate: string, endDate: string): string {
   return [startDate, endDate].filter(Boolean).join(" - ")
@@ -44,9 +47,9 @@ function dateRange(startDate: string, endDate: string): string {
       <text>{{ resume.selfEvaluation }}</text>
     </view>
 
-    <view v-if="resume.sectionVisibility.education && resume.education.length" class="section">
+    <view v-if="resume.sectionVisibility.education && education.length" class="section">
       <text class="section-title">教育经历</text>
-      <view v-for="(item, index) in resume.education" :key="`${item.school}-${index}`" class="experience">
+      <view v-for="(item, index) in education" :key="`${item.school}-${index}`" class="experience">
         <view class="experience-title">
           <text>{{ previewContact(item.school, "学校待补充") }}</text>
           <text>{{ dateRange(item.startDate, item.endDate) }}</text>
@@ -56,9 +59,9 @@ function dateRange(startDate: string, endDate: string): string {
       </view>
     </view>
 
-    <view v-if="resume.sectionVisibility.employment && resume.employment.length" class="section">
+    <view v-if="resume.sectionVisibility.employment && employment.length" class="section">
       <text class="section-title">实习/工作经历</text>
-      <view v-for="(item, index) in resume.employment" :key="`${item.company}-${index}`" class="experience">
+      <view v-for="(item, index) in employment" :key="`${item.company}-${index}`" class="experience">
         <view class="experience-title">
           <text>{{ previewContact(item.company, "公司待补充") }}</text>
           <text>{{ dateRange(item.startDate, item.endDate) }}</text>
@@ -68,9 +71,9 @@ function dateRange(startDate: string, endDate: string): string {
       </view>
     </view>
 
-    <view v-if="resume.sectionVisibility.projects && resume.projects.length" class="section">
+    <view v-if="resume.sectionVisibility.projects && projects.length" class="section">
       <text class="section-title">项目经历</text>
-      <view v-for="(item, index) in resume.projects" :key="`${item.name}-${index}`" class="experience">
+      <view v-for="(item, index) in projects" :key="`${item.name}-${index}`" class="experience">
         <view class="experience-title">
           <text>{{ previewContact(item.name, "项目名称待补充") }}</text>
           <text>{{ dateRange(item.startDate, item.endDate) }}</text>

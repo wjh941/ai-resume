@@ -36,8 +36,8 @@ export const useResumeStore = defineStore("resume", {
     setJobIntelligence(job: JobIntelligence): void {
       this.activeJob = job
       this.draft.jobIntelligence = job
-      this.draft.jobTitle = job.roleName
-      this.draft.resume.job.targetRole = job.roleName
+      if (!this.draft.jobTitle.trim()) this.draft.jobTitle = job.roleName
+      if (!this.draft.resume.job.targetRole.trim()) this.draft.resume.job.targetRole = job.roleName
       this.checkpoint()
     },
     resetDraft(): void {

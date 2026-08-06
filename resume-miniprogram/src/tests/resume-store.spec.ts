@@ -3,8 +3,19 @@ import { createPinia, setActivePinia } from "pinia"
 
 import { getClientId } from "../stores/session"
 import { useResumeStore } from "../stores/resume"
+import type { JobIntelligence } from "../types/resume"
 
 const storage = new Map<string, unknown>()
+const frontendJob: JobIntelligence = {
+  version: 1,
+  roleName: "前端开发工程师",
+  salaryByExperience: {},
+  responsibilities: [],
+  hardRequirements: [],
+  requiredSkills: [],
+  bonusSkills: [],
+  careerRoute: [],
+}
 
 beforeEach(() => {
   storage.clear()
@@ -29,5 +40,18 @@ describe("local client and resume checkpoint", () => {
     store.restoreCheckpoint()
 
     expect(store.draft.resume.basic.name).toBe("张三")
+  })
+
+  it("keeps user-entered job fields when a new role intelligence result is selected", () => {
+    const store = useResumeStore()
+    store.draft.jobTitle = "用户自定义岗位标题"
+    store.draft.resume.job.targetRole = "用户自定义目标岗位"
+
+    store.setJobIntelligence(frontendJob)
+
+    expect(store.activeJob).toEqual(frontendJob)
+    expect(store.draft.jobIntelligence).toEqual(frontendJob)
+    expect(store.draft.jobTitle).toBe("用户自定义岗位标题")
+    expect(store.draft.resume.job.targetRole).toBe("用户自定义目标岗位")
   })
 })
