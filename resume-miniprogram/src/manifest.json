@@ -1,0 +1,8 @@
+{
+  "name": "AI岗位查询与智能简历",
+  "appid": "__UNI__RESUME_DEMO__",
+  "description": "本地可运行的简历生成演示项目",
+  "versionName": "0.1.0",
+  "versionCode": 100,
+  "mp-weixin": { "appid": "", "setting": { "urlCheck": false } }
+}

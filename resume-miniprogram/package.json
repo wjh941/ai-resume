@@ -1,0 +1,21 @@
+{
+  "name": "resume-miniprogram",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "test:unit": "vitest run"
+  },
+  "dependencies": {
+    "@dcloudio/uni-app": "3.0.0-alpha-5020320260803001",
+    "@dcloudio/uni-mp-weixin": "3.0.0-alpha-5020320260803001",
+    "pinia": "^2.2.6",
+    "vue": "^3.5.11"
+  },
+  "devDependencies": {
+    "@dcloudio/types": "3.4.31",
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
+    "vitest": "^2.1.8"
+  }
+}
