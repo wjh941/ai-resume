@@ -2,6 +2,7 @@ import { defineConfig } from "vite"
 import uni from "@dcloudio/vite-plugin-uni"
 
 const isVitest = process.env.VITEST === "true"
+const localApiTarget = process.env.RESUME_API_URL || "http://127.0.0.1:8000"
 
 export default defineConfig({
   plugins: isVitest ? [] : [uni()],
@@ -10,8 +11,8 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     proxy: {
-      "/api": "http://127.0.0.1:8000",
-      "/downloads": "http://127.0.0.1:8000",
+      "/api": localApiTarget,
+      "/downloads": localApiTarget,
     },
   },
   test: {

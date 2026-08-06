@@ -3,6 +3,7 @@ import sqlite3
 
 from app.db import initialize_database
 from app.schemas.job import JobIntelligence
+from app.services.ai_client import MOCK_CACHE_KEY
 from app.services.job_cache import JobCache
 
 
@@ -30,7 +31,7 @@ def test_expired_job_cache_refreshes_role_intelligence(api_client):
             SET expires_at = ?
             WHERE normalized_role = ? AND provider_mode = ?
             """,
-            ((datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat(), "data engineer", "mock"),
+            ((datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat(), "data engineer", MOCK_CACHE_KEY),
         )
 
     assert_success(api_client.post("/api/job/query", json={"role_name": "Data Engineer"}))
@@ -42,6 +43,15 @@ def test_blank_role_name_returns_validation_error(api_client):
 
     assert response.status_code == 422
     assert response.json()["code"] == "validation_error"
+
+
+def test_mock_profiles_return_distinct_data_for_data_and_frontend_roles(api_client):
+    data = assert_success(api_client.post("/api/job/query", json={"role_name": "数据工程师"}))
+    frontend = assert_success(api_client.post("/api/job/query", json={"role_name": "前端开发工程师"}))
+
+    assert data["required_skills"] == ["Python", "SQL", "Data warehousing"]
+    assert frontend["required_skills"] == ["JavaScript", "TypeScript", "Vue or React"]
+    assert data["responsibilities"] != frontend["responsibilities"]
 
 
 def test_job_cache_migrates_legacy_single_provider_primary_key(tmp_path):

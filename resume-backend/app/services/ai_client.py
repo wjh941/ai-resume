@@ -11,6 +11,8 @@ from app.schemas.job import JobIntelligence
 from app.schemas.resume import ResumePayload
 from app.services.job_cache import normalize_role_name
 
+MOCK_CACHE_KEY = "mock-v2"
+
 
 class AIClient(Protocol):
     async def query_job(self, role_name: str) -> JobIntelligence: ...
@@ -23,6 +25,105 @@ class AIClient(Protocol):
     ) -> ResumePayload: ...
 
 
+def mock_job_profile(role_name: str) -> JobIntelligence:
+    normalized_role = normalize_role_name(role_name)
+    display_role = " ".join(part.capitalize() for part in normalized_role.split())
+
+    data_profile = {
+        "salary_by_experience": {
+            "graduate": "10k-16k",
+            "1-3_years": "16k-26k",
+            "3-5_years": "26k-38k",
+            "5_plus_years": "38k-55k",
+        },
+        "responsibilities": [
+            "Build reliable data pipelines and data models.",
+            "Collaborate with analysts and product teams on data delivery.",
+        ],
+        "hard_requirements": ["Bachelor degree or equivalent practical experience."],
+        "required_skills": ["Python", "SQL", "Data warehousing"],
+        "bonus_skills": ["Airflow", "Spark", "Cloud platforms"],
+        "career_route": ["Data Engineer", "Senior Data Engineer", "Data Platform Lead"],
+    }
+    frontend_profile = {
+        "salary_by_experience": {
+            "graduate": "12k-18k",
+            "1-3_years": "18k-30k",
+            "3-5_years": "30k-45k",
+            "5_plus_years": "45k-65k",
+        },
+        "responsibilities": [
+            "Build responsive interfaces and reusable component systems.",
+            "Collaborate with product and design teams to improve web experiences.",
+        ],
+        "hard_requirements": ["Bachelor degree or equivalent practical experience."],
+        "required_skills": ["JavaScript", "TypeScript", "Vue or React"],
+        "bonus_skills": ["Vite", "State management", "Frontend performance"],
+        "career_route": ["Frontend Engineer", "Senior Frontend Engineer", "Frontend Architect"],
+    }
+    backend_profile = {
+        "salary_by_experience": {
+            "graduate": "12k-18k",
+            "1-3_years": "18k-30k",
+            "3-5_years": "30k-44k",
+            "5_plus_years": "44k-62k",
+        },
+        "responsibilities": [
+            "Design stable service APIs and core business modules.",
+            "Improve reliability, observability, and delivery efficiency.",
+        ],
+        "hard_requirements": ["Bachelor degree or equivalent practical experience."],
+        "required_skills": ["Python or Java", "SQL", "API design"],
+        "bonus_skills": ["Docker", "Redis", "Distributed systems"],
+        "career_route": ["Backend Engineer", "Senior Backend Engineer", "Technical Lead"],
+    }
+    product_profile = {
+        "salary_by_experience": {
+            "graduate": "10k-15k",
+            "1-3_years": "15k-25k",
+            "3-5_years": "25k-36k",
+            "5_plus_years": "36k-52k",
+        },
+        "responsibilities": [
+            "Define user problems, product goals, and measurable outcomes.",
+            "Coordinate research, design, engineering, and launch decisions.",
+        ],
+        "hard_requirements": ["Bachelor degree or equivalent practical experience."],
+        "required_skills": ["Requirement analysis", "User research", "Data analysis"],
+        "bonus_skills": ["Experiment design", "Roadmap planning", "Stakeholder management"],
+        "career_route": ["Product Manager", "Senior Product Manager", "Product Lead"],
+    }
+    generic_profile = {
+        "salary_by_experience": {
+            "graduate": "8k-14k",
+            "1-3_years": "14k-22k",
+            "3-5_years": "22k-32k",
+            "5_plus_years": "32k-48k",
+        },
+        "responsibilities": [
+            f"Deliver reliable outcomes for the {display_role} role.",
+            "Collaborate across teams to improve quality and delivery efficiency.",
+        ],
+        "hard_requirements": ["Bachelor degree or equivalent practical experience."],
+        "required_skills": ["Domain knowledge", "Communication", "Problem solving"],
+        "bonus_skills": ["Data literacy", "Project coordination", "Continuous improvement"],
+        "career_route": [display_role, f"Senior {display_role}", "Team Lead"],
+    }
+
+    if any(keyword in normalized_role for keyword in ("数据", "data", "etl", "数仓")):
+        profile = data_profile
+    elif any(keyword in normalized_role for keyword in ("前端", "frontend", "vue", "react")):
+        profile = frontend_profile
+    elif any(keyword in normalized_role for keyword in ("后端", "backend", "服务端", "java")):
+        profile = backend_profile
+    elif any(keyword in normalized_role for keyword in ("产品", "product")):
+        profile = product_profile
+    else:
+        profile = generic_profile
+
+    return JobIntelligence(role_name=display_role, **profile)
+
+
 class MockAIClient:
     def __init__(self) -> None:
         self.job_query_count = 0
@@ -30,24 +131,7 @@ class MockAIClient:
 
     async def query_job(self, role_name: str) -> JobIntelligence:
         self.job_query_count += 1
-        display_role = " ".join(part.capitalize() for part in normalize_role_name(role_name).split())
-        return JobIntelligence(
-            role_name=display_role,
-            salary_by_experience={
-                "graduate": "10k-16k",
-                "1-3_years": "16k-26k",
-                "3-5_years": "26k-38k",
-                "5_plus_years": "38k-55k",
-            },
-            responsibilities=[
-                "Build reliable data pipelines and data models.",
-                "Collaborate with analysts and product teams on data delivery.",
-            ],
-            hard_requirements=["Bachelor degree or equivalent practical experience."],
-            required_skills=["Python", "SQL", "Data warehousing"],
-            bonus_skills=["Airflow", "Spark", "Cloud platforms"],
-            career_route=["Data Engineer", "Senior Data Engineer", "Data Platform Lead"],
-        )
+        return mock_job_profile(role_name)
 
     async def rewrite_resume(
         self,

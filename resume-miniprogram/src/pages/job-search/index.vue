@@ -2,6 +2,7 @@
 import { ref } from "vue"
 import { queryJob } from "../../services/resume-api"
 import { useResumeStore } from "../../stores/resume"
+import { prepareResumeForJob } from "../../utils/resume-autofill"
 
 const roleName = ref("")
 const loading = ref(false)
@@ -27,7 +28,9 @@ async function search() {
 
 function startResume() {
   if (!store.activeJob) return
-  uni.navigateTo({ url: "/pages/resume-form/index" })
+  prepareResumeForJob(store.draft, store.activeJob)
+  store.checkpoint()
+  uni.navigateTo({ url: "/pages/template-picker/index" })
 }
 </script>
 
@@ -43,7 +46,9 @@ function startResume() {
       <text class="role">{{ store.activeJob.roleName }}</text>
       <view class="block"><text>薪资区间</text><text v-for="(value, key) in store.activeJob.salaryByExperience" :key="key">{{ key }}：{{ value }}</text></view>
       <view class="block"><text>工作职责</text><text v-for="item in store.activeJob.responsibilities" :key="item">• {{ item }}</text></view>
+      <view class="block"><text>硬性任职要求</text><text v-for="item in store.activeJob.hardRequirements" :key="item">• {{ item }}</text></view>
       <view class="block"><text>必备技能</text><text>{{ store.activeJob.requiredSkills.join(" / ") }}</text></view>
+      <view class="block"><text>加分技能</text><text>{{ store.activeJob.bonusSkills.join(" / ") }}</text></view>
       <view class="block"><text>发展路线</text><text>{{ store.activeJob.careerRoute.join(" → ") }}</text></view>
       <button class="primary" @click="startResume">以此岗位生成简历</button>
     </view>

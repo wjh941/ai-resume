@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { computed } from "vue"
+import { computed, watch } from "vue"
 import FormField from "../../components/FormField.vue"
 import { saveDraft } from "../../services/resume-api"
 import { useResumeStore } from "../../stores/resume"
 import { getClientId } from "../../stores/session"
+import { prepareResumeForJob } from "../../utils/resume-autofill"
 import { validateResume } from "../../utils/validators"
 
 const store = useResumeStore()
 const resume = computed(() => store.draft.resume)
+watch(() => store.draft, () => store.checkpoint(), { deep: true })
 
 function addEducation() { resume.value.education.push({ school: "", major: "", degree: "", startDate: "", endDate: "", courses: "" }); store.checkpoint() }
 function addEmployment() { resume.value.employment.push({ company: "", position: "", startDate: "", endDate: "", description: "" }); store.checkpoint() }
@@ -25,6 +27,17 @@ async function save() {
     store.checkpoint()
     uni.showToast({ title: "网络异常，已保留本地草稿", icon: "none" })
   }
+}
+
+function prepareAndChooseTemplate() {
+  const job = store.activeJob ?? store.draft.jobIntelligence
+  if (!job) {
+    uni.showToast({ title: "请先查询目标岗位", icon: "none" })
+    return
+  }
+  prepareResumeForJob(store.draft, job)
+  store.checkpoint()
+  uni.navigateTo({ url: "/pages/template-picker/index" })
 }
 </script>
 
@@ -51,7 +64,7 @@ async function save() {
       <view v-for="(item, index) in resume.projects" :key="index" class="entry"><FormField label="项目名称" v-model="item.name" /><FormField label="角色" v-model="item.role" /><textarea v-model="item.description" placeholder="项目描述与成果" /><button size="mini" @click="resume.projects.splice(index, 1)">删除</button></view>
     </view>
     <view class="card"><FormField label="技能（以逗号分隔）" :model-value="resume.skills.skills.join(',')" @update:model-value="resume.skills.skills = $event.split(',').map(item => item.trim()).filter(Boolean)" /><textarea v-model="resume.selfEvaluation" placeholder="自我评价" /></view>
-    <view class="actions"><button @click="save">保存草稿</button><button class="primary" @click="save">下一步选择模板</button></view>
+    <view class="actions"><button @click="save">保存草稿</button><button class="primary" @click="prepareAndChooseTemplate">智能补全并选择模板</button></view>
   </scroll-view>
 </template>
 
