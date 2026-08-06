@@ -9,53 +9,60 @@ from app.schemas.resume import ResumePayload
 
 def render_word_resume(resume: ResumePayload, output_path: Path) -> None:
     document = Document()
-    document.add_heading(resume.basic.name, level=0)
-    document.add_paragraph(
-        " | ".join(part for part in [resume.basic.phone, resume.basic.email, resume.basic.city] if part)
-    )
-    document.add_heading("求职意向", level=1)
-    document.add_paragraph(resume.job.target_role)
-
-    _add_entries(
-        document,
-        "教育经历",
-        [
-            f"{item.school} | {item.major} | {item.degree} | {item.start_date} - {item.end_date}"
-            for item in resume.education
-        ],
-    )
-    _add_entries(
-        document,
-        "实习/工作经历",
-        [
-            "\n".join(
-                part
-                for part in [
-                    f"{item.company} | {item.position} | {item.start_date} - {item.end_date}",
-                    item.description,
-                ]
-                if part
-            )
-            for item in resume.employment
-        ],
-    )
-    _add_entries(
-        document,
-        "项目经历",
-        [
-            "\n".join(
-                part
-                for part in [
-                    f"{item.name} | {item.role} | {item.start_date} - {item.end_date}",
-                    item.description,
-                ]
-                if part
-            )
-            for item in resume.projects
-        ],
-    )
-    _add_entries(document, "技能证书", [", ".join(resume.skills.skills + resume.skills.certificates)])
-    _add_entries(document, "自我评价", [resume.self_evaluation])
+    visibility = resume.section_visibility
+    if visibility.basic:
+        document.add_heading(resume.basic.name, level=0)
+        document.add_paragraph(
+            " | ".join(part for part in [resume.basic.phone, resume.basic.email, resume.basic.city] if part)
+        )
+    if visibility.job:
+        document.add_heading("求职意向", level=1)
+        document.add_paragraph(resume.job.target_role)
+    if visibility.education:
+        _add_entries(
+            document,
+            "教育经历",
+            [
+                f"{item.school} | {item.major} | {item.degree} | {item.start_date} - {item.end_date}"
+                for item in resume.education
+            ],
+        )
+    if visibility.employment:
+        _add_entries(
+            document,
+            "实习/工作经历",
+            [
+                "\n".join(
+                    part
+                    for part in [
+                        f"{item.company} | {item.position} | {item.start_date} - {item.end_date}",
+                        item.description,
+                    ]
+                    if part
+                )
+                for item in resume.employment
+            ],
+        )
+    if visibility.projects:
+        _add_entries(
+            document,
+            "项目经历",
+            [
+                "\n".join(
+                    part
+                    for part in [
+                        f"{item.name} | {item.role} | {item.start_date} - {item.end_date}",
+                        item.description,
+                    ]
+                    if part
+                )
+                for item in resume.projects
+            ],
+        )
+    if visibility.skills:
+        _add_entries(document, "技能证书", [", ".join(resume.skills.skills + resume.skills.certificates)])
+    if visibility.self_evaluation:
+        _add_entries(document, "自我评价", [resume.self_evaluation])
     output_path.parent.mkdir(parents=True, exist_ok=True)
     document.save(output_path)
 

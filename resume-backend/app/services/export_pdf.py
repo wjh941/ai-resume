@@ -46,9 +46,12 @@ def _render_content(resume: ResumePayload) -> str:
     contact = " | ".join(
         escape(value) for value in [resume.basic.phone, resume.basic.email, resume.basic.city] if value
     )
-    sections: list[str] = [
-        f'<section class="header"><h1>{escape(resume.basic.name)}</h1><div class="contact">{contact}</div></section>'
-    ]
+    sections: list[str] = []
+    if resume.section_visibility.basic:
+        sections.append(
+            f'<section class="header"><h1>{escape(resume.basic.name)}</h1>'
+            f'<div class="contact">{contact}</div></section>'
+        )
     if resume.section_visibility.job:
         sections.append(_section("求职意向", [escape(resume.job.target_role)]))
     if resume.section_visibility.education:

@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 import sqlite3
 
 import pytest
+from docx import Document
 
 from conftest import make_draft_payload
 from app.services.export_pdf import chromium_is_available
@@ -52,6 +53,28 @@ def test_expired_download_returns_not_found(api_client):
 
     assert response.status_code == 404
     assert response.json()["code"] == "not_found"
+
+
+def test_word_export_respects_section_visibility(api_client):
+    payload = make_draft_payload()
+    payload["resume"]["section_visibility"]["basic"] = False
+    payload["resume"]["section_visibility"]["employment"] = False
+    draft = api_client.post("/api/draft/save", json=payload).json()["data"]
+    export = api_client.post(
+        "/api/export/word",
+        json={"client_id": "demo-client", "draft_id": draft["id"]},
+    ).json()["data"]
+    token = export["download_url"].rsplit("/", 1)[-1]
+
+    with sqlite3.connect(api_client.app.state.settings.database_path) as connection:
+        output_path = connection.execute(
+            "SELECT file_path FROM download_file WHERE token = ?",
+            (token,),
+        ).fetchone()[0]
+    text = "\n".join(paragraph.text for paragraph in Document(output_path).paragraphs)
+
+    assert "Zhang San" not in text
+    assert "实习/工作经历" not in text
 
 
 def test_pdf_export_returns_download_when_chromium_is_available(api_client):
