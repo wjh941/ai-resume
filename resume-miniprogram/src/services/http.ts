@@ -1,6 +1,7 @@
 import type { ApiEnvelope } from "../types/api"
 
-const API_BASE_URL = "http://127.0.0.1:8000"
+const API_BASE_URL =
+  process.env.UNI_PLATFORM === "h5" ? "" : "http://127.0.0.1:8000"
 
 type UniRequest = (options: Record<string, unknown>) => Promise<{ data: ApiEnvelope<unknown> }>
 
