@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 import sqlite3
 
+from app.services.career_catalog import ROLE_SEEDS, seed_career_catalog
+
 
 TEMPLATES = (
     ("business", "Business", "A clear, conservative business resume.", {"accent": "navy"}),
@@ -161,6 +163,42 @@ def initialize_database(database_path: Path) -> None:
                 aliases_json TEXT NOT NULL,
                 sort_order INTEGER NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS role_profile (
+                role_name TEXT PRIMARY KEY,
+                family TEXT NOT NULL,
+                aliases_json TEXT NOT NULL,
+                recommended_majors_json TEXT NOT NULL,
+                adjacent_majors_json TEXT NOT NULL,
+                relevant_courses_json TEXT NOT NULL,
+                required_skills_json TEXT NOT NULL,
+                entry_skills_json TEXT NOT NULL,
+                alternative_roles_json TEXT NOT NULL,
+                internship_roles_json TEXT NOT NULL,
+                entry_difficulty INTEGER NOT NULL CHECK (entry_difficulty BETWEEN 1 AND 5),
+                industry_tags_json TEXT NOT NULL,
+                description TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS major_catalog (
+                major_name TEXT PRIMARY KEY,
+                category TEXT NOT NULL,
+                aliases_json TEXT NOT NULL,
+                related_families_json TEXT NOT NULL,
+                transferable_skills_json TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS career_profile (
+                client_id TEXT PRIMARY KEY,
+                identity_code TEXT NOT NULL,
+                major TEXT NOT NULL,
+                education_level TEXT NOT NULL,
+                graduation_year INTEGER,
+                city_preferences_json TEXT NOT NULL,
+                minimum_salary TEXT,
+                industry_preferences_json TEXT NOT NULL,
+                work_types_json TEXT NOT NULL,
+                skills_json TEXT NOT NULL,
+                draft_id TEXT,
+                updated_at TEXT NOT NULL
+            );
             """
         )
         connection.executemany(
@@ -178,6 +216,22 @@ def initialize_database(database_path: Path) -> None:
             [
                 (role_name, category, json.dumps(aliases, ensure_ascii=False), sort_order)
                 for role_name, category, aliases, sort_order in JOB_CATALOG
+            ],
+        )
+        seed_career_catalog(connection)
+        connection.executemany(
+            """
+            INSERT OR IGNORE INTO job_catalog (role_name, category, aliases_json, sort_order)
+            VALUES (?, ?, ?, ?)
+            """,
+            [
+                (
+                    role.role_name,
+                    role.family,
+                    json.dumps(role.aliases, ensure_ascii=False),
+                    1_000 + index,
+                )
+                for index, role in enumerate(ROLE_SEEDS)
             ],
         )
         _migrate_legacy_job_cache(connection)

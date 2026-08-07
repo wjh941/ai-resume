@@ -7,13 +7,16 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.api import ai, consultation, drafts, exports, templates
+from app.api import ai, career, consultation, drafts, exports, templates
 from app.config import Settings, load_settings
 from app.db import initialize_database
+from app.repositories.career_catalog import CareerCatalogRepository
+from app.repositories.career_profiles import CareerProfileNotFoundError, CareerProfileRepository
 from app.repositories.drafts import DraftNotFoundError, DraftRepository
 from app.repositories.templates import TemplateRepository
 from app.schemas.common import error, success
 from app.services.ai_client import build_ai_client
+from app.services.career_recommender import CareerRecommender
 from app.services.downloads import DownloadNotFoundError, DownloadService
 from app.services.job_catalog import JobCatalog
 from app.services.export_pdf import PdfRendererUnavailableError
@@ -52,6 +55,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.ai_client = build_ai_client(settings)
     app.state.job_cache = JobCache(settings.database_path, settings.cache_expire_day)
     app.state.job_catalog = JobCatalog(settings.database_path)
+    app.state.career_catalog_repository = CareerCatalogRepository(settings.database_path)
+    app.state.career_profile_repository = CareerProfileRepository(settings.database_path)
+    app.state.career_recommender = CareerRecommender(
+        app.state.career_catalog_repository
+    )
     app.state.web_search_client = build_web_search_client(settings)
     app.state.download_service = DownloadService(
         settings.database_path,
@@ -62,6 +70,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.exception_handler(DraftNotFoundError)
     def draft_not_found(_: Request, __: DraftNotFoundError):
         return JSONResponse(status_code=404, content=error("not_found", "Draft not found"))
+
+    @app.exception_handler(CareerProfileNotFoundError)
+    def career_profile_not_found(_: Request, __: CareerProfileNotFoundError):
+        return JSONResponse(
+            status_code=404,
+            content=error("not_found", "Career profile not found"),
+        )
 
     @app.exception_handler(RequestValidationError)
     def request_validation_error(_: Request, __: RequestValidationError):
@@ -90,6 +105,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return success({"status": "healthy"})
 
     app.include_router(ai.router)
+    app.include_router(career.router)
     app.include_router(consultation.router)
     app.include_router(drafts.router)
     app.include_router(exports.router)
