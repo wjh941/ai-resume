@@ -11,6 +11,12 @@ from app.services.rewrite_guard import validate_rewrite_facts
 router = APIRouter()
 
 
+@router.get("/api/job/suggestions")
+async def query_job_suggestions(request: Request, q: str = ""):
+    items = request.app.state.job_catalog.search(q)
+    return success({"items": [item.model_dump() for item in items]})
+
+
 @router.post("/api/job/query")
 async def query_job(payload: JobQueryRequest, request: Request):
     role_name = " ".join(payload.role_name.split())

@@ -45,6 +45,21 @@ def test_blank_role_name_returns_validation_error(api_client):
     assert response.json()["code"] == "validation_error"
 
 
+def test_engineer_suggestions_return_distinct_catalog_roles(api_client):
+    data = assert_success(api_client.get("/api/job/suggestions", params={"q": "工程师"}))
+
+    names = [item["role_name"] for item in data["items"]]
+    assert "数据工程师" in names
+    assert "AI Agent工程师" in names
+    assert len(names) == len(set(names))
+
+
+def test_blank_suggestion_query_returns_no_items(api_client):
+    data = assert_success(api_client.get("/api/job/suggestions", params={"q": "   "}))
+
+    assert data == {"items": []}
+
+
 def test_mock_profiles_return_distinct_data_for_data_and_frontend_roles(api_client):
     data = assert_success(api_client.post("/api/job/query", json={"role_name": "数据工程师"}))
     frontend = assert_success(api_client.post("/api/job/query", json={"role_name": "前端开发工程师"}))
@@ -52,6 +67,31 @@ def test_mock_profiles_return_distinct_data_for_data_and_frontend_roles(api_clie
     assert data["required_skills"] == ["Python", "SQL", "Data warehousing"]
     assert frontend["required_skills"] == ["JavaScript", "TypeScript", "Vue or React"]
     assert data["responsibilities"] != frontend["responsibilities"]
+
+
+def test_mock_profile_returns_agent_specific_intelligence(api_client):
+    agent = assert_success(api_client.post("/api/job/query", json={"role_name": "AI Agent工程师"}))
+
+    assert agent["role_name"] == "AI Agent工程师"
+    assert agent["required_skills"] == ["Python", "LLM应用开发", "Agent工作流"]
+    assert "RAG" in agent["bonus_skills"]
+
+
+def test_previous_mock_cache_version_does_not_override_new_agent_profile(api_client):
+    api_client.app.state.job_cache.put(
+        "AI Agent工程师",
+        "mock-v2",
+        JobIntelligence(
+            role_name="AI Agent工程师",
+            required_skills=["Domain knowledge"],
+            bonus_skills=["Continuous improvement"],
+        ),
+    )
+
+    agent = assert_success(api_client.post("/api/job/query", json={"role_name": "AI Agent工程师"}))
+
+    assert agent["required_skills"] == ["Python", "LLM应用开发", "Agent工作流"]
+    assert api_client.app.state.ai_client.job_query_count == 1
 
 
 def test_job_cache_migrates_legacy_single_provider_primary_key(tmp_path):

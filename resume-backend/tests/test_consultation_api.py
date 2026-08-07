@@ -195,6 +195,40 @@ def test_advice_returns_structured_salary_negotiation_guidance(api_client):
     assert "公积金" in " ".join(item for section in data["sections"] for item in section["items"])
 
 
+def test_all_toolkit_topics_include_actions_templates_and_risk_checks(api_client):
+    topics = [
+        "simulation_interview",
+        "salary_negotiation",
+        "contract_pitfalls",
+        "career_planning",
+        "certificate_recommendation",
+        "role_comparison",
+        "written_test",
+        "job_channels",
+        "scam_screening",
+    ]
+
+    for topic in topics:
+        data = assert_success(
+            api_client.post(
+                "/api/consultation/advice",
+                json={
+                    "identity_code": "2",
+                    "role_name": "数据工程师",
+                    "topic": topic,
+                    "question": "请给我可以立刻执行的具体步骤。",
+                },
+            )
+        )
+
+        titles = [section["title"] for section in data["sections"]]
+        assert len(data["sections"]) >= 5
+        assert "落地行动清单" in titles
+        assert "可复制表达" in titles
+        assert "验证与避坑" in titles
+        assert all(section["items"] for section in data["sections"])
+
+
 def test_advice_rejects_unsupported_topic(api_client):
     response = api_client.post(
         "/api/consultation/advice",

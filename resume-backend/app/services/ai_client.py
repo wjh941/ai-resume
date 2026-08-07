@@ -23,7 +23,7 @@ from app.services.career_consultation import (
 )
 from app.services.job_cache import normalize_role_name
 
-MOCK_CACHE_KEY = "mock-v2"
+MOCK_CACHE_KEY = "mock-v3"
 
 
 class AIClient(Protocol):
@@ -62,7 +62,11 @@ class AIClient(Protocol):
 
 def mock_job_profile(role_name: str) -> JobIntelligence:
     normalized_role = normalize_role_name(role_name)
-    display_role = " ".join(part.capitalize() for part in normalized_role.split())
+    display_role = (
+        "AI Agent工程师"
+        if "ai" in normalized_role and "agent" in normalized_role and "工程师" in normalized_role
+        else " ".join(part.capitalize() for part in normalized_role.split())
+    )
 
     data_profile = {
         "salary_by_experience": {
@@ -79,6 +83,25 @@ def mock_job_profile(role_name: str) -> JobIntelligence:
         "required_skills": ["Python", "SQL", "Data warehousing"],
         "bonus_skills": ["Airflow", "Spark", "Cloud platforms"],
         "career_route": ["Data Engineer", "Senior Data Engineer", "Data Platform Lead"],
+    }
+    agent_profile = {
+        "salary_by_experience": {
+            "graduate": "14k-22k",
+            "1-3_years": "22k-36k",
+            "3-5_years": "36k-52k",
+            "5_plus_years": "52k-75k",
+        },
+        "responsibilities": [
+            "Design, build, evaluate, and iterate AI agent workflows for real business tasks.",
+            "Connect LLMs, retrieval, tools, and guardrails into observable product capabilities.",
+        ],
+        "hard_requirements": [
+            "Bachelor degree or equivalent practical experience.",
+            "Evidence of LLM application, workflow, or evaluation practice.",
+        ],
+        "required_skills": ["Python", "LLM应用开发", "Agent工作流"],
+        "bonus_skills": ["RAG", "工具调用", "评测与安全"],
+        "career_route": ["AI Agent Engineer", "Senior AI Agent Engineer", "AI Application Lead"],
     }
     frontend_profile = {
         "salary_by_experience": {
@@ -145,7 +168,9 @@ def mock_job_profile(role_name: str) -> JobIntelligence:
         "career_route": [display_role, f"Senior {display_role}", "Team Lead"],
     }
 
-    if any(keyword in normalized_role for keyword in ("数据", "data", "etl", "数仓")):
+    if any(keyword in normalized_role for keyword in ("agent", "llm", "大模型", "智能体")):
+        profile = agent_profile
+    elif any(keyword in normalized_role for keyword in ("数据", "data", "etl", "数仓")):
         profile = data_profile
     elif any(keyword in normalized_role for keyword in ("前端", "frontend", "vue", "react")):
         profile = frontend_profile
@@ -326,7 +351,9 @@ class OpenAICompatibleClient:
             system_prompt=(
                 "You are an experienced Chinese career consultant. Return only valid JSON with "
                 "identity_code, identity_label, topic, title, and sections. Use concise mobile "
-                "friendly bullet-style items. Never invent candidate facts, legal conclusions, or "
+                "friendly bullet-style items. Return at least five detailed sections, including "
+                "topic-specific advice, an identity-aware action checklist, copyable language, "
+                "and verification or risk checks. Never invent candidate facts, legal conclusions, or "
                 "market data. Mark uncertain items as [待确认]."
             ),
             user_prompt=json.dumps(

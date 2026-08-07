@@ -19,6 +19,11 @@ class JobQueryRequest(BaseModel):
         return normalized
 
 
+class JobSuggestion(BaseModel):
+    role_name: str
+    category: str
+
+
 class JobIntelligence(BaseModel):
     version: Literal[1] = 1
     role_name: str

@@ -437,6 +437,13 @@ def build_career_advice(
             ],
         ),
     }[topic]
+    sections.extend(
+        [
+            ("落地行动清单", _advice_action_items(identity_code, role, topic, question)),
+            ("可复制表达", _advice_template_items(role, topic)),
+            ("验证与避坑", _advice_risk_items(topic)),
+        ]
+    )
     return CareerAdviceResponse(
         identity_code=identity_code,
         identity_label=IDENTITY_LABELS[identity_code],
@@ -449,8 +456,130 @@ def build_career_advice(
     )
 
 
+def _advice_action_items(
+    identity_code: IdentityCode,
+    role_name: str,
+    topic: AdviceTopic,
+    question: str | None,
+) -> list[str]:
+    identity_steps = {
+        "1": "本周从课程、社团或个人练习中选一个真实素材，补齐任务背景、个人动作和作品链接。",
+        "2": "本周完成一份与校招岗位对应的项目复盘，并找同学或导师进行一次模拟面试。",
+        "3": "下班后用两个晚上整理最近两个真实项目，分别准备成果证据和可追问的技术细节。",
+        "4": "用 15 天把空档期真实学习或兼职材料整理为时间线，避免在面试中临时解释。",
+        "5": "先完成一个低成本可展示项目，再投递能够积累目标能力的助理或初级入口岗位。",
+    }[identity_code]
+    topic_steps = {
+        "simulation_interview": [
+            f"围绕{role_name}准备 3 个真实 STAR 案例，每个案例写清问题、行动、协作、结果和待确认的数据来源。",
+            "录音练习 1 分钟自我介绍，复听后删掉空泛形容词，保留岗位关键词和可验证交付物。",
+        ],
+        "salary_negotiation": [
+            "把固定薪资、绩效规则、年终奖、加班补偿、社保公积金基数和试用期折扣写成同一张对比表。",
+            "在收到书面 offer 前不口头承诺到岗日；每一项差异都要求招聘方确认书面口径。",
+        ],
+        "contract_pitfalls": [
+            "在签约前逐项核对劳动合同主体、工作地点、岗位名称、试用期、社保主体和薪资构成是否一致。",
+            "保存 JD、沟通记录和 offer；遇到收费、押证件或空白协议时立即暂停流程。",
+        ],
+        "career_planning": [
+            f"为{role_name}设定 30 天作品目标、60 天投递复盘目标和 90 天面试迭代目标。",
+            "每周统计投递数、面试数、拒绝原因和补齐动作，用数据而不是焦虑调整优先级。",
+        ],
+        "certificate_recommendation": [
+            "收集目标城市 20 条真实 JD，统计证书是否是硬门槛、加分项或根本未出现。",
+            "优先把时间投入可展示项目；只有证书确为准入门槛时再安排报名与备考。",
+        ],
+        "role_comparison": [
+            "把两个岗位按核心产出、工具门槛、工作节奏、薪资结构、成长路径和风险并排比较。",
+            "分别准备一版简历摘要，确认你现有真实经历更能支撑哪一个岗位。",
+        ],
+        "written_test": [
+            "把基础概念、场景题、逻辑题和项目复盘题分四类练习，每道错题记录原因和复盘日期。",
+            "先做企业官方样题或公开题库，避免购买来源不明且可能过时的题库。",
+        ],
+        "job_channels": [
+            "建立投递台账，记录岗位链接、公司主体、简历版本、联系人、投递日期和反馈节点。",
+            "优先使用官网、学校就业平台、可信内推和正规招聘平台，并为每周投递设定复盘时间。",
+        ],
+        "scam_screening": [
+            "面试前核验公司主体、办公地点、社保主体和招聘联系人身份；异常信息先截图留档。",
+            "对外包、驻场、试岗、加班和绩效扣减直接提问，并要求关键承诺写入 offer 或合同。",
+        ],
+    }[topic]
+    items = [identity_steps, *topic_steps]
+    if question:
+        items.append(f"针对你的补充问题“{question}”：先按以上清单收集真实信息，再决定下一步。")
+    return items
+
+
+def _advice_template_items(role_name: str, topic: AdviceTopic) -> list[str]:
+    primary_templates = {
+        "simulation_interview": (
+            f"自我介绍模板：我以{role_name}为目标，已完成[真实项目/课程/工作任务]。"
+            "我负责[真实模块]，使用[真实工具]产出[真实交付物]，结果数据为[待确认]。"
+        ),
+        "salary_negotiation": (
+            "谈薪模板：我希望综合固定薪资、绩效规则、年终奖、公积金基数和工作安排评估 offer，"
+            "请问这些项目是否可以提供书面说明？"
+        ),
+        "contract_pitfalls": (
+            "确认模板：为避免理解偏差，请帮我确认合同主体、社保缴纳主体、试用期薪资、"
+            "工作地点和加班补偿是否与本次岗位一致，并以书面版本为准。"
+        ),
+        "career_planning": (
+            f"规划模板：未来 90 天我会围绕{role_name}完成[真实作品]、优化[简历模块]、"
+            "每周复盘[投递/面试]数据，并依据反馈调整下一周行动。"
+        ),
+        "certificate_recommendation": (
+            "证书判断模板：我已统计[目标岗位数量]条真实 JD，证书[名称]出现[待确认]次，"
+            "因此将它判断为[硬门槛/加分项/暂不投入]。"
+        ),
+        "role_comparison": (
+            "岗位比较模板：我更倾向[岗位 A/B]，因为我的真实经历在[核心产出]、[工具]和"
+            "[项目场景]上更匹配；仍需补齐[待确认技能]。"
+        ),
+        "written_test": (
+            "笔试复盘模板：本题考查[知识点]，我错在[真实原因]，下次会用[练习动作]验证，"
+            "复盘日期为[待确认]。"
+        ),
+        "job_channels": (
+            "投递跟进模板：您好，我已投递[岗位名称]，简历中包含[真实相关项目]。"
+            "如岗位仍在推进，期待有机会补充我的作品和项目细节。"
+        ),
+        "scam_screening": (
+            "风险确认模板：请问该岗位的合同主体、社保主体、是否外包/驻场、试用期规则和"
+            "加班补偿分别是什么？我需要依据书面信息判断是否继续流程。"
+        ),
+    }[topic]
+    return [
+        primary_templates,
+        "使用前请把方括号内容替换为真实事实；没有证据的公司、项目、日期和数据都保留 [待确认]。",
+    ]
+
+
+def _advice_risk_items(topic: AdviceTopic) -> list[str]:
+    topic_risks = {
+        "simulation_interview": "不要把团队成果全部说成个人成果；任何追问无法展开的案例都会降低可信度。",
+        "salary_negotiation": "不要只看“综合包”或口头承诺，必须拆开确认固定部分、浮动条件和发放时间。",
+        "contract_pitfalls": "不要签空白文件、提交证件原件或先支付培训费、押金、内推费。",
+        "career_planning": "不要同时堆积过多课程和证书；没有可展示产出的学习难以提升简历竞争力。",
+        "certificate_recommendation": "不要把证书当作项目替代品；招聘方通常会继续追问真实场景和应用能力。",
+        "role_comparison": "不要只比较岗位名称或薪资上限；应核验实际职责、团队成熟度和成长空间。",
+        "written_test": "不要购买来源不明的泄题或培训包；这类内容可能无效，也可能带来合规风险。",
+        "job_channels": "不要向任何“保证 offer”“付费内推”渠道转账；正规招聘不会以录用为条件收费。",
+        "scam_screening": "不要忽略公司主体、合同主体和社保主体不一致的信号；必要时暂停并核验。",
+    }[topic]
+    return [
+        f"【高频坑】{topic_risks}",
+        "【核验动作】把关键承诺保留为 JD、邮件、聊天记录、书面 offer 或合同条款，再做决定。",
+    ]
+
+
 def _keywords_for_target(role_name: str) -> list[str]:
     normalized = role_name.casefold()
+    if any(key in normalized for key in ("agent", "llm", "大模型", "智能体")):
+        return ["Python", "LLM应用开发", "Agent工作流", "评测与安全"]
     if any(key in normalized for key in ("data", "数据", "etl", "数仓")):
         return ["Python", "SQL", "数据建模", "数据质量"]
     if any(key in normalized for key in ("frontend", "前端", "vue", "react")):
