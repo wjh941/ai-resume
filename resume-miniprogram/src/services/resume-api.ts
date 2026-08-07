@@ -1,5 +1,10 @@
 import { apiUrl, request } from "./http"
-import type { AdviceTopic, CareerAdvice, JobConsultation, ResumeReview } from "../types/consultation"
+import type {
+  AdviceTopic,
+  CareerAdvice,
+  JobConsultation,
+  ResumeReview,
+} from "../types/consultation"
 import type { JobIntelligence, ResumeDraft, ResumePayload } from "../types/resume"
 
 type BackendJob = {
@@ -12,6 +17,15 @@ type BackendConsultationSection = {
   order: number; title: string; items: string[]
 }
 
+type BackendCareerGrowthStage = {
+  stage: string; role_name: string; years_reference: string; core_skills: string[]
+  responsibilities: string[]; assessment_criteria: string[]
+}
+
+type BackendPrioritySkillGap = {
+  skill_name: string; learning_direction: string; project_practice: string; practice_task: string
+}
+
 type BackendJobConsultation = {
   identity_code: JobConsultation["identityCode"]; identity_label: string
   job_intelligence: BackendJob
@@ -19,12 +33,19 @@ type BackendJobConsultation = {
   identity_plan: { title: string; sections: BackendConsultationSection[] }
   follow_up_question: string
   market_notice: string
+  career_growth_route: { title: string; stages: BackendCareerGrowthStage[] }
+  custom_requirement_notes: string[]
 }
 
 type BackendResumeReview = {
   identity_code: ResumeReview["identityCode"]; identity_label: string
   issues: string[]; rewrite_examples: string[]; keywords: string[]
   optimized_resume_text: string; interview_intro: string
+  job_match_report: {
+    score: number; score_basis: string[]; matching_advantages: string[]
+    missing_skills: string[]; priority_gaps: BackendPrioritySkillGap[]
+  }
+  custom_requirement_notes: string[]
 }
 
 type BackendCareerAdvice = {
@@ -75,10 +96,12 @@ export async function queryJob(roleName: string): Promise<JobIntelligence> {
 export async function queryJobConsultation(
   roleName: string,
   identityCode: JobConsultation["identityCode"],
+  customRequirement?: string,
 ): Promise<JobConsultation> {
   const response = await request<BackendJobConsultation>("/api/consultation/job-analysis", "POST", {
     role_name: roleName,
     identity_code: identityCode,
+    custom_requirement: customRequirement || undefined,
   })
   return {
     identityCode: response.identity_code,
@@ -88,6 +111,18 @@ export async function queryJobConsultation(
     identityPlan: response.identity_plan,
     followUpQuestion: response.follow_up_question,
     marketNotice: response.market_notice,
+    careerGrowthRoute: {
+      title: response.career_growth_route.title,
+      stages: response.career_growth_route.stages.map((stage) => ({
+        stage: stage.stage,
+        roleName: stage.role_name,
+        yearsReference: stage.years_reference,
+        coreSkills: stage.core_skills,
+        responsibilities: stage.responsibilities,
+        assessmentCriteria: stage.assessment_criteria,
+      })),
+    },
+    customRequirementNotes: response.custom_requirement_notes,
   }
 }
 
@@ -95,11 +130,13 @@ export async function reviewResumeText(
   resumeText: string,
   identityCode: ResumeReview["identityCode"],
   roleName?: string,
+  customRequirement?: string,
 ): Promise<ResumeReview> {
   const response = await request<BackendResumeReview>("/api/consultation/resume-review", "POST", {
     resume_text: resumeText,
     identity_code: identityCode,
     role_name: roleName || undefined,
+    custom_requirement: customRequirement || undefined,
   })
   return {
     identityCode: response.identity_code,
@@ -109,6 +146,19 @@ export async function reviewResumeText(
     keywords: response.keywords,
     optimizedResumeText: response.optimized_resume_text,
     interviewIntro: response.interview_intro,
+    jobMatchReport: {
+      score: response.job_match_report.score,
+      scoreBasis: response.job_match_report.score_basis,
+      matchingAdvantages: response.job_match_report.matching_advantages,
+      missingSkills: response.job_match_report.missing_skills,
+      priorityGaps: response.job_match_report.priority_gaps.map((gap) => ({
+        skillName: gap.skill_name,
+        learningDirection: gap.learning_direction,
+        projectPractice: gap.project_practice,
+        practiceTask: gap.practice_task,
+      })),
+    },
+    customRequirementNotes: response.custom_requirement_notes,
   }
 }
 

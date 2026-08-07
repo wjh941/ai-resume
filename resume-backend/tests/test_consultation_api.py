@@ -60,6 +60,33 @@ def test_job_analysis_returns_nine_sections_and_detailed_identity_plan(api_clien
     assert data["job_intelligence"]["role_name"] == "Data Engineer"
 
 
+def test_job_analysis_returns_growth_route_risk_markers_and_custom_requirement_notes(api_client):
+    data = assert_success(
+        api_client.post(
+            "/api/consultation/job-analysis",
+            json={
+                "role_name": "Data Engineer",
+                "identity_code": "2",
+                "custom_requirement": "Prioritize Hangzhou roles with weekends off",
+            },
+        )
+    )
+
+    route = data["career_growth_route"]
+    assert route["title"] == "职业晋升路线"
+    assert [stage["stage"] for stage in route["stages"]] == ["初级", "中级", "高级"]
+    assert all(stage["role_name"] for stage in route["stages"])
+    assert all(stage["years_reference"] for stage in route["stages"])
+    assert all(stage["core_skills"] for stage in route["stages"])
+    assert all(stage["responsibilities"] for stage in route["stages"])
+    assert all(stage["assessment_criteria"] for stage in route["stages"])
+    assert any(
+        item.startswith("【避雷】") or item.startswith("【高频坑】")
+        for item in data["job_analysis_sections"][8]["items"]
+    )
+    assert "Prioritize Hangzhou roles with weekends off" in " ".join(data["custom_requirement_notes"])
+
+
 def test_all_identities_receive_distinct_detailed_plans(api_client):
     expected_titles = {
         "1": "在校学生全套求职解决方案",
@@ -111,6 +138,32 @@ def test_resume_review_returns_safe_full_resume_and_interview_intro(api_client):
     assert "Data Engineer" in data["interview_intro"]
     assert "job_analysis_sections" not in data
     assert "identity_plan" not in data
+
+
+def test_resume_review_returns_transparent_match_report_and_custom_requirement_notes(api_client):
+    data = assert_success(
+        api_client.post(
+            "/api/consultation/resume-review",
+            json={
+                "identity_code": "2",
+                "role_name": "Data Engineer",
+                "resume_text": "Built SQL reports for the operations team.",
+                "custom_requirement": "Focus on entry-level data platform roles.",
+            },
+        )
+    )
+
+    report = data["job_match_report"]
+    assert 0 <= report["score"] <= 100
+    assert report["score_basis"]
+    assert report["matching_advantages"]
+    assert report["missing_skills"]
+    assert report["priority_gaps"]
+    assert all(gap["skill_name"] for gap in report["priority_gaps"])
+    assert all(gap["learning_direction"] for gap in report["priority_gaps"])
+    assert all(gap["project_practice"] for gap in report["priority_gaps"])
+    assert all(gap["practice_task"] for gap in report["priority_gaps"])
+    assert "Focus on entry-level data platform roles." in " ".join(data["custom_requirement_notes"])
 
 
 def test_resume_review_rejects_blank_text(api_client):

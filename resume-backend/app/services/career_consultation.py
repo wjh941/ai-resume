@@ -3,11 +3,15 @@ from __future__ import annotations
 from app.schemas.consultation import (
     AdviceTopic,
     CareerAdviceResponse,
+    CareerGrowthRoute,
+    CareerGrowthStage,
     IDENTITY_LABELS,
     ConsultationSection,
     IdentityCode,
     IdentityPlan,
+    JobMatchReport,
     JobConsultationResponse,
+    PrioritySkillGap,
     ResumeReviewResponse,
 )
 from app.schemas.job import JobIntelligence
@@ -16,6 +20,7 @@ from app.schemas.job import JobIntelligence
 def build_job_consultation(
     job: JobIntelligence,
     identity_code: IdentityCode,
+    custom_requirement: str | None = None,
 ) -> JobConsultationResponse:
     role_name = job.role_name
     salary = job.salary_by_experience
@@ -106,8 +111,41 @@ def build_job_consultation(
             ],
         ),
     ]
+    analysis[3] = ConsultationSection(
+        order=analysis[3].order,
+        title=analysis[3].title,
+        items=[
+            *analysis[3].items,
+            "隐性筛选还包括优先级判断：面对多个需求时，能否说明取舍依据、影响范围和向谁同步决策。",
+            "面对模糊任务时，面试官会追问你如何澄清目标、定义验收标准、留存过程证据并复盘改进。",
+        ],
+    )
+    analysis[5] = ConsultationSection(
+        order=analysis[5].order,
+        title=analysis[5].title,
+        items=[
+            *analysis[5].items,
+            "判断行业前景时应同时查看岗位数量、技能迭代速度和业务预算：岗位多不等于初级机会多，需区分初级执行岗与独立交付岗。",
+            "建议每月保存目标城市 20 条真实 JD，统计重复出现的工具、业务场景和年限门槛，再据此调整简历关键词与学习优先级。",
+        ],
+    )
+    risk_section = analysis[8]
+    analysis[8] = ConsultationSection(
+        order=risk_section.order,
+        title=risk_section.title,
+        items=[
+            f"【避雷】{risk_section.items[0]}",
+            f"【高频坑】{risk_section.items[1]}",
+            f"【避雷】{risk_section.items[2]}",
+            "【高频坑】不要只听“综合月薪”或“发展空间”，应要求书面确认固定薪资、绩效条件、发薪日、试用期折扣和实际汇报对象。",
+        ],
+    )
+    career_growth_route = _build_career_growth_route(job)
+    custom_requirement_notes = _custom_requirement_notes(custom_requirement)
     return JobConsultationResponse(
         identity_code=identity_code,
+        career_growth_route=career_growth_route,
+        custom_requirement_notes=custom_requirement_notes,
         identity_label=IDENTITY_LABELS[identity_code],
         job_intelligence=job,
         job_analysis_sections=analysis,
@@ -121,6 +159,7 @@ def build_resume_review(
     resume_text: str,
     identity_code: IdentityCode,
     role_name: str | None,
+    custom_requirement: str | None = None,
 ) -> ResumeReviewResponse:
     target = role_name or "目标岗位"
     first_line = next((line.strip() for line in resume_text.splitlines() if line.strip()), resume_text[:80])
@@ -132,8 +171,12 @@ def build_resume_review(
         "5": "转行简历应先写可迁移能力，再说明已完成的低成本实战项目。",
     }[identity_code]
     keywords = _keywords_for_target(target)
+    job_match_report = _build_job_match_report(resume_text, target, keywords)
+    custom_requirement_notes = _custom_requirement_notes(custom_requirement)
     return ResumeReviewResponse(
         identity_code=identity_code,
+        job_match_report=job_match_report,
+        custom_requirement_notes=custom_requirement_notes,
         identity_label=IDENTITY_LABELS[identity_code],
         issues=[
             f"目标岗位“{target}”的关键词覆盖不足，建议在技能、项目标题和成果描述中自然补充：{_join(keywords)}。",
@@ -417,6 +460,112 @@ def _keywords_for_target(role_name: str) -> list[str]:
     if any(key in normalized for key in ("product", "产品")):
         return ["需求分析", "用户研究", "数据分析", "项目推进"]
     return ["岗位核心技能", "问题解决", "沟通协作", "项目复盘"]
+
+
+def _build_career_growth_route(job: JobIntelligence) -> CareerGrowthRoute:
+    core_skills = job.required_skills or _keywords_for_target(job.role_name)
+    advanced_skills = job.bonus_skills or core_skills
+    return CareerGrowthRoute(
+        title="职业晋升路线",
+        stages=[
+            CareerGrowthStage(
+                stage="初级",
+                role_name=f"初级{job.role_name}",
+                years_reference="0-2年：完成基础训练并能在指导下稳定交付",
+                core_skills=core_skills[:3] or core_skills,
+                responsibilities=[
+                    "在明确需求和业务规范下完成负责模块，及时暴露风险并提交可复核产物。",
+                    "整理需求、过程记录和复盘材料，形成可写入简历的真实项目证据。",
+                ],
+                assessment_criteria=[
+                    "交付物能按验收标准通过检查，返工原因可说明并能在复盘后减少重复问题。",
+                    "能清楚说明个人负责边界、使用工具和真实结果，未知数据明确标记[待确认]。",
+                ],
+            ),
+            CareerGrowthStage(
+                stage="中级",
+                role_name=f"{job.role_name}（独立负责模块）",
+                years_reference="2-5年：可独立拆解复杂模块并推动跨角色协作",
+                core_skills=list(dict.fromkeys([*core_skills, *advanced_skills]))[:5],
+                responsibilities=[
+                    "独立拆解目标、制定方案、管理关键风险，并负责从执行到复盘的完整闭环。",
+                    "与产品、运营、研发或业务团队协调优先级，推动可验证的效率或质量改善。",
+                ],
+                assessment_criteria=[
+                    "能解释方案取舍、资源约束和风险预案，并用过程数据或交付证据证明结果。",
+                    "遇到模糊需求时可主动澄清验收标准，减少依赖他人反复推动。",
+                ],
+            ),
+            CareerGrowthStage(
+                stage="高级",
+                role_name=f"高级{job.role_name} / 专家",
+                years_reference="5年以上：承担复杂问题、方法沉淀与团队影响力",
+                core_skills=list(dict.fromkeys([*advanced_skills, *core_skills]))[:6],
+                responsibilities=[
+                    "主导跨团队复杂项目或关键能力建设，将个人方法沉淀为可复用流程、标准或平台能力。",
+                    "培养成员并参与关键决策，平衡业务目标、质量、成本、合规与长期专业债务。",
+                ],
+                assessment_criteria=[
+                    "能持续解决高不确定性问题，并将成果转化为可复用的组织能力而非单次救火。",
+                    "能带动协作方形成一致目标，清晰呈现投入、风险、收益和后续演进计划。",
+                ],
+            ),
+        ],
+    )
+
+
+def _build_job_match_report(
+    resume_text: str,
+    target: str,
+    keywords: list[str],
+) -> JobMatchReport:
+    normalized_text = resume_text.casefold()
+    matched = [skill for skill in keywords if skill.casefold() in normalized_text]
+    missing = [skill for skill in keywords if skill not in matched]
+    core_skills = keywords[:3]
+    supporting_skills = keywords[3:]
+    core_score = round(60 * sum(skill in matched for skill in core_skills) / max(len(core_skills), 1))
+    support_score = round(
+        20 * sum(skill in matched for skill in supporting_skills) / max(len(supporting_skills), 1)
+    )
+    material_score = 20 if len(resume_text.strip()) >= 40 else 10
+    score = min(100, material_score + core_score + support_score)
+    visible_missing = missing or ["可核验成果材料"]
+    matching_advantages = (
+        [f"已在简历中识别到与{target}相关的技能证据：{_join(matched, '、')}。"]
+        if matched
+        else ["已提供可用于提炼的真实经历素材；下一步应补齐目标岗位所需的技能证据和项目细节。"]
+    )
+    priority_gaps = [
+        PrioritySkillGap(
+            skill_name=skill,
+            learning_direction=f"围绕{skill}完成从基础概念、常用工具到业务场景的连续练习。",
+            project_practice=f"完成一个贴近{target}的小型项目，保留需求、过程、产物和复盘，不虚构公司经历。",
+            practice_task=f"为{skill}整理3个可追问的真实案例：做了什么、为什么这样做、证据或数据[待确认]。",
+        )
+        for skill in visible_missing[:3]
+    ]
+    return JobMatchReport(
+        score=score,
+        score_basis=[
+            f"简历素材完整度：{material_score}/20（根据已提供文本长度与可提炼经历判断）。",
+            f"核心技能覆盖：{core_score}/60（目标关键词：{_join(core_skills, '、')}）。",
+            f"加分技能覆盖：{support_score}/20（目标关键词：{_join(supporting_skills, '、')}）。",
+            "总分是关键词与可用经历素材覆盖度，不代表录用概率；真实项目证据和面试表现需另行核验。",
+        ],
+        matching_advantages=matching_advantages,
+        missing_skills=visible_missing,
+        priority_gaps=priority_gaps,
+    )
+
+
+def _custom_requirement_notes(custom_requirement: str | None) -> list[str]:
+    if not custom_requirement:
+        return []
+    return [
+        f"已纳入你的补充需求：{custom_requirement}",
+        "补充需求会影响建议优先级；涉及薪资、城市、工时或企业制度的信息仍需以真实 JD、面试和书面 offer 为准。",
+    ]
 
 
 def _join(values: list[str], separator: str = "；") -> str:

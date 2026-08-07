@@ -52,6 +52,21 @@ class CapturingClient(OpenAICompatibleClient):
                     },
                     "follow_up_question": "需要继续细化吗？",
                     "market_notice": "实时市场信息需核验。",
+                    "career_growth_route": {
+                        "title": "职业晋升路线",
+                        "stages": [
+                            {
+                                "stage": stage,
+                                "role_name": f"{stage} Data Engineer",
+                                "years_reference": "参考年限",
+                                "core_skills": ["Python"],
+                                "responsibilities": ["负责交付"],
+                                "assessment_criteria": ["完成验收"],
+                            }
+                            for stage in ["初级", "中级", "高级"]
+                        ],
+                    },
+                    "custom_requirement_notes": ["已纳入补充需求"],
                 },
                 ensure_ascii=False,
             )
@@ -66,6 +81,21 @@ class CapturingClient(OpenAICompatibleClient):
                 "keywords": ["Python"],
                 "optimized_resume_text": "草稿[待确认]",
                 "interview_intro": "自我介绍",
+                "job_match_report": {
+                    "score": 60,
+                    "score_basis": ["透明评分口径"],
+                    "matching_advantages": ["已有真实素材"],
+                    "missing_skills": ["SQL"],
+                    "priority_gaps": [
+                        {
+                            "skill_name": "SQL",
+                            "learning_direction": "学习方向",
+                            "project_practice": "项目练习",
+                            "practice_task": "练习任务",
+                        }
+                    ],
+                },
+                "custom_requirement_notes": ["已纳入补充需求"],
             },
             ensure_ascii=False,
         )
@@ -76,10 +106,23 @@ def test_openai_compatible_client_requests_all_extended_consultation_fields():
         client = CapturingClient()
         job = JobIntelligence(role_name="Data Engineer")
 
-        analysis = await client.build_job_consultation(job, "2")
-        review = await client.review_resume_text("resume text", "2", "Data Engineer")
+        analysis = await client.build_job_consultation(job, "2", "Prioritize Hangzhou")
+        review = await client.review_resume_text(
+            "resume text",
+            "2",
+            "Data Engineer",
+            "Focus on data platform roles",
+        )
 
         assert analysis.market_notice == "实时市场信息需核验。"
         assert review.optimized_resume_text == "草稿[待确认]"
+        job_system_prompt, job_user_prompt = client.calls[0]
+        review_system_prompt, review_user_prompt = client.calls[1]
+        assert "career_growth_route" in job_system_prompt
+        assert "custom_requirement_notes" in job_system_prompt
+        assert json.loads(job_user_prompt)["custom_requirement"] == "Prioritize Hangzhou"
+        assert "job_match_report" in review_system_prompt
+        assert "custom_requirement_notes" in review_system_prompt
+        assert json.loads(review_user_prompt)["custom_requirement"] == "Focus on data platform roles"
 
     asyncio.run(run())

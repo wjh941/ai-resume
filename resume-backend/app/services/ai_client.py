@@ -33,6 +33,7 @@ class AIClient(Protocol):
         self,
         job: JobIntelligence,
         identity_code: IdentityCode,
+        custom_requirement: str | None = None,
     ) -> JobConsultationResponse: ...
 
     async def review_resume_text(
@@ -40,6 +41,7 @@ class AIClient(Protocol):
         resume_text: str,
         identity_code: IdentityCode,
         role_name: str | None,
+        custom_requirement: str | None = None,
     ) -> ResumeReviewResponse: ...
 
     async def build_career_advice(
@@ -170,16 +172,18 @@ class MockAIClient:
         self,
         job: JobIntelligence,
         identity_code: IdentityCode,
+        custom_requirement: str | None = None,
     ) -> JobConsultationResponse:
-        return build_job_consultation(job, identity_code)
+        return build_job_consultation(job, identity_code, custom_requirement)
 
     async def review_resume_text(
         self,
         resume_text: str,
         identity_code: IdentityCode,
         role_name: str | None,
+        custom_requirement: str | None = None,
     ) -> ResumeReviewResponse:
-        return build_resume_review(resume_text, identity_code, role_name)
+        return build_resume_review(resume_text, identity_code, role_name, custom_requirement)
 
     async def build_career_advice(
         self,
@@ -234,6 +238,7 @@ class OpenAICompatibleClient:
         self,
         job: JobIntelligence,
         identity_code: IdentityCode,
+        custom_requirement: str | None = None,
     ) -> JobConsultationResponse:
         content = await self._chat_completion(
             system_prompt=(
@@ -241,9 +246,14 @@ class OpenAICompatibleClient:
                 "Provide exactly nine concise job-analysis sections ordered 1 through 9: "
                 "基础工作, 薪酬分层, 硬性准入门槛, 隐性软要求, 双晋升通道, 行业前景, "
                 "求职竞争, 岗位优缺点, 岗位避雷点. Then provide an identity-specific "
-                "practical plan with copyable templates. Include a market_notice and state "
-                "whether information is a verified live source or an estimate. Do not invent "
-                "candidate facts, salary facts, or market facts."
+                "practical plan with copyable templates. Return career_growth_route with exactly "
+                "three actionable stages: 初级, 中级, 高级; each must include role_name, "
+                "years_reference, core_skills, responsibilities, and assessment_criteria. "
+                "Return custom_requirement_notes and explicitly apply custom_requirement when it "
+                "is supplied. Make 隐性软要求 and 行业前景 specific about observable work behavior "
+                "and evidence. Prefix job risks with 【避雷】 or 【高频坑】. Include a market_notice "
+                "and state whether information is a verified live source or an estimate. Do not "
+                "invent candidate facts, salary facts, or market facts."
             ),
             user_prompt=json.dumps(
                 {
@@ -256,6 +266,7 @@ class OpenAICompatibleClient:
                         "5": "零基础跨行业转行",
                     }[identity_code],
                     "job_intelligence": job.model_dump(),
+                    "custom_requirement": custom_requirement,
                     "required_json_keys": [
                         "identity_code",
                         "identity_label",
@@ -264,6 +275,8 @@ class OpenAICompatibleClient:
                         "identity_plan",
                         "follow_up_question",
                         "market_notice",
+                        "career_growth_route",
+                        "custom_requirement_notes",
                     ],
                 },
                 ensure_ascii=False,
@@ -276,20 +289,26 @@ class OpenAICompatibleClient:
         resume_text: str,
         identity_code: IdentityCode,
         role_name: str | None,
+        custom_requirement: str | None = None,
     ) -> ResumeReviewResponse:
         content = await self._chat_completion(
             system_prompt=(
                 "You are an experienced Chinese career consultant. Return only valid JSON with "
                 "identity_code, identity_label, issues, rewrite_examples, keywords, "
-                "optimized_resume_text, and interview_intro. Do not output job analysis. "
+                "optimized_resume_text, interview_intro, job_match_report, and "
+                "custom_requirement_notes. Do not output job analysis. "
                 "Never invent employers, schools, dates, projects, certificates, or metrics. "
-                "Mark unknown evidence as [待确认]."
+                "Mark unknown evidence as [待确认]. job_match_report must include an integer 0-100 "
+                "coverage score, transparent score_basis, matching_advantages, missing_skills, "
+                "and priority_gaps with learning_direction, project_practice, and practice_task. "
+                "Apply custom_requirement when supplied without changing user facts."
             ),
             user_prompt=json.dumps(
                 {
                     "identity_code": identity_code,
                     "role_name": role_name,
                     "resume_text": resume_text,
+                    "custom_requirement": custom_requirement,
                 },
                 ensure_ascii=False,
             ),

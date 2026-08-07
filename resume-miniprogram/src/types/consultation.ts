@@ -14,6 +14,35 @@ export interface IdentityPlan {
   sections: ConsultationSection[]
 }
 
+export interface CareerGrowthStage {
+  stage: string
+  roleName: string
+  yearsReference: string
+  coreSkills: string[]
+  responsibilities: string[]
+  assessmentCriteria: string[]
+}
+
+export interface CareerGrowthRoute {
+  title: string
+  stages: CareerGrowthStage[]
+}
+
+export interface PrioritySkillGap {
+  skillName: string
+  learningDirection: string
+  projectPractice: string
+  practiceTask: string
+}
+
+export interface JobMatchReport {
+  score: number
+  scoreBasis: string[]
+  matchingAdvantages: string[]
+  missingSkills: string[]
+  priorityGaps: PrioritySkillGap[]
+}
+
 export interface JobConsultation {
   identityCode: IdentityCode
   identityLabel: string
@@ -22,6 +51,8 @@ export interface JobConsultation {
   identityPlan: IdentityPlan
   followUpQuestion: string
   marketNotice: string
+  careerGrowthRoute: CareerGrowthRoute
+  customRequirementNotes: string[]
 }
 
 export interface ResumeReview {
@@ -32,6 +63,8 @@ export interface ResumeReview {
   keywords: string[]
   optimizedResumeText: string
   interviewIntro: string
+  jobMatchReport: JobMatchReport
+  customRequirementNotes: string[]
 }
 
 export type AdviceTopic =

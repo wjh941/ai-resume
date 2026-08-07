@@ -14,6 +14,7 @@ import { prepareResumeForJob } from "../../utils/resume-autofill"
 
 const roleName = ref("")
 const resumeText = ref("")
+const customRequirement = ref("")
 const adviceQuestion = ref("")
 const selectedAdviceIndex = ref(0)
 const loading = ref(false)
@@ -78,7 +79,11 @@ async function loadJobAnalysis(identityCode: (typeof IDENTITY_OPTIONS)[number]["
   loading.value = true
   error.value = ""
   try {
-    const result = await queryJobConsultation(consultation.pendingRoleName, identityCode)
+    const result = await queryJobConsultation(
+      consultation.pendingRoleName,
+      identityCode,
+      customRequirement.value.trim(),
+    )
     jobConsultation.value = result
     store.setJobIntelligence(result.jobIntelligence)
     consultation.showJobAnalysis()
@@ -114,6 +119,7 @@ async function reviewResume() {
       text,
       consultation.identityCode,
       jobConsultation.value?.jobIntelligence.roleName || consultation.pendingRoleName,
+      customRequirement.value.trim(),
     )
   } catch (reason) {
     reviewError.value = reason instanceof Error ? reason.message : "简历优化失败"
@@ -192,6 +198,10 @@ async function requestCareerAdvice() {
     adviceLoading.value = false
   }
 }
+
+function isRiskItem(item: string) {
+  return item.includes("【避雷】") || item.includes("【高频坑】")
+}
 </script>
 
 <template>
@@ -203,6 +213,12 @@ async function requestCareerAdvice() {
 
     <view class="search-card">
       <input v-model="roleName" placeholder="例如：数据工程师" confirm-type="search" @confirm="beginConsultation" />
+      <textarea
+        v-model="customRequirement"
+        class="custom-requirement-input"
+        placeholder="可选：补充你的岗位偏好或特殊需求，例如目标城市、双休、行业方向"
+        auto-height
+      />
       <button class="primary" :loading="loading" @click="beginConsultation">查询岗位情报</button>
       <text v-if="error" class="error">{{ error }}</text>
     </view>
@@ -232,10 +248,31 @@ async function requestCareerAdvice() {
         <button class="secondary compact" @click="changeIdentity">切换身份</button>
       </view>
       <text class="notice">{{ jobConsultation.marketNotice }}</text>
+      <view v-if="jobConsultation.customRequirementNotes.length" class="custom-note">
+        <text class="block-title">## 已纳入你的补充需求</text>
+        <text v-for="item in jobConsultation.customRequirementNotes" :key="item" class="list-item">- {{ item }}</text>
+      </view>
       <text class="result-title">## 岗位深度全解析</text>
       <view v-for="section in jobConsultation.jobAnalysisSections" :key="section.order" class="block">
         <text class="block-title">## {{ section.order }}. {{ section.title }}</text>
-        <text v-for="item in section.items" :key="item" class="list-item">- {{ item }}</text>
+        <text
+          v-for="item in section.items"
+          :key="item"
+          :class="['list-item', { 'risk-item': isRiskItem(item) }]"
+        >- {{ item }}</text>
+      </view>
+
+      <text class="result-title">## 职业晋升路线</text>
+      <view
+        v-for="stage in jobConsultation.careerGrowthRoute.stages"
+        :key="stage.stage"
+        class="growth-stage"
+      >
+        <text class="block-title">{{ stage.stage }}｜{{ stage.roleName }}</text>
+        <text class="growth-meta">{{ stage.yearsReference }}</text>
+        <text class="list-item">- 核心技能：{{ stage.coreSkills.join(" / ") }}</text>
+        <text v-for="item in stage.responsibilities" :key="item" class="list-item">- 工作职责：{{ item }}</text>
+        <text v-for="item in stage.assessmentCriteria" :key="item" class="list-item">- 考核标准：{{ item }}</text>
       </view>
 
       <text class="result-title">## 对应人群全套求职解决方案</text>
@@ -275,6 +312,27 @@ async function requestCareerAdvice() {
       <text class="copy-text">{{ resumeReview.optimizedResumeText }}</text>
       <text class="result-title">## 1分钟面试自我介绍</text>
       <text class="copy-text">{{ resumeReview.interviewIntro }}</text>
+      <view v-if="resumeReview.customRequirementNotes.length" class="custom-note">
+        <text class="block-title">## 已纳入你的补充需求</text>
+        <text v-for="item in resumeReview.customRequirementNotes" :key="item" class="list-item">- {{ item }}</text>
+      </view>
+      <text class="result-title">## 人岗匹配分析报告</text>
+      <view class="match-score-card">
+        <text class="match-score">{{ resumeReview.jobMatchReport.score }}%</text>
+        <text class="match-score-label">目标岗位匹配度</text>
+      </view>
+      <text class="block-title">## 评分口径</text>
+      <text v-for="item in resumeReview.jobMatchReport.scoreBasis" :key="item" class="list-item">- {{ item }}</text>
+      <text class="block-title">## 现有匹配优势</text>
+      <text v-for="item in resumeReview.jobMatchReport.matchingAdvantages" :key="item" class="list-item">- {{ item }}</text>
+      <text class="block-title">## 缺失技能清单</text>
+      <text v-for="item in resumeReview.jobMatchReport.missingSkills" :key="item" class="list-item">- {{ item }}</text>
+      <view v-for="gap in resumeReview.jobMatchReport.priorityGaps" :key="gap.skillName" class="priority-gap">
+        <text class="priority-gap-title">【需提升】{{ gap.skillName }}</text>
+        <text class="list-item">- 学习方向：{{ gap.learningDirection }}</text>
+        <text class="list-item">- 项目练习：{{ gap.projectPractice }}</text>
+        <text class="list-item">- 练习任务：{{ gap.practiceTask }}</text>
+      </view>
     </view>
 
     <view v-if="canReviewResume" class="toolkit-card">
@@ -311,12 +369,13 @@ async function requestCareerAdvice() {
   margin-top: 24rpx; padding: 24rpx; background: #fff; border: 1rpx solid #e5e6eb;
   border-radius: 18rpx; box-shadow: 0 8rpx 24rpx rgba(31,35,41,.06);
 }
-input,.resume-textarea,.question-textarea,.picker-value {
+input,.resume-textarea,.question-textarea,.custom-requirement-input,.picker-value {
   width: 100%; box-sizing: border-box; padding: 20rpx; background: #f7f8fa; border-radius: 12rpx;
 }
 input { height: 80rpx; margin-bottom: 18rpx; }
 .resume-textarea { min-height: 180rpx; margin: 20rpx 0; line-height: 1.6; }
 .question-textarea { min-height: 120rpx; margin: 20rpx 0; line-height: 1.6; }
+.custom-requirement-input { min-height: 96rpx; margin: 4rpx 0 8rpx; line-height: 1.6; }
 .primary { margin-top: 12rpx; color: #fff; background: #1677ff; }
 .secondary { margin-top: 12rpx; color: #4e5969; background: #f2f3f5; }
 .identity-prompt { display: block; margin-bottom: 12rpx; font-weight: 600; color: #1f2329; }
@@ -332,6 +391,13 @@ input { height: 80rpx; margin-bottom: 18rpx; }
 .block { display: flex; flex-direction: column; gap: 10rpx; margin: 24rpx 0; color: #4e5969; }
 .block-title { color: #1f2329; font-weight: 600; }.list-item { line-height: 1.65; }
 .plan-block { padding: 20rpx; background: #f7faff; border-radius: 12rpx; }
+.custom-note,.growth-stage,.priority-gap { margin-top: 20rpx; padding: 20rpx; background: #f7faff; border-radius: 12rpx; }
+.growth-stage { border-left: 6rpx solid #4096ff; }
+.growth-meta { display: block; margin: 10rpx 0; color: #1677ff; font-size: 24rpx; }
+.risk-item { padding: 12rpx; color: #ad4e00; background: #fff7e8; border-radius: 10rpx; }
+.match-score-card { display: flex; align-items: baseline; gap: 16rpx; margin: 18rpx 0; padding: 20rpx; color: #0958d9; background: #e6f4ff; border-radius: 12rpx; }
+.match-score { font-size: 52rpx; font-weight: 700; }.match-score-label { font-size: 26rpx; color: #4e5969; }
+.priority-gap { background: #fff7e8; border: 1rpx solid #ffe7ba; }.priority-gap-title { display: block; margin-bottom: 10rpx; color: #d46b08; font-weight: 700; }
 .follow-up,.keywords { display: block; margin: 20rpx 0; color: #4e5969; line-height: 1.6; }
 .review-result { margin-top: 24rpx; }.error { display: block; margin-top: 12rpx; color: #d03050; }
 .button-row { display: flex; gap: 16rpx; }.button-row button { flex: 1; font-size: 24rpx; }

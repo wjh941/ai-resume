@@ -16,7 +16,11 @@ router = APIRouter()
 @router.post("/api/consultation/job-analysis")
 async def job_analysis(payload: JobConsultationRequest, request: Request):
     job = await _get_job_intelligence(payload.role_name, request)
-    result = await request.app.state.ai_client.build_job_consultation(job, payload.identity_code)
+    result = await request.app.state.ai_client.build_job_consultation(
+        job,
+        payload.identity_code,
+        payload.custom_requirement,
+    )
     return success(result.model_dump())
 
 
@@ -26,6 +30,7 @@ async def resume_review(payload: ResumeReviewRequest, request: Request):
         payload.resume_text,
         payload.identity_code,
         payload.role_name,
+        payload.custom_requirement,
     )
     return success(result.model_dump())
 
