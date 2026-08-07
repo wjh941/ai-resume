@@ -1,9 +1,12 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Request
+from io import BytesIO
+
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile
+from pypdf import PdfReader
 
 from app.schemas.common import success
-from app.schemas.consultation import JobConsultationRequest, ResumeReviewRequest
+from app.schemas.consultation import AdviceRequest, JobConsultationRequest, ResumeReviewRequest
 from app.services.ai_client import MOCK_CACHE_KEY
 
 
@@ -25,6 +28,35 @@ async def resume_review(payload: ResumeReviewRequest, request: Request):
         payload.role_name,
     )
     return success(result.model_dump())
+
+
+@router.post("/api/consultation/advice")
+async def career_advice(payload: AdviceRequest, request: Request):
+    result = await request.app.state.ai_client.build_career_advice(
+        payload.identity_code,
+        payload.topic,
+        payload.role_name,
+        payload.question,
+    )
+    return success(result.model_dump())
+
+
+@router.post("/api/consultation/resume-pdf-extract")
+async def extract_resume_pdf(file: UploadFile = File(...)):
+    filename = (file.filename or "").casefold()
+    if file.content_type != "application/pdf" and not filename.endswith(".pdf"):
+        raise HTTPException(status_code=422, detail="Only PDF files are supported")
+    content = await file.read()
+    if not content or len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=422, detail="PDF file must be between 1 byte and 10 MB")
+    try:
+        reader = PdfReader(BytesIO(content))
+        text = "\n".join(page.extract_text() or "" for page in reader.pages).strip()
+    except Exception as error:
+        raise HTTPException(status_code=422, detail="Unable to extract text from this PDF") from error
+    if not text:
+        raise HTTPException(status_code=422, detail="No extractable text found in this PDF")
+    return success({"text": text})
 
 
 async def _get_job_intelligence(role_name: str, request: Request):

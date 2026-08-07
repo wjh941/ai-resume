@@ -21,6 +21,7 @@ export interface JobConsultation {
   jobAnalysisSections: ConsultationSection[]
   identityPlan: IdentityPlan
   followUpQuestion: string
+  marketNotice: string
 }
 
 export interface ResumeReview {
@@ -29,4 +30,25 @@ export interface ResumeReview {
   issues: string[]
   rewriteExamples: string[]
   keywords: string[]
+  optimizedResumeText: string
+  interviewIntro: string
+}
+
+export type AdviceTopic =
+  | "simulation_interview"
+  | "salary_negotiation"
+  | "contract_pitfalls"
+  | "career_planning"
+  | "certificate_recommendation"
+  | "role_comparison"
+  | "written_test"
+  | "job_channels"
+  | "scam_screening"
+
+export interface CareerAdvice {
+  identityCode: IdentityCode
+  identityLabel: string
+  topic: AdviceTopic
+  title: string
+  sections: ConsultationSection[]
 }

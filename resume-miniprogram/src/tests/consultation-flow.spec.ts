@@ -43,4 +43,15 @@ describe("consultation flow", () => {
     expect(restored.identityCode).toBe("3")
     expect(restored.pendingRoleName).toBe("数据工程师")
   })
+
+  it("reuses a saved identity when the user starts a new role consultation", () => {
+    const store = useConsultationStore()
+    store.selectIdentity("3")
+
+    const nextStep = store.beginRoleConsultation("后端开发工程师")
+
+    expect(nextStep).toBe("reuse-identity")
+    expect(store.pendingRoleName).toBe("后端开发工程师")
+    expect(store.identityCode).toBe("3")
+  })
 })

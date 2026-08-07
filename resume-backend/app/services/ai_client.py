@@ -8,13 +8,19 @@ import httpx
 
 from app.config import Settings
 from app.schemas.consultation import (
+    AdviceTopic,
+    CareerAdviceResponse,
     IdentityCode,
     JobConsultationResponse,
     ResumeReviewResponse,
 )
 from app.schemas.job import JobIntelligence
 from app.schemas.resume import ResumePayload
-from app.services.career_consultation import build_job_consultation, build_resume_review
+from app.services.career_consultation import (
+    build_career_advice,
+    build_job_consultation,
+    build_resume_review,
+)
 from app.services.job_cache import normalize_role_name
 
 MOCK_CACHE_KEY = "mock-v2"
@@ -35,6 +41,14 @@ class AIClient(Protocol):
         identity_code: IdentityCode,
         role_name: str | None,
     ) -> ResumeReviewResponse: ...
+
+    async def build_career_advice(
+        self,
+        identity_code: IdentityCode,
+        topic: AdviceTopic,
+        role_name: str | None,
+        question: str | None,
+    ) -> CareerAdviceResponse: ...
 
     async def rewrite_resume(
         self,
@@ -167,6 +181,15 @@ class MockAIClient:
     ) -> ResumeReviewResponse:
         return build_resume_review(resume_text, identity_code, role_name)
 
+    async def build_career_advice(
+        self,
+        identity_code: IdentityCode,
+        topic: AdviceTopic,
+        role_name: str | None,
+        question: str | None,
+    ) -> CareerAdviceResponse:
+        return build_career_advice(identity_code, topic, role_name, question)
+
     async def rewrite_resume(
         self,
         resume: ResumePayload,
@@ -215,10 +238,12 @@ class OpenAICompatibleClient:
         content = await self._chat_completion(
             system_prompt=(
                 "You are an experienced Chinese career consultant. Return only valid JSON. "
-                "Provide exactly eight concise job-analysis sections ordered 1 through 8: "
-                "基础概况, 薪酬分层, 硬性门槛, 软性隐性要求, 完整晋升路线, 行业前景, "
-                "求职竞争, 岗位优缺点. Then provide an identity-specific practical plan. "
-                "Include copyable templates. Do not invent candidate facts."
+                "Provide exactly nine concise job-analysis sections ordered 1 through 9: "
+                "基础工作, 薪酬分层, 硬性准入门槛, 隐性软要求, 双晋升通道, 行业前景, "
+                "求职竞争, 岗位优缺点, 岗位避雷点. Then provide an identity-specific "
+                "practical plan with copyable templates. Include a market_notice and state "
+                "whether information is a verified live source or an estimate. Do not invent "
+                "candidate facts, salary facts, or market facts."
             ),
             user_prompt=json.dumps(
                 {
@@ -238,6 +263,7 @@ class OpenAICompatibleClient:
                         "job_analysis_sections",
                         "identity_plan",
                         "follow_up_question",
+                        "market_notice",
                     ],
                 },
                 ensure_ascii=False,
@@ -254,9 +280,10 @@ class OpenAICompatibleClient:
         content = await self._chat_completion(
             system_prompt=(
                 "You are an experienced Chinese career consultant. Return only valid JSON with "
-                "identity_code, identity_label, issues, rewrite_examples, and keywords. "
-                "Do not output job analysis. Never invent employers, schools, dates, projects, "
-                "certificates, or metrics. Mark unknown evidence as 待确认."
+                "identity_code, identity_label, issues, rewrite_examples, keywords, "
+                "optimized_resume_text, and interview_intro. Do not output job analysis. "
+                "Never invent employers, schools, dates, projects, certificates, or metrics. "
+                "Mark unknown evidence as [待确认]."
             ),
             user_prompt=json.dumps(
                 {
@@ -268,6 +295,32 @@ class OpenAICompatibleClient:
             ),
         )
         return ResumeReviewResponse.model_validate_json(content)
+
+    async def build_career_advice(
+        self,
+        identity_code: IdentityCode,
+        topic: AdviceTopic,
+        role_name: str | None,
+        question: str | None,
+    ) -> CareerAdviceResponse:
+        content = await self._chat_completion(
+            system_prompt=(
+                "You are an experienced Chinese career consultant. Return only valid JSON with "
+                "identity_code, identity_label, topic, title, and sections. Use concise mobile "
+                "friendly bullet-style items. Never invent candidate facts, legal conclusions, or "
+                "market data. Mark uncertain items as [待确认]."
+            ),
+            user_prompt=json.dumps(
+                {
+                    "identity_code": identity_code,
+                    "topic": topic,
+                    "role_name": role_name,
+                    "question": question,
+                },
+                ensure_ascii=False,
+            ),
+        )
+        return CareerAdviceResponse.model_validate_json(content)
 
     async def rewrite_resume(
         self,

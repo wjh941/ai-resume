@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from app.schemas.consultation import (
+    AdviceTopic,
+    CareerAdviceResponse,
     IDENTITY_LABELS,
     ConsultationSection,
     IdentityCode,
@@ -20,9 +22,10 @@ def build_job_consultation(
     analysis = [
         ConsultationSection(
             order=1,
-            title="基础概况",
+            title="基础工作",
             items=[
                 f"{role_name}的日常重点是：{_join(job.responsibilities)}",
+                "典型流程是接收业务目标、拆解任务、交付结果、复盘优化；上下班和办公环境以目标公司制度为准。",
                 "工作节奏通常随项目节点变化；上线、交付和业务高峰期可能需要加班。",
                 "出差频率取决于公司业务属性，平台型与总部岗位通常较低，交付型岗位可能更高。",
                 "计算机、数据、统计、信息管理等相关背景更容易匹配；跨专业应准备可验证作品。",
@@ -33,14 +36,14 @@ def build_job_consultation(
             title="薪酬分层",
             items=[
                 f"实习/应届参考：{salary.get('graduate', '以目标城市招聘信息为准')}。",
-                f"1-3年参考：{salary.get('1-3_years', '以目标城市招聘信息为准')}；3-5年参考：{salary.get('3-5_years', '以目标城市招聘信息为准')}。",
+                f"0-1年与1-3年参考：{salary.get('1-3_years', '以目标城市招聘信息为准')}；3-5年参考：{salary.get('3-5_years', '以目标城市招聘信息为准')}。",
                 f"5年以上参考：{salary.get('5_plus_years', '以目标城市招聘信息为准')}。",
-                "年终奖、餐补、交通补贴、五险一金缴纳基数需在面试和 offer 阶段单独确认。",
+                "底薪、绩效、年终奖、餐补交通住房、五险一金缴纳基数与绩效扣减规则需在面试和 offer 阶段逐项确认。",
             ],
         ),
         ConsultationSection(
             order=3,
-            title="硬性门槛",
+            title="硬性准入门槛",
             items=[
                 f"常见学历与项目门槛：{_join(job.hard_requirements)}",
                 f"必备技能：{_join(job.required_skills)}。",
@@ -50,7 +53,7 @@ def build_job_consultation(
         ),
         ConsultationSection(
             order=4,
-            title="软性隐性要求",
+            title="隐性软要求",
             items=[
                 "面试通常会观察沟通是否清晰：能否用业务语言解释技术或方法选择。",
                 "企业会看抗压与协作：是否能拆解任务、同步风险、按节点交付。",
@@ -59,7 +62,7 @@ def build_job_consultation(
         ),
         ConsultationSection(
             order=5,
-            title="完整晋升路线",
+            title="双晋升通道",
             items=[
                 f"专业路线：{_join(job.career_route, ' → ')}。",
                 "初级阶段重执行与基础质量；中级阶段需要独立负责模块；高级阶段需解决复杂问题并带动协作。",
@@ -93,6 +96,15 @@ def build_job_consultation(
                 "发展上限取决于能否把专业能力转化为业务影响力，并逐步承担复杂协作与决策责任。",
             ],
         ),
+        ConsultationSection(
+            order=9,
+            title="岗位避雷点",
+            items=[
+                "警惕以培训、贷款、押金、收费内推为前提的岗位；正规招聘不会要求先付款。",
+                "面试时确认劳动合同主体、社保缴纳地、试用期、加班补偿和绩效计算方式，避免口头承诺。",
+                "对“高薪但岗位职责模糊”“无固定办公地”“要求先交个人证件原件”的公司保持谨慎。",
+            ],
+        ),
     ]
     return JobConsultationResponse(
         identity_code=identity_code,
@@ -101,6 +113,7 @@ def build_job_consultation(
         job_analysis_sections=analysis,
         identity_plan=_identity_plan(identity_code, role_name),
         follow_up_question="需要我结合你目标城市、大厂/中小企业再细化薪资与要求吗？",
+        market_notice="本地演示模式：薪资与市场信息为参考估算，请结合目标城市和企业招聘信息核验。",
     )
 
 
@@ -140,13 +153,28 @@ def build_resume_review(
             ),
         ],
         keywords=keywords,
+        optimized_resume_text=(
+            f"## {target} 简历精简草稿\n"
+            f"- 求职目标：{target}\n"
+            f"- 核心关键词：{_join(keywords, ' / ')}\n"
+            f"- 经历素材：{first_line[:120]}\n"
+            f"- 优化表述：围绕[业务场景]，使用[{keywords[0]}]完成[具体动作]，"
+            "沉淀[交付物]，结果为[待确认]。\n"
+            "- 证明材料：补充作品链接、项目截图、复盘文档或可联系证明人[待确认]。"
+        ),
+        interview_intro=(
+            f"面试官您好，我目前以{target}为求职方向。"
+            f"我已梳理过往经历中与{_join(keywords[:2], '、')}相关的真实素材，"
+            "并准备通过具体项目说明自己的行动、协作方式和可核验结果。"
+            "其中尚未确认的数据会在后续补齐，不会夸大个人贡献。"
+        ),
     )
 
 
 def _identity_plan(identity_code: IdentityCode, role_name: str) -> IdentityPlan:
     plan_title, section_definitions = {
         "1": (
-            "在校学生专属简历&求职实操方案",
+            "在校学生全套求职解决方案",
             [
                 ("简历优化", [
                     f"可复制模板：课程项目｜围绕{role_name}完成[项目名称]，负责[具体模块]，使用[工具]产出[可验证交付物]。",
@@ -163,10 +191,22 @@ def _identity_plan(identity_code: IdentityCode, role_name: str) -> IdentityPlan:
                 ("加分项", [
                     "可复制模板：在[竞赛/校园活动]中协调[人数/资源，待确认]，完成[成果]，提升[影响指标，待确认]。",
                 ]),
+                ("证书取舍", [
+                    "优先选择与目标岗位直接相关、招聘 JD 高频出现的证书；没有岗位关联的泛证书不应挤占项目时间。",
+                ]),
+                ("面试配套", [
+                    "30秒自我介绍模板：我是[学校/专业]学生，围绕目标岗位完成了[真实课程项目]，希望通过实习把[技能]用于真实业务。",
+                ]),
+                ("3个月规划", [
+                    "第1月补基础并做小作品；第2月完善项目证据与简历；第3月集中投递、模拟面试并复盘反馈。",
+                ]),
+                ("空白补救", [
+                    "无经历时只写真实完成的课程作业、公开练习或社团任务，附上作品链接，不虚构公司实习。",
+                ]),
             ],
         ),
         "2": (
-            "应届生专属简历&求职实操方案",
+            "应届毕业生全套求职解决方案",
             [
                 ("简历优化", [
                     "可复制模板：在[毕业设计/竞赛]中负责[模块]，通过[方法]解决[问题]，形成[作品/报告]，结果[待确认]。",
@@ -183,10 +223,19 @@ def _identity_plan(identity_code: IdentityCode, role_name: str) -> IdentityPlan:
                 ("兜底适配", [
                     "同步关注与核心技能相邻的岗位，保持关键词与项目经历一致，避免无关海投。",
                 ]),
+                ("笔试考点", [
+                    f"围绕{_join(_keywords_for_target(role_name))}梳理基础题、场景题和项目复盘题；刷题后记录错因而非只记答案。",
+                ]),
+                ("证书规划", [
+                    "优先报名招聘描述明确要求的证书；没有真实项目时，证书不能替代作品和可追问经历。",
+                ]),
+                ("面试全套", [
+                    "1分钟自我介绍按“专业背景-相关项目-目标岗位-可验证准备”展开；群面优先承担结构化记录和推进角色。",
+                ]),
             ],
         ),
         "3": (
-            "在职跳槽专属简历&求职实操方案",
+            "在职跳槽全套求职解决方案",
             [
                 ("简历优化", [
                     "可复制模板：负责[业务范围]，识别[问题]，采用[方法/工具]推动[行动]，结果为[真实指标，待确认]。",
@@ -202,10 +251,19 @@ def _identity_plan(identity_code: IdentityCode, role_name: str) -> IdentityPlan:
                 ("瓶颈风险", [
                     "若长期只做重复交付，应主动争取复杂项目、业务理解和可复用方法沉淀。",
                 ]),
+                ("薪资谈判", [
+                    "可复制话术：我更关注职责范围、固定薪资、奖金规则、双休与公积金基数能否形成完整匹配，请明确写入 offer。",
+                ]),
+                ("合同避雷", [
+                    "确认试用期是否符合法定期限、违约金是否有合法依据、竞业范围与补偿是否明确；不理解的条款应书面提问。",
+                ]),
+                ("中长期规划", [
+                    "1年形成独立交付能力，3年争取负责复杂模块或项目推进；每次跳槽都要能解释能力增长逻辑。",
+                ]),
             ],
         ),
         "4": (
-            "待业求职专属简历&求职实操方案",
+            "待业求职全套求职解决方案",
             [
                 ("简历优化", [
                     "空档期真实说明模板：在[起止时间]集中完成[学习/兼职/家庭事务]，同步通过[作品/课程/项目]保持岗位能力。",
@@ -220,10 +278,16 @@ def _identity_plan(identity_code: IdentityCode, role_name: str) -> IdentityPlan:
                 ("过渡经历", [
                     "选择真实的短期项目、兼职或志愿服务补充经历，并保留联系人或成果证据。",
                 ]),
+                ("投递节奏", [
+                    "每周固定两次集中投递、两次复盘；避免一天海投后长时间不跟进，优先提高匹配度。",
+                ]),
+                ("过渡思路", [
+                    "可以考虑真实的中小公司、短期项目或灵活就业作为过渡，但要判断岗位是否能积累目标能力。",
+                ]),
             ],
         ),
         "5": (
-            "零基础转行专属简历&求职实操方案",
+            "零基础转行全套求职解决方案",
             [
                 ("简历优化", [
                     "可复制模板：原岗位中我长期使用[可迁移能力]解决[真实问题]，已通过[项目/课程]把该能力迁移到目标方向。",
@@ -239,6 +303,12 @@ def _identity_plan(identity_code: IdentityCode, role_name: str) -> IdentityPlan:
                 ("1/2/3年规划", [
                     "第1年建立可交付能力；第2年独立负责模块并形成方法；第3年向复杂项目、领域深度或带项目推进。",
                 ]),
+                ("替代岗位", [
+                    "同步关注同赛道的助理、运营支持、实施、测试或数据助理等入口岗位，前提是职责能积累目标能力。",
+                ]),
+                ("证书取舍", [
+                    "只投入招聘 JD 明确要求或行业强制准入的证书；其余时间优先做能被面试追问的真实作品。",
+                ]),
             ],
         ),
     }[identity_code]
@@ -247,6 +317,91 @@ def _identity_plan(identity_code: IdentityCode, role_name: str) -> IdentityPlan:
         sections=[
             ConsultationSection(order=index, title=title, items=items)
             for index, (title, items) in enumerate(section_definitions, start=1)
+        ],
+    )
+
+
+def build_career_advice(
+    identity_code: IdentityCode,
+    topic: AdviceTopic,
+    role_name: str | None,
+    question: str | None,
+) -> CareerAdviceResponse:
+    role = role_name or "目标岗位"
+    question_hint = f"你当前关注的问题：{question}" if question else "未提供具体问题时，先按下面清单逐项准备。"
+    title, sections = {
+        "simulation_interview": (
+            "模拟面试",
+            [
+                ("开场准备", [f"请用1分钟说明你为何匹配{role}，结构为背景、真实项目、目标和可验证证据。", question_hint]),
+                ("高频追问", ["准备一个真实 STAR 案例：问题、行动、协作、结果；未知数据写[待确认]，不要补造。", "回答后复盘是否说清职责边界和个人贡献。"]),
+            ],
+        ),
+        "salary_negotiation": (
+            "薪资谈判话术",
+            [
+                ("确认清单", ["请明确固定月薪、绩效占比、年终奖规则、加班补偿、双休、年假和公积金缴纳基数。", question_hint]),
+                ("可复制话术", ["我希望综合职责范围、固定薪资、奖金规则和公积金基数评估 offer，方便请您说明每一项的书面口径吗？", "在信息完整前不要只用一个总包数字做决定。"]),
+            ],
+        ),
+        "contract_pitfalls": (
+            "劳动合同避坑",
+            [
+                ("重点条款", ["核对合同主体、工作地点、岗位、试用期、薪资构成、社保缴纳与加班安排。", "竞业协议应明确范围、期限与补偿；不理解的条款先要求书面解释。"]),
+                ("风险信号", ["要求先交押金、培训费、证件原件或签署空白文件，应立即停止流程并保留沟通记录。", question_hint]),
+            ],
+        ),
+        "career_planning": (
+            "职业规划",
+            [
+                ("3个月", [f"围绕{role}补齐一个可展示作品、一次简历迭代和至少两轮模拟面试。", "每周记录投递反馈，按拒绝原因调整关键词与项目表达。"]),
+                ("1-3年", ["第1年建立稳定交付；第2年独立负责模块；第3年承担复杂协作或领域深度。", question_hint]),
+            ],
+        ),
+        "certificate_recommendation": (
+            "证书推荐与取舍",
+            [
+                ("筛选原则", ["只优先考虑招聘 JD 高频要求、行业准入或目标企业明确认可的证书。", "证书不能替代真实作品、项目复盘和可追问技能。"]),
+                ("行动建议", [f"先收集{role}的10条真实 JD，再决定是否投入考试成本。", question_hint]),
+            ],
+        ),
+        "role_comparison": (
+            "岗位横向对比",
+            [
+                ("对比维度", ["按核心产出、技能门槛、工作节奏、薪资结构、晋升路线和风险逐项对比。", "不要只看标题，应对比实际 JD 与合同主体。"]),
+                ("提问模板", [f"请补充要比较的两个岗位名称，我会按{role}相关性给出差异清单。", question_hint]),
+            ],
+        ),
+        "written_test": (
+            "笔试高频题与刷题渠道",
+            [
+                ("准备方向", [f"围绕{_join(_keywords_for_target(role))}准备基础概念、场景题、逻辑题和项目复盘题。", "每道错题记录错因、适用场景和复盘日期。"]),
+                ("投递配套", ["企业官网、校招平台、就业中心和正规内推渠道优先；不购买来源不明题库。", question_hint]),
+            ],
+        ),
+        "job_channels": (
+            "招聘渠道与内推",
+            [
+                ("渠道优先级", ["企业官网、国央企官方招聘平台、学校就业中心、正规招聘平台和可信内推。", "投递后记录岗位链接、版本、联系人和反馈日期。"]),
+                ("避坑", ["任何收费内推、保证 offer、培训贷或要求私下转账的信息都不应继续。", question_hint]),
+            ],
+        ),
+        "scam_screening": (
+            "识别外包与求职陷阱",
+            [
+                ("核验动作", ["核对公司统一社会信用代码、合同主体、社保主体、办公地址和岗位职责是否一致。", "面试中直接确认是否外包、项目驻场、加班制度和绩效扣减规则。"]),
+                ("高风险信号", ["无偿试岗、收费培训、押证件、高薪画饼、职责极度模糊或拒绝提供书面 offer。", question_hint]),
+            ],
+        ),
+    }[topic]
+    return CareerAdviceResponse(
+        identity_code=identity_code,
+        identity_label=IDENTITY_LABELS[identity_code],
+        topic=topic,
+        title=title,
+        sections=[
+            ConsultationSection(order=index, title=section_title, items=items)
+            for index, (section_title, items) in enumerate(sections, start=1)
         ],
     )
 

@@ -7,6 +7,17 @@ from pydantic import BaseModel, Field, field_validator
 from app.schemas.job import JobIntelligence
 
 IdentityCode = Literal["1", "2", "3", "4", "5"]
+AdviceTopic = Literal[
+    "simulation_interview",
+    "salary_negotiation",
+    "contract_pitfalls",
+    "career_planning",
+    "certificate_recommendation",
+    "role_comparison",
+    "written_test",
+    "job_channels",
+    "scam_screening",
+]
 
 IDENTITY_LABELS: dict[IdentityCode, str] = {
     "1": "在校学生（寻找短期实习）",
@@ -50,6 +61,18 @@ class ResumeReviewRequest(BaseModel):
         return _non_blank(value, "role_name") if value is not None else None
 
 
+class AdviceRequest(BaseModel):
+    identity_code: IdentityCode
+    topic: AdviceTopic
+    role_name: str | None = Field(default=None, max_length=200)
+    question: str | None = Field(default=None, max_length=2_000)
+
+    @field_validator("role_name", "question")
+    @classmethod
+    def normalize_optional_text(cls, value: str | None) -> str | None:
+        return _non_blank(value, "text") if value is not None else None
+
+
 class ConsultationSection(BaseModel):
     order: int = Field(ge=1)
     title: str = Field(min_length=1)
@@ -65,9 +88,10 @@ class JobConsultationResponse(BaseModel):
     identity_code: IdentityCode
     identity_label: str
     job_intelligence: JobIntelligence
-    job_analysis_sections: list[ConsultationSection] = Field(min_length=8, max_length=8)
+    job_analysis_sections: list[ConsultationSection] = Field(min_length=9, max_length=9)
     identity_plan: IdentityPlan
     follow_up_question: str
+    market_notice: str
 
 
 class ResumeReviewResponse(BaseModel):
@@ -76,3 +100,13 @@ class ResumeReviewResponse(BaseModel):
     issues: list[str] = Field(min_length=1)
     rewrite_examples: list[str] = Field(min_length=1)
     keywords: list[str] = Field(min_length=1)
+    optimized_resume_text: str = Field(min_length=1)
+    interview_intro: str = Field(min_length=1)
+
+
+class CareerAdviceResponse(BaseModel):
+    identity_code: IdentityCode
+    identity_label: str
+    topic: AdviceTopic
+    title: str = Field(min_length=1)
+    sections: list[ConsultationSection] = Field(min_length=2)

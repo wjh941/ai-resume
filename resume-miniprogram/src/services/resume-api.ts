@@ -1,5 +1,5 @@
-import { request } from "./http"
-import type { JobConsultation, ResumeReview } from "../types/consultation"
+import { apiUrl, request } from "./http"
+import type { AdviceTopic, CareerAdvice, JobConsultation, ResumeReview } from "../types/consultation"
 import type { JobIntelligence, ResumeDraft, ResumePayload } from "../types/resume"
 
 type BackendJob = {
@@ -18,11 +18,18 @@ type BackendJobConsultation = {
   job_analysis_sections: BackendConsultationSection[]
   identity_plan: { title: string; sections: BackendConsultationSection[] }
   follow_up_question: string
+  market_notice: string
 }
 
 type BackendResumeReview = {
   identity_code: ResumeReview["identityCode"]; identity_label: string
   issues: string[]; rewrite_examples: string[]; keywords: string[]
+  optimized_resume_text: string; interview_intro: string
+}
+
+type BackendCareerAdvice = {
+  identity_code: CareerAdvice["identityCode"]; identity_label: string
+  topic: CareerAdvice["topic"]; title: string; sections: BackendConsultationSection[]
 }
 
 function fromBackendJob(job: BackendJob): JobIntelligence {
@@ -80,6 +87,7 @@ export async function queryJobConsultation(
     jobAnalysisSections: response.job_analysis_sections,
     identityPlan: response.identity_plan,
     followUpQuestion: response.follow_up_question,
+    marketNotice: response.market_notice,
   }
 }
 
@@ -99,7 +107,66 @@ export async function reviewResumeText(
     issues: response.issues,
     rewriteExamples: response.rewrite_examples,
     keywords: response.keywords,
+    optimizedResumeText: response.optimized_resume_text,
+    interviewIntro: response.interview_intro,
   }
+}
+
+export async function queryCareerAdvice(
+  identityCode: CareerAdvice["identityCode"],
+  topic: AdviceTopic,
+  roleName?: string,
+  question?: string,
+): Promise<CareerAdvice> {
+  const response = await request<BackendCareerAdvice>("/api/consultation/advice", "POST", {
+    identity_code: identityCode,
+    topic,
+    role_name: roleName || undefined,
+    question: question || undefined,
+  })
+  return {
+    identityCode: response.identity_code,
+    identityLabel: response.identity_label,
+    topic: response.topic,
+    title: response.title,
+    sections: response.sections,
+  }
+}
+
+type UniUploadFile = (options: {
+  url: string
+  filePath: string
+  name: string
+  success: (response: { statusCode: number; data: string }) => void
+  fail: (reason: unknown) => void
+}) => void
+
+export async function extractResumePdf(filePath: string): Promise<string> {
+  const uploadFile = (globalThis as typeof globalThis & { uni?: { uploadFile?: UniUploadFile } }).uni?.uploadFile
+  if (!uploadFile) throw new Error("当前运行环境不支持文件上传")
+  return new Promise((resolve, reject) => {
+    uploadFile({
+      url: apiUrl("/api/consultation/resume-pdf-extract"),
+      filePath,
+      name: "file",
+      success: (response) => {
+        try {
+          const envelope = JSON.parse(response.data) as {
+            code?: string
+            message?: string
+            data?: { text?: string }
+          }
+          if (response.statusCode >= 400 || envelope.code !== "ok" || !envelope.data?.text) {
+            throw new Error(envelope.message || "PDF 文本提取失败")
+          }
+          resolve(envelope.data.text)
+        } catch (reason) {
+          reject(reason instanceof Error ? reason : new Error("PDF 文本提取失败"))
+        }
+      },
+      fail: (reason) => reject(reason instanceof Error ? reason : new Error("PDF 上传失败")),
+    })
+  })
 }
 
 export async function saveDraft(clientId: string, draft: ResumeDraft): Promise<{ id: string }> {

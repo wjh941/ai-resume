@@ -53,6 +53,12 @@ export const useConsultationStore = defineStore("consultation", {
       this.stage = "identity-selection"
       this.persist()
     },
+    beginRoleConsultation(roleName: string): "identity-selection" | "reuse-identity" {
+      this.pendingRoleName = roleName.trim()
+      this.stage = this.identityCode ? "role-entry" : "identity-selection"
+      this.persist()
+      return this.identityCode ? "reuse-identity" : "identity-selection"
+    },
     selectIdentity(identityCode: IdentityCode): void {
       this.identityCode = identityCode
       this.persist()
