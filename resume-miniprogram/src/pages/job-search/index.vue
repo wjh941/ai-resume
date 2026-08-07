@@ -5,6 +5,7 @@ import {
   extractResumePdf,
   queryCareerAdvice,
   queryJobConsultation,
+  queryJobMarketSearch,
   queryJobSuggestions,
   reviewResumeText,
 } from "../../services/resume-api"
@@ -15,6 +16,7 @@ import type {
   CareerAdvice,
   JobConsultation,
   JobSuggestion,
+  MarketSearchReport,
   ResumeReview,
 } from "../../types/consultation"
 import { prepareResumeForJob } from "../../utils/resume-autofill"
@@ -31,6 +33,7 @@ const loading = ref(false)
 const reviewLoading = ref(false)
 const adviceLoading = ref(false)
 const pdfLoading = ref(false)
+const marketSearchLoading = ref(false)
 const error = ref("")
 const reviewError = ref("")
 const adviceError = ref("")
@@ -38,7 +41,9 @@ const jobConsultations = ref<JobConsultation[]>([])
 const activeJobIndex = ref(0)
 const resumeReview = ref<ResumeReview | null>(null)
 const careerAdvice = ref<CareerAdvice | null>(null)
+const marketSearchReport = ref<MarketSearchReport | null>(null)
 const showTargetPicker = ref(false)
+const expandedAnalysisOrders = ref<number[]>([1, 2, 3])
 
 const store = useResumeStore()
 const consultation = useConsultationStore()
@@ -51,6 +56,11 @@ const activeRoleName = computed(() => jobConsultation.value?.jobIntelligence.rol
 const visibleSuggestions = computed(() =>
   suggestions.value.filter((suggestion) => !selectedRoles.value.includes(suggestion.roleName)),
 )
+const activeSalary = computed(() => {
+  const salary = jobConsultation.value?.jobIntelligence.salaryByExperience
+  return salary?.["1-3_years"] || salary?.graduate || "按城市与企业类型核实"
+})
+const activeSkills = computed(() => jobConsultation.value?.jobIntelligence.requiredSkills.slice(0, 3) ?? [])
 const adviceTopics: Array<{ topic: AdviceTopic; label: string }> = [
   { topic: "simulation_interview", label: "模拟面试" },
   { topic: "salary_negotiation", label: "薪资谈判" },
@@ -124,15 +134,17 @@ function resetResults() {
   activeJobIndex.value = 0
   resumeReview.value = null
   careerAdvice.value = null
+  marketSearchReport.value = null
   reviewError.value = ""
   adviceError.value = ""
   showTargetPicker.value = false
+  expandedAnalysisOrders.value = [1, 2, 3]
 }
 
 async function beginConsultation() {
   const roles = selectedOrTypedRoles()
   if (!roles.length) {
-    error.value = "请输入岗位名称，或从下方建议中选择岗位。"
+    error.value = "请输入岗位名称，或从下方联想岗位中选择。"
     return
   }
 
@@ -171,7 +183,7 @@ async function loadJobAnalyses(identityCode: (typeof IDENTITY_OPTIONS)[number]["
     store.setJobIntelligence(results[0].jobIntelligence)
     consultation.showJobAnalysis()
   } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : "岗位解析失败"
+    error.value = reason instanceof Error ? reason.message : "岗位分析失败"
   } finally {
     loading.value = false
   }
@@ -181,8 +193,48 @@ function selectJobConsultation(index: number) {
   const next = jobConsultations.value[index]
   if (!next) return
   activeJobIndex.value = index
+  marketSearchReport.value = null
   showTargetPicker.value = false
+  expandedAnalysisOrders.value = [1, 2, 3]
   store.setJobIntelligence(next.jobIntelligence)
+}
+
+async function loadMarketSearch() {
+  if (!activeRoleName.value) return
+  marketSearchLoading.value = true
+  marketSearchReport.value = null
+  try {
+    marketSearchReport.value = await queryJobMarketSearch(activeRoleName.value)
+  } catch (reason) {
+    marketSearchReport.value = {
+      enabled: false,
+      provider: "unavailable",
+      notice: reason instanceof Error ? reason.message : "联网市场搜索暂时不可用。",
+      results: [],
+    }
+  } finally {
+    marketSearchLoading.value = false
+  }
+}
+
+function copySourceUrl(url: string) {
+  if (!url) return
+  uni.setClipboardData({
+    data: url,
+    success: () => uni.showToast({ title: "来源链接已复制", icon: "none" }),
+  })
+}
+
+function toggleAnalysisSection(order: number) {
+  if (expandedAnalysisOrders.value.includes(order)) {
+    expandedAnalysisOrders.value = expandedAnalysisOrders.value.filter((item) => item !== order)
+  } else {
+    expandedAnalysisOrders.value = [...expandedAnalysisOrders.value, order]
+  }
+}
+
+function isAnalysisSectionOpen(order: number) {
+  return expandedAnalysisOrders.value.includes(order)
 }
 
 function openResumeTargetPicker() {
@@ -302,256 +354,400 @@ function isRiskItem(item: string) {
 </script>
 
 <template>
-  <view class="page">
-    <view class="hero">
-      <text class="title">AI 求职顾问</text>
-      <text class="subtitle">岗位解析、简历批改与求职工具，按你的身份给出可执行方案。</text>
-    </view>
-
-    <view class="search-card">
-      <input v-model="roleName" placeholder="例如：工程师、数据工程师、Agent 工程师" confirm-type="search" @confirm="beginConsultation" />
-      <text v-if="suggestionLoading" class="suggestion-hint">正在匹配相关岗位…</text>
-      <view v-if="visibleSuggestions.length" class="suggestion-list">
-        <text class="suggestion-title">相关岗位，点击加入本次对比</text>
-        <button
-          v-for="suggestion in visibleSuggestions"
-          :key="suggestion.roleName"
-          class="suggestion-button"
-          @click="selectSuggestion(suggestion)"
-        >
-          <text>{{ suggestion.roleName }}</text>
-          <text class="suggestion-category">{{ suggestion.category }}</text>
-        </button>
+  <scroll-view class="page" scroll-y>
+    <view class="page-content">
+      <view class="hero">
+        <text class="hero-kicker">CAREER WORKSPACE</text>
+        <text class="title">AI 求职顾问</text>
+        <text class="subtitle">从岗位方向、市场信息到简历草案，按你的求职身份给出可执行方案。</text>
       </view>
-      <view v-if="selectedRoles.length" class="selected-role-area">
-        <text class="selected-role-title">本次要分析的岗位（最多 3 个）</text>
-        <view class="role-chip-list">
+
+      <view class="search-card">
+        <view class="search-header">
+          <view>
+            <text class="card-eyebrow">岗位工作台</text>
+            <text class="card-title">先选方向，再做针对性准备</text>
+          </view>
+          <text class="search-count">最多 3 个岗位</text>
+        </view>
+
+        <view class="search-shell">
+          <input
+            v-model="roleName"
+            class="role-input"
+            placeholder="输入“数据”“工程师”或具体岗位"
+            confirm-type="search"
+            @confirm="beginConsultation"
+          />
+          <text class="search-icon">⌕</text>
+          <view v-if="roleName.trim() && (suggestionLoading || visibleSuggestions.length)" class="suggestion-popover">
+            <text class="popover-title">{{ suggestionLoading ? "正在匹配岗位…" : "匹配岗位" }}</text>
+            <button
+              v-for="suggestion in visibleSuggestions"
+              :key="suggestion.roleName"
+              class="suggestion-button"
+              @click="selectSuggestion(suggestion)"
+            >
+              <view>
+                <text class="suggestion-name">{{ suggestion.roleName }}</text>
+                <text class="suggestion-category">{{ suggestion.category }}</text>
+              </view>
+              <text class="suggestion-add">添加</text>
+            </button>
+          </view>
+        </view>
+
+        <view v-if="selectedRoles.length" class="selected-role-area">
+          <text class="selected-role-title">已选岗位</text>
+          <view class="role-chip-list">
+            <button
+              v-for="role in selectedRoles"
+              :key="role"
+              class="role-chip"
+              @click="removeSelectedRole(role)"
+            >{{ role }} ×</button>
+          </view>
+        </view>
+
+        <textarea
+          v-model="customRequirement"
+          class="custom-requirement-input"
+          placeholder="可选：补充目标城市、公司类型、薪资或行业偏好"
+          auto-height
+        />
+        <button class="primary primary-action" :loading="loading" @click="beginConsultation">查询岗位情报</button>
+        <text v-if="error" class="error">{{ error }}</text>
+      </view>
+
+      <view v-if="consultation.stage === 'identity-selection'" class="identity-card">
+        <text class="card-eyebrow">身份定位</text>
+        <text v-for="line in identityPromptLines" :key="line" class="identity-prompt">{{ line }}</text>
+        <view class="identity-options">
           <button
-            v-for="role in selectedRoles"
-            :key="role"
-            class="role-chip"
-            @click="removeSelectedRole(role)"
-          >{{ role }} ×</button>
+            v-for="option in IDENTITY_OPTIONS"
+            :key="option.code"
+            class="identity-button"
+            :loading="loading"
+            :disabled="loading"
+            @click="selectIdentity(option.code)"
+          >
+            <text class="identity-code">{{ option.code }}</text>
+            <text>{{ option.label }}</text>
+            <text class="identity-arrow">›</text>
+          </button>
         </view>
       </view>
-      <textarea
-        v-model="customRequirement"
-        class="custom-requirement-input"
-        placeholder="可选：补充岗位偏好或特殊需求，例如目标城市、双休、行业方向。"
-        auto-height
-      />
-      <button class="primary" :loading="loading" @click="beginConsultation">查询岗位情报</button>
-      <text v-if="error" class="error">{{ error }}</text>
-    </view>
 
-    <view v-if="consultation.stage === 'identity-selection'" class="identity-card">
-      <text v-for="line in identityPromptLines" :key="line" class="identity-prompt">{{ line }}</text>
-      <view class="identity-options">
-        <button
-          v-for="option in IDENTITY_OPTIONS"
-          :key="option.code"
-          class="identity-button"
-          :loading="loading"
-          :disabled="loading"
-          @click="selectIdentity(option.code)"
+      <view v-if="jobConsultation" class="result">
+        <view v-if="jobConsultations.length > 1" class="role-tab-list">
+          <button
+            v-for="(item, index) in jobConsultations"
+            :key="item.jobIntelligence.roleName"
+            :class="['role-tab', { 'role-tab-active': index === activeJobIndex }]"
+            @click="selectJobConsultation(index)"
+          >{{ item.jobIntelligence.roleName }}</button>
+        </view>
+
+        <view class="result-header">
+          <view>
+            <text class="card-eyebrow">当前岗位</text>
+            <text class="role">{{ jobConsultation.jobIntelligence.roleName }}</text>
+            <text class="identity-name">{{ jobConsultation.identityLabel }}</text>
+          </view>
+          <button class="secondary compact" @click="changeIdentity">切换身份</button>
+        </view>
+
+        <view class="summary-grid">
+          <view class="summary-item">
+            <text class="summary-label">1-3 年参考薪资</text>
+            <text class="summary-value">{{ activeSalary }}</text>
+          </view>
+          <view class="summary-item">
+            <text class="summary-label">优先技能</text>
+            <text class="summary-value summary-skills">{{ activeSkills.join(" · ") || "岗位信息加载中" }}</text>
+          </view>
+        </view>
+
+        <view class="notice-bar">
+          <text class="notice-dot"></text>
+          <text class="notice">{{ jobConsultation.marketNotice }}</text>
+        </view>
+
+        <view v-if="jobConsultation.customRequirementNotes.length" class="custom-note">
+          <text class="block-title">已纳入你的补充需求</text>
+          <text v-for="item in jobConsultation.customRequirementNotes" :key="item" class="list-item">- {{ item }}</text>
+        </view>
+
+        <view class="market-card">
+          <view class="market-card-header">
+            <view>
+              <text class="block-title">联网市场更新</text>
+              <text class="market-caption">主动读取公开网页来源，不替代岗位分析结论</text>
+            </view>
+            <button class="secondary compact" :loading="marketSearchLoading" @click="loadMarketSearch">联网更新</button>
+          </view>
+          <text v-if="marketSearchReport" :class="['market-notice', { 'market-disabled': !marketSearchReport.enabled }]">
+            {{ marketSearchReport.notice }}
+          </text>
+          <view
+            v-for="source in marketSearchReport?.results"
+            :key="source.url"
+            class="market-source"
+            @click="copySourceUrl(source.url)"
+          >
+            <view>
+              <text class="market-source-title">{{ source.title }}</text>
+              <text class="market-source-text">{{ source.snippet }}</text>
+              <text v-if="source.publishedDate" class="market-source-date">{{ source.publishedDate }}</text>
+            </view>
+            <text class="source-copy">复制链接</text>
+          </view>
+        </view>
+
+        <text class="result-title">岗位深度全解析</text>
+        <view
+          v-for="section in jobConsultation.jobAnalysisSections"
+          :key="section.order"
+          class="analysis-section"
         >
-          {{ option.code }} {{ option.label }}
-        </button>
-      </view>
-    </view>
-
-    <view v-if="jobConsultation" class="result">
-      <view v-if="jobConsultations.length > 1" class="role-tab-list">
-        <button
-          v-for="(item, index) in jobConsultations"
-          :key="item.jobIntelligence.roleName"
-          :class="['role-tab', { 'role-tab-active': index === activeJobIndex }]"
-          @click="selectJobConsultation(index)"
-        >{{ item.jobIntelligence.roleName }}</button>
-      </view>
-      <view class="result-header">
-        <view>
-          <text class="role">{{ jobConsultation.jobIntelligence.roleName }}</text>
-          <text class="identity-name">当前身份：{{ jobConsultation.identityLabel }}</text>
+          <view class="analysis-section-header" @click="toggleAnalysisSection(section.order)">
+            <view>
+              <text class="analysis-index">{{ String(section.order).padStart(2, "0") }}</text>
+              <text class="block-title">{{ section.title }}</text>
+            </view>
+            <text class="section-toggle">{{ isAnalysisSectionOpen(section.order) ? "收起" : "展开" }}</text>
+          </view>
+          <view v-if="isAnalysisSectionOpen(section.order)" class="analysis-section-body">
+            <text
+              v-for="item in section.items"
+              :key="item"
+              :class="['list-item', { 'risk-item': isRiskItem(item) }]"
+            >- {{ item }}</text>
+          </view>
         </view>
-        <button class="secondary compact" @click="changeIdentity">切换身份</button>
-      </view>
-      <text class="notice">{{ jobConsultation.marketNotice }}</text>
-      <view v-if="jobConsultation.customRequirementNotes.length" class="custom-note">
-        <text class="block-title">## 已纳入你的补充需求</text>
-        <text v-for="item in jobConsultation.customRequirementNotes" :key="item" class="list-item">- {{ item }}</text>
-      </view>
-      <text class="result-title">## 岗位深度全解析</text>
-      <view v-for="section in jobConsultation.jobAnalysisSections" :key="section.order" class="block">
-        <text class="block-title">## {{ section.order }}. {{ section.title }}</text>
-        <text
-          v-for="item in section.items"
-          :key="item"
-          :class="['list-item', { 'risk-item': isRiskItem(item) }]"
-        >- {{ item }}</text>
+
+        <text class="result-title">职业晋升路线</text>
+        <view
+          v-for="stage in jobConsultation.careerGrowthRoute.stages"
+          :key="stage.stage"
+          class="growth-stage"
+        >
+          <text class="growth-stage-title">{{ stage.stage }} · {{ stage.roleName }}</text>
+          <text class="growth-meta">{{ stage.yearsReference }}</text>
+          <text class="list-item">- 核心技能：{{ stage.coreSkills.join(" / ") }}</text>
+          <text v-for="item in stage.responsibilities" :key="item" class="list-item">- 工作职责：{{ item }}</text>
+          <text v-for="item in stage.assessmentCriteria" :key="item" class="list-item">- 考核标准：{{ item }}</text>
+        </view>
+
+        <text class="result-title">身份适配求职方案</text>
+        <text class="identity-plan-title">{{ jobConsultation.identityPlan.title }}</text>
+        <view v-for="section in jobConsultation.identityPlan.sections" :key="section.order" class="plan-block">
+          <text class="block-title">{{ section.title }}</text>
+          <text v-for="item in section.items" :key="item" class="list-item">- {{ item }}</text>
+        </view>
+        <text class="follow-up">{{ jobConsultation.followUpQuestion }}</text>
+
+        <view class="resume-callout">
+          <text class="resume-callout-title">按目标岗位生成简历</text>
+          <text class="resume-callout-text">空白项目和实习经历会补出 2 个项目草案和 1 个实习草案，所有未知事实均保留 [待确认]。</text>
+          <button class="primary primary-action" @click="openResumeTargetPicker">选择岗位并制作简历</button>
+        </view>
+
+        <view v-if="showTargetPicker" class="target-picker">
+          <text class="target-picker-title">选择本次优化的目标岗位</text>
+          <text class="target-picker-hint">将添加岗位关键词与可编辑草案，不会覆盖你已有的真实经历。</text>
+          <button
+            v-for="(item, index) in jobConsultations"
+            :key="item.jobIntelligence.roleName"
+            class="target-role-button"
+            @click="generateResumeForRole(index)"
+          >按“{{ item.jobIntelligence.roleName }}”优化并制作简历</button>
+        </view>
       </view>
 
-      <text class="result-title">## 职业晋升路线</text>
-      <view
-        v-for="stage in jobConsultation.careerGrowthRoute.stages"
-        :key="stage.stage"
-        class="growth-stage"
-      >
-        <text class="block-title">{{ stage.stage }}｜{{ stage.roleName }}</text>
-        <text class="growth-meta">{{ stage.yearsReference }}</text>
-        <text class="list-item">- 核心技能：{{ stage.coreSkills.join(" / ") }}</text>
-        <text v-for="item in stage.responsibilities" :key="item" class="list-item">- 工作职责：{{ item }}</text>
-        <text v-for="item in stage.assessmentCriteria" :key="item" class="list-item">- 考核标准：{{ item }}</text>
+      <view v-if="canReviewResume" class="review-card">
+        <text class="card-eyebrow">简历专项批改</text>
+        <text class="review-title">保留真实经历，优化表达和岗位关键词</text>
+        <text class="review-hint">粘贴简历或上传 PDF 后，生成问题标注、替换范文、完整草稿、面试介绍与人岗匹配报告。</text>
+        <textarea
+          v-model="resumeText"
+          class="resume-textarea"
+          placeholder="直接粘贴简历文本。未知信息会标为 [待确认]，不会凭空编造经历。"
+          auto-height
+        />
+        <view class="button-row">
+          <button class="secondary" :loading="pdfLoading" @click="chooseResumePdf">上传 PDF 提取文字</button>
+          <button class="primary inline-primary" :loading="reviewLoading" @click="reviewResume">开始批改</button>
+        </view>
+        <text v-if="reviewError" class="error">{{ reviewError }}</text>
       </view>
 
-      <text class="result-title">## 对应人群全套求职解决方案</text>
-      <text class="identity-name">{{ jobConsultation.identityPlan.title }}</text>
-      <view v-for="section in jobConsultation.identityPlan.sections" :key="section.order" class="block plan-block">
-        <text class="block-title">## {{ section.title }}</text>
-        <text v-for="item in section.items" :key="item" class="list-item">- {{ item }}</text>
+      <view v-if="resumeReview" class="result review-result">
+        <text class="result-title">简历问题逐条标注</text>
+        <text v-for="item in resumeReview.issues" :key="item" class="list-item">- {{ item }}</text>
+        <text class="result-title">逐段优化范文</text>
+        <text v-for="item in resumeReview.rewriteExamples" :key="item" class="list-item">- {{ item }}</text>
+        <text class="result-title">加分关键词</text>
+        <text class="keywords">{{ resumeReview.keywords.join(" / ") }}</text>
+        <text class="result-title">可复制完整简历文本</text>
+        <text class="copy-text">{{ resumeReview.optimizedResumeText }}</text>
+        <text class="result-title">1 分钟面试自我介绍</text>
+        <text class="copy-text">{{ resumeReview.interviewIntro }}</text>
+        <view v-if="resumeReview.customRequirementNotes.length" class="custom-note">
+          <text class="block-title">已纳入你的补充需求</text>
+          <text v-for="item in resumeReview.customRequirementNotes" :key="item" class="list-item">- {{ item }}</text>
+        </view>
+        <text class="result-title">人岗匹配分析报告</text>
+        <view class="match-score-card">
+          <text class="match-score">{{ resumeReview.jobMatchReport.score }}%</text>
+          <text class="match-score-label">目标岗位匹配度</text>
+        </view>
+        <text class="block-title">评分口径</text>
+        <text v-for="item in resumeReview.jobMatchReport.scoreBasis" :key="item" class="list-item">- {{ item }}</text>
+        <text class="block-title">现有匹配优势</text>
+        <text v-for="item in resumeReview.jobMatchReport.matchingAdvantages" :key="item" class="list-item">- {{ item }}</text>
+        <text class="block-title">缺失技能清单</text>
+        <text v-for="item in resumeReview.jobMatchReport.missingSkills" :key="item" class="list-item">- {{ item }}</text>
+        <view v-for="gap in resumeReview.jobMatchReport.priorityGaps" :key="gap.skillName" class="priority-gap">
+          <text class="priority-gap-title">【需要提升】{{ gap.skillName }}</text>
+          <text class="list-item">- 学习方向：{{ gap.learningDirection }}</text>
+          <text class="list-item">- 项目练习：{{ gap.projectPractice }}</text>
+          <text class="list-item">- 练习任务：{{ gap.practiceTask }}</text>
+        </view>
       </view>
-      <text class="follow-up">{{ jobConsultation.followUpQuestion }}</text>
-      <button class="primary" @click="openResumeTargetPicker">选择岗位并制作简历</button>
-      <view v-if="showTargetPicker" class="target-picker">
-        <text class="target-picker-title">请选择要用于简历优化的目标岗位</text>
-        <text class="target-picker-hint">会按所选岗位补充关键词与可编辑草案，不会自动虚构你的真实经历。</text>
-        <button
-          v-for="(item, index) in jobConsultations"
-          :key="item.jobIntelligence.roleName"
-          class="target-role-button"
-          @click="generateResumeForRole(index)"
-        >按“{{ item.jobIntelligence.roleName }}”优化并制作简历</button>
+
+      <view v-if="canReviewResume" class="toolkit-card">
+        <text class="card-eyebrow">求职工具箱</text>
+        <text class="review-title">针对当前身份的专项准备</text>
+        <picker :range="adviceTopics" range-key="label" @change="selectAdviceTopic">
+          <view class="picker-value">{{ selectedAdviceTopic.label }} <text class="picker-arrow">›</text></view>
+        </picker>
+        <textarea
+          v-model="adviceQuestion"
+          class="question-textarea"
+          placeholder="可补充具体问题，例如：如何确认公积金基数？"
+          auto-height
+        />
+        <button class="primary primary-action" :loading="adviceLoading" @click="requestCareerAdvice">获取针对性建议</button>
+        <text v-if="adviceError" class="error">{{ adviceError }}</text>
+      </view>
+
+      <view v-if="careerAdvice" class="result">
+        <text class="result-title">{{ careerAdvice.title }}</text>
+        <view v-for="section in careerAdvice.sections" :key="section.order" class="plan-block">
+          <text class="block-title">{{ section.title }}</text>
+          <text v-for="item in section.items" :key="item" class="list-item">- {{ item }}</text>
+        </view>
       </view>
     </view>
-
-    <view v-if="canReviewResume" class="review-card">
-      <text class="review-title">简历专项批改</text>
-      <text class="review-hint">粘贴简历文本或上传 PDF 提取文字后，生成问题标注、替换范文、完整草稿和面试自我介绍。</text>
-      <textarea
-        v-model="resumeText"
-        class="resume-textarea"
-        placeholder="直接粘贴简历文本。系统会保留真实经历，只将未知信息标为 [待确认]。"
-        auto-height
-      />
-      <view class="button-row">
-        <button class="secondary" :loading="pdfLoading" @click="chooseResumePdf">上传 PDF 提取文字</button>
-        <button class="primary inline-primary" :loading="reviewLoading" @click="reviewResume">批改简历</button>
-      </view>
-      <text v-if="reviewError" class="error">{{ reviewError }}</text>
-    </view>
-
-    <view v-if="resumeReview" class="result review-result">
-      <text class="result-title">## 简历问题逐条标注</text>
-      <text v-for="item in resumeReview.issues" :key="item" class="list-item">- {{ item }}</text>
-      <text class="result-title">## 逐段优化范文</text>
-      <text v-for="item in resumeReview.rewriteExamples" :key="item" class="list-item">- {{ item }}</text>
-      <text class="result-title">## 加分关键词</text>
-      <text class="keywords">{{ resumeReview.keywords.join(" / ") }}</text>
-      <text class="result-title">## 可复制完整简历文本</text>
-      <text class="copy-text">{{ resumeReview.optimizedResumeText }}</text>
-      <text class="result-title">## 1 分钟面试自我介绍</text>
-      <text class="copy-text">{{ resumeReview.interviewIntro }}</text>
-      <view v-if="resumeReview.customRequirementNotes.length" class="custom-note">
-        <text class="block-title">## 已纳入你的补充需求</text>
-        <text v-for="item in resumeReview.customRequirementNotes" :key="item" class="list-item">- {{ item }}</text>
-      </view>
-      <text class="result-title">## 人岗匹配分析报告</text>
-      <view class="match-score-card">
-        <text class="match-score">{{ resumeReview.jobMatchReport.score }}%</text>
-        <text class="match-score-label">目标岗位匹配度</text>
-      </view>
-      <text class="block-title">## 评分口径</text>
-      <text v-for="item in resumeReview.jobMatchReport.scoreBasis" :key="item" class="list-item">- {{ item }}</text>
-      <text class="block-title">## 现有匹配优势</text>
-      <text v-for="item in resumeReview.jobMatchReport.matchingAdvantages" :key="item" class="list-item">- {{ item }}</text>
-      <text class="block-title">## 缺失技能清单</text>
-      <text v-for="item in resumeReview.jobMatchReport.missingSkills" :key="item" class="list-item">- {{ item }}</text>
-      <view v-for="gap in resumeReview.jobMatchReport.priorityGaps" :key="gap.skillName" class="priority-gap">
-        <text class="priority-gap-title">【需提升】{{ gap.skillName }}</text>
-        <text class="list-item">- 学习方向：{{ gap.learningDirection }}</text>
-        <text class="list-item">- 项目练习：{{ gap.projectPractice }}</text>
-        <text class="list-item">- 练习任务：{{ gap.practiceTask }}</text>
-      </view>
-    </view>
-
-    <view v-if="canReviewResume" class="toolkit-card">
-      <text class="review-title">求职工具箱</text>
-      <picker :range="adviceTopics" range-key="label" @change="selectAdviceTopic">
-        <view class="picker-value">{{ selectedAdviceTopic.label }} ▼</view>
-      </picker>
-      <textarea
-        v-model="adviceQuestion"
-        class="question-textarea"
-        placeholder="可补充具体问题，例如：如何确认公积金基数？"
-        auto-height
-      />
-      <button class="primary" :loading="adviceLoading" @click="requestCareerAdvice">获取针对性建议</button>
-      <text v-if="adviceError" class="error">{{ adviceError }}</text>
-    </view>
-
-    <view v-if="careerAdvice" class="result">
-      <text class="result-title">## {{ careerAdvice.title }}</text>
-      <view v-for="section in careerAdvice.sections" :key="section.order" class="block plan-block">
-        <text class="block-title">## {{ section.title }}</text>
-        <text v-for="item in section.items" :key="item" class="list-item">- {{ item }}</text>
-      </view>
-    </view>
-  </view>
+  </scroll-view>
 </template>
 
 <style scoped>
-.page { padding: 32rpx; background: #f7f8fa; }
-.hero { padding: 24rpx 0 32rpx; }
-.title { display: block; font-size: 44rpx; font-weight: 700; color: #1f2329; }
-.subtitle { display: block; margin-top: 10rpx; color: #86909c; font-size: 26rpx; line-height: 1.55; }
+.page { height: 100vh; background: #f4f7fb; }
+.page-content { padding: 28rpx 28rpx 72rpx; box-sizing: border-box; }
+.hero { padding: 16rpx 4rpx 32rpx; }
+.hero-kicker,.card-eyebrow { display: block; color: #5d89c7; font-size: 20rpx; font-weight: 700; letter-spacing: 1.5rpx; }
+.title { display: block; margin-top: 8rpx; color: #1d2a3a; font-size: 48rpx; font-weight: 700; line-height: 1.2; }
+.subtitle { display: block; margin-top: 12rpx; color: #718096; font-size: 26rpx; line-height: 1.65; }
+
 .search-card,.result,.identity-card,.review-card,.toolkit-card {
-  margin-top: 24rpx; padding: 24rpx; background: #fff; border: 1rpx solid #e5e6eb;
-  border-radius: 18rpx; box-shadow: 0 8rpx 24rpx rgba(31,35,41,.06);
+  margin-top: 22rpx; padding: 26rpx; background: #ffffff; border: 1rpx solid #e4eaf2;
+  border-radius: 22rpx; box-shadow: 0 12rpx 32rpx rgba(38, 65, 102, .08);
 }
-input,.resume-textarea,.question-textarea,.custom-requirement-input,.picker-value {
-  width: 100%; box-sizing: border-box; padding: 20rpx; background: #f7f8fa; border-radius: 12rpx;
+.search-header,.result-header,.market-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18rpx; }
+.card-title,.review-title { display: block; margin-top: 8rpx; color: #1d2a3a; font-size: 30rpx; font-weight: 700; line-height: 1.35; }
+.search-count { flex-shrink: 0; padding: 6rpx 12rpx; color: #5d89c7; background: #eef5ff; border-radius: 999rpx; font-size: 21rpx; }
+
+.search-shell { position: relative; margin-top: 22rpx; z-index: 3; }
+.role-input,.resume-textarea,.question-textarea,.custom-requirement-input,.picker-value {
+  width: 100%; box-sizing: border-box; color: #31445a; background: #f7f9fc; border: 1rpx solid #e0e7f0;
+  border-radius: 14rpx; font-size: 26rpx;
 }
-input { height: 80rpx; margin-bottom: 12rpx; }
-.resume-textarea { min-height: 180rpx; margin: 20rpx 0; line-height: 1.6; }
-.question-textarea { min-height: 120rpx; margin: 20rpx 0; line-height: 1.6; }
-.custom-requirement-input { min-height: 96rpx; margin: 18rpx 0 8rpx; line-height: 1.6; }
-.primary { margin-top: 12rpx; color: #fff; background: #1677ff; }
-.secondary { margin-top: 12rpx; color: #4e5969; background: #f2f3f5; }
-.suggestion-hint,.suggestion-title,.selected-role-title { display: block; margin-top: 12rpx; color: #86909c; font-size: 24rpx; }
-.suggestion-list,.selected-role-area { margin-top: 16rpx; padding: 16rpx; background: #f7faff; border-radius: 12rpx; }
-.suggestion-button { display: flex; justify-content: space-between; align-items: center; margin-top: 12rpx; color: #1677ff; background: #e8f3ff; border: 1rpx solid #b7d8ff; font-size: 26rpx; }
-.suggestion-category { color: #86909c; font-size: 22rpx; }
-.role-chip-list,.role-tab-list { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 14rpx; }
-.role-chip,.role-tab { margin: 0; padding: 6rpx 18rpx; color: #1677ff; background: #e8f3ff; border: 1rpx solid #b7d8ff; border-radius: 999rpx; font-size: 24rpx; line-height: 1.6; }
-.role-tab-active { color: #fff; background: #1677ff; border-color: #1677ff; }
-.role-tab-list { margin: 0 0 22rpx; padding-bottom: 18rpx; border-bottom: 1rpx solid #e5e6eb; }
-.identity-prompt { display: block; margin-bottom: 12rpx; font-weight: 600; color: #1f2329; }
-.identity-options { display: flex; flex-direction: column; gap: 14rpx; margin-top: 24rpx; }
-.identity-button { margin: 0; text-align: left; color: #1677ff; background: #e8f3ff; border: 1rpx solid #b7d8ff; }
-.result-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20rpx; }
-.role,.result-title,.review-title { display: block; font-weight: 700; color: #1f2329; }
-.role { font-size: 36rpx; }.result-title { margin-top: 32rpx; font-size: 32rpx; }
-.review-title { font-size: 32rpx; }.review-hint,.notice { display: block; margin-top: 14rpx; color: #86909c; line-height: 1.55; }
-.notice { padding: 14rpx; background: #fff7e8; border-radius: 10rpx; }
-.identity-name { display: block; margin-top: 12rpx; color: #1677ff; font-weight: 600; }
-.compact { min-width: 144rpx; margin: 0; font-size: 24rpx; }
-.block { display: flex; flex-direction: column; gap: 10rpx; margin: 24rpx 0; color: #4e5969; }
-.block-title { color: #1f2329; font-weight: 600; }.list-item { line-height: 1.65; }
-.plan-block { padding: 20rpx; background: #f7faff; border-radius: 12rpx; }
-.custom-note,.growth-stage,.priority-gap,.target-picker { margin-top: 20rpx; padding: 20rpx; background: #f7faff; border-radius: 12rpx; }
-.growth-stage { border-left: 6rpx solid #4096ff; }
-.growth-meta { display: block; margin: 10rpx 0; color: #1677ff; font-size: 24rpx; }
-.risk-item { padding: 12rpx; color: #ad4e00; background: #fff7e8; border-radius: 10rpx; }
-.target-picker { border: 1rpx solid #b7d8ff; background: #f5faff; }
-.target-picker-title { display: block; color: #1f2329; font-weight: 700; }
-.target-picker-hint { display: block; margin-top: 10rpx; color: #86909c; line-height: 1.55; }
-.target-role-button { margin-top: 14rpx; color: #1677ff; background: #e8f3ff; border: 1rpx solid #b7d8ff; text-align: left; }
-.match-score-card { display: flex; align-items: baseline; gap: 16rpx; margin: 18rpx 0; padding: 20rpx; color: #0958d9; background: #e6f4ff; border-radius: 12rpx; }
-.match-score { font-size: 52rpx; font-weight: 700; }.match-score-label { font-size: 26rpx; color: #4e5969; }
-.priority-gap { background: #fff7e8; border: 1rpx solid #ffe7ba; }.priority-gap-title { display: block; margin-bottom: 10rpx; color: #d46b08; font-weight: 700; }
-.follow-up,.keywords { display: block; margin: 20rpx 0; color: #4e5969; line-height: 1.6; }
-.review-result { margin-top: 24rpx; }.error { display: block; margin-top: 12rpx; color: #d03050; }
-.button-row { display: flex; gap: 16rpx; }.button-row button { flex: 1; font-size: 24rpx; }
-.inline-primary { margin-top: 12rpx; }.copy-text { display: block; white-space: pre-line; margin-top: 16rpx; padding: 20rpx; color: #4e5969; background: #f7f8fa; border-radius: 12rpx; line-height: 1.65; }
-.picker-value { margin-top: 18rpx; color: #4e5969; border: 1rpx solid #e5e6eb; }
+.role-input { height: 88rpx; padding: 0 74rpx 0 22rpx; }
+.search-icon { position: absolute; top: 22rpx; right: 24rpx; color: #6c94ca; font-size: 40rpx; line-height: 1; }
+.suggestion-popover {
+  position: absolute; top: 98rpx; right: 0; left: 0; overflow: hidden; padding: 14rpx;
+  background: #fff; border: 1rpx solid #dbe7f5; border-radius: 16rpx; box-shadow: 0 16rpx 38rpx rgba(35, 73, 118, .16);
+}
+.popover-title { display: block; padding: 6rpx 8rpx 12rpx; color: #7d8da1; font-size: 22rpx; }
+.suggestion-button {
+  display: flex; align-items: center; justify-content: space-between; width: 100%; margin: 0 0 8rpx;
+  padding: 18rpx; color: #1d2a3a; background: #f7faff; border: 1rpx solid transparent; border-radius: 12rpx; text-align: left;
+}
+.suggestion-button:last-child { margin-bottom: 0; }
+.suggestion-name,.suggestion-category,.suggestion-add { display: block; }
+.suggestion-name { font-size: 27rpx; font-weight: 600; }.suggestion-category { margin-top: 5rpx; color: #8292a6; font-size: 21rpx; }
+.suggestion-add { color: #2d77d1; font-size: 22rpx; }
+
+.selected-role-area { margin-top: 20rpx; }
+.selected-role-title { display: block; color: #718096; font-size: 23rpx; }
+.role-chip-list,.role-tab-list { display: flex; flex-wrap: wrap; gap: 10rpx; margin-top: 12rpx; }
+.role-chip,.role-tab {
+  margin: 0; padding: 8rpx 16rpx; color: #2d77d1; background: #edf5ff; border: 1rpx solid #cde0f7;
+  border-radius: 999rpx; font-size: 23rpx; line-height: 1.45;
+}
+.custom-requirement-input { min-height: 96rpx; margin-top: 20rpx; padding: 18rpx 20rpx; line-height: 1.6; }
+.primary,.secondary { border-radius: 12rpx; font-size: 25rpx; }
+.primary { color: #fff; background: #2d77d1; }.secondary { color: #53667b; background: #edf2f7; }
+.primary-action { margin-top: 18rpx; }.error { display: block; margin-top: 12rpx; color: #cf4b5d; font-size: 23rpx; line-height: 1.5; }
+
+.identity-prompt { display: block; margin-top: 12rpx; color: #34465b; font-size: 25rpx; font-weight: 600; line-height: 1.55; }
+.identity-options { display: flex; flex-direction: column; gap: 12rpx; margin-top: 22rpx; }
+.identity-button { display: flex; align-items: center; gap: 14rpx; margin: 0; padding: 18rpx; color: #2e4965; background: #f7faff; border: 1rpx solid #e2ebf5; border-radius: 14rpx; text-align: left; }
+.identity-code { display: inline-flex; align-items: center; justify-content: center; width: 38rpx; height: 38rpx; color: #fff; background: #6094d5; border-radius: 50%; font-size: 22rpx; }
+.identity-arrow { margin-left: auto; color: #8ca5c2; font-size: 38rpx; line-height: .7; }
+
+.role-tab-list { margin: 0 0 22rpx; padding-bottom: 18rpx; border-bottom: 1rpx solid #e7edf4; }
+.role-tab-active { color: #fff; background: #2d77d1; border-color: #2d77d1; }
+.role { display: block; margin-top: 8rpx; color: #1d2a3a; font-size: 40rpx; font-weight: 700; line-height: 1.25; }
+.identity-name { display: block; margin-top: 8rpx; color: #5d89c7; font-size: 24rpx; font-weight: 600; }
+.compact { flex-shrink: 0; min-width: 136rpx; margin: 0; padding: 12rpx 14rpx; font-size: 22rpx; }
+
+.summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12rpx; margin-top: 22rpx; }
+.summary-item { min-width: 0; padding: 18rpx; background: #f6f9fd; border: 1rpx solid #e8eef5; border-radius: 14rpx; }
+.summary-label { display: block; color: #8393a5; font-size: 21rpx; }.summary-value { display: block; margin-top: 8rpx; color: #2766af; font-size: 25rpx; font-weight: 700; line-height: 1.45; word-break: break-word; }
+.summary-skills { color: #3c536c; font-size: 23rpx; font-weight: 600; }
+.notice-bar { display: flex; align-items: flex-start; gap: 10rpx; margin-top: 16rpx; padding: 14rpx 16rpx; background: #fff9ee; border-radius: 12rpx; }
+.notice-dot { flex-shrink: 0; width: 12rpx; height: 12rpx; margin-top: 9rpx; background: #e8aa50; border-radius: 50%; }
+.notice { color: #7c633c; font-size: 23rpx; line-height: 1.6; }
+
+.custom-note,.market-card,.growth-stage,.priority-gap,.target-picker,.resume-callout {
+  margin-top: 20rpx; padding: 20rpx; background: #f8fbff; border: 1rpx solid #e1ebf7; border-radius: 16rpx;
+}
+.block-title { color: #26394d; font-size: 26rpx; font-weight: 700; line-height: 1.45; }
+.list-item { display: block; color: #52677d; font-size: 25rpx; line-height: 1.72; word-break: break-word; }
+.market-caption { display: block; margin-top: 6rpx; color: #8292a6; font-size: 21rpx; line-height: 1.45; }
+.market-notice { display: block; margin-top: 16rpx; color: #55708d; font-size: 23rpx; line-height: 1.55; }
+.market-disabled { color: #9b7a45; }
+.market-source { display: flex; align-items: flex-start; justify-content: space-between; gap: 14rpx; margin-top: 14rpx; padding-top: 14rpx; border-top: 1rpx solid #e3ebf4; }
+.market-source-title,.market-source-text,.market-source-date { display: block; }.market-source-title { color: #2f5e93; font-size: 24rpx; font-weight: 700; }.market-source-text { margin-top: 5rpx; color: #65798d; font-size: 22rpx; line-height: 1.55; }.market-source-date { margin-top: 5rpx; color: #93a1b2; font-size: 20rpx; }
+.source-copy { flex-shrink: 0; color: #2d77d1; font-size: 20rpx; }
+
+.result-title { display: block; margin-top: 34rpx; color: #1d2a3a; font-size: 31rpx; font-weight: 700; }
+.analysis-section { margin-top: 14rpx; overflow: hidden; border: 1rpx solid #e6edf5; border-radius: 14rpx; }
+.analysis-section-header { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; padding: 18rpx; background: #fbfcfe; }
+.analysis-section-header > view { display: flex; align-items: center; gap: 12rpx; min-width: 0; }
+.analysis-index { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 40rpx; height: 40rpx; color: #3d79bf; background: #eaf3ff; border-radius: 10rpx; font-size: 20rpx; font-weight: 700; }
+.section-toggle { flex-shrink: 0; color: #6e91b8; font-size: 21rpx; }.analysis-section-body { padding: 0 18rpx 18rpx; }
+.risk-item { margin-top: 8rpx; padding: 12rpx; color: #a36022; background: #fff8ec; border-radius: 10rpx; }
+
+.growth-stage { border-left: 6rpx solid #76a9e7; }.growth-stage-title { display: block; color: #2b5f9b; font-size: 27rpx; font-weight: 700; }.growth-meta { display: block; margin: 8rpx 0; color: #6e91b8; font-size: 22rpx; }
+.identity-plan-title,.follow-up,.keywords { display: block; margin-top: 14rpx; color: #4f6680; font-size: 25rpx; line-height: 1.6; }.plan-block { margin-top: 14rpx; padding: 18rpx; background: #f8fbff; border-radius: 14rpx; }
+.resume-callout { background: #f0f7ff; border-color: #cfe4fb; }.resume-callout-title { display: block; color: #245b99; font-size: 28rpx; font-weight: 700; }.resume-callout-text,.target-picker-hint { display: block; margin-top: 10rpx; color: #59728d; font-size: 23rpx; line-height: 1.6; }
+.target-picker { background: #fff; }.target-picker-title { display: block; color: #26394d; font-size: 27rpx; font-weight: 700; }.target-role-button { margin-top: 14rpx; color: #286fbf; background: #eff7ff; border: 1rpx solid #d3e7fb; border-radius: 12rpx; text-align: left; font-size: 24rpx; }
+
+.review-hint { display: block; margin-top: 12rpx; color: #718096; font-size: 24rpx; line-height: 1.6; }.resume-textarea { min-height: 190rpx; margin-top: 20rpx; padding: 18rpx; line-height: 1.65; }.question-textarea { min-height: 120rpx; margin-top: 18rpx; padding: 18rpx; line-height: 1.6; }
+.button-row { display: flex; gap: 14rpx; margin-top: 16rpx; }.button-row button { flex: 1; padding-right: 8rpx; padding-left: 8rpx; font-size: 22rpx; }.inline-primary { margin-top: 0; }
+.copy-text { display: block; margin-top: 14rpx; padding: 18rpx; color: #51677d; background: #f7f9fc; border-radius: 14rpx; font-size: 24rpx; line-height: 1.7; white-space: pre-line; word-break: break-word; }
+.match-score-card { display: flex; align-items: baseline; gap: 16rpx; margin-top: 16rpx; padding: 22rpx; background: #eaf4ff; border-radius: 16rpx; }.match-score { color: #2465ad; font-size: 54rpx; font-weight: 700; }.match-score-label { color: #55708d; font-size: 24rpx; }
+.priority-gap { background: #fffaf1; border-color: #f5dfb8; }.priority-gap-title { display: block; margin-bottom: 8rpx; color: #a56727; font-size: 26rpx; font-weight: 700; }
+.picker-value { display: flex; align-items: center; justify-content: space-between; margin-top: 20rpx; padding: 20rpx; color: #4b6279; }.picker-arrow { color: #7090ad; font-size: 32rpx; line-height: .7; }
+
+@media (max-width: 360px) {
+  .page-content { padding-right: 20rpx; padding-left: 20rpx; }
+  .summary-grid { grid-template-columns: 1fr; }
+  .button-row { flex-direction: column; }
+  .market-card-header .compact,.result-header .compact { min-width: 116rpx; font-size: 20rpx; }
+}
 </style>

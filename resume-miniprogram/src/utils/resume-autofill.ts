@@ -37,6 +37,25 @@ export function createRoleBasedProjectDraft(job: JobIntelligence): ProjectDraft 
   }
 }
 
+export function createRoleBasedProjectDrafts(job: JobIntelligence): ProjectDraft[] {
+  const skills = roleSkillText(job)
+  return [
+    createRoleBasedProjectDraft(job),
+    {
+      name: `${job.roleName}业务质量与交付项目 ${UNKNOWN}`,
+      role: `执行成员 / 质量协同 ${UNKNOWN}`,
+      startDate: UNKNOWN,
+      endDate: UNKNOWN,
+      description: [
+        `业务场景：针对${UNKNOWN}真实业务流程中的质量、效率或协作问题，明确问题边界和相关干系人。`,
+        `职责与行动：在本人真实参与范围内，使用${skills}完成数据核查、方案执行、问题跟进或结果复盘。`,
+        `交付物：输出${UNKNOWN}检查清单/分析报告/操作说明/项目复盘，并补充本人实际负责的具体模块。`,
+        `结果与证据：仅填写本人可提供的真实反馈、作品链接或可复核结果${UNKNOWN}，未确认数据不得量化。`,
+      ].join("\n"),
+    },
+  ]
+}
+
 export function createRoleBasedInternshipDraft(job: JobIntelligence): EmploymentDraft {
   const skills = roleSkillText(job)
   return {
@@ -66,7 +85,11 @@ export function prepareResumeForJob(draft: ResumeDraft, job: JobIntelligence): v
   }
 
   if (draft.resume.projects.length === 0) {
-    draft.resume.projects.push(createRoleBasedProjectDraft(job))
+    draft.resume.projects.push(...createRoleBasedProjectDrafts(job))
+  }
+
+  if (draft.resume.employment.length === 0) {
+    draft.resume.employment.push(createRoleBasedInternshipDraft(job))
   }
 
   if (!draft.resume.selfEvaluation.trim()) {

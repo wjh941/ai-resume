@@ -92,7 +92,7 @@ function prepareAndChooseTemplate() {
 
     <view v-if="activeJob" class="card enrichment-card">
       <text class="heading">AI 补全草案</text>
-      <text class="enrichment-hint">当前目标：{{ activeJob.roleName }}。草案只提供竞争力表达结构，所有 [待确认] 内容必须替换成真实经历、公司、时间与证据。</text>
+      <text class="enrichment-hint">当前目标：{{ activeJob.roleName }}。智能补全会在空白经历中生成 2 个项目草案和 1 个实习草案；所有 [待确认] 内容必须替换成真实经历、公司、时间与证据。</text>
       <view class="enrichment-actions">
         <button class="secondary" @click="addSuggestedProject">添加项目经历草案</button>
         <button class="primary" @click="addSuggestedInternship">添加实习经历草案</button>

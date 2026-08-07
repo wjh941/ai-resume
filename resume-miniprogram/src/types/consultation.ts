@@ -14,6 +14,20 @@ export interface JobSuggestion {
   category: string
 }
 
+export interface MarketSource {
+  title: string
+  url: string
+  snippet: string
+  publishedDate: string | null
+}
+
+export interface MarketSearchReport {
+  enabled: boolean
+  provider: string
+  notice: string
+  results: MarketSource[]
+}
+
 export interface IdentityPlan {
   title: string
   sections: ConsultationSection[]

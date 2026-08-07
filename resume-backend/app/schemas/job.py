@@ -24,6 +24,20 @@ class JobSuggestion(BaseModel):
     category: str
 
 
+class MarketSource(BaseModel):
+    title: str
+    url: str
+    snippet: str
+    published_date: str | None = None
+
+
+class MarketSearchReport(BaseModel):
+    enabled: bool
+    provider: str
+    notice: str
+    results: list[MarketSource] = Field(default_factory=list)
+
+
 class JobIntelligence(BaseModel):
     version: Literal[1] = 1
     role_name: str

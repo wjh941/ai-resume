@@ -54,6 +54,19 @@ def test_engineer_suggestions_return_distinct_catalog_roles(api_client):
     assert len(names) == len(set(names))
 
 
+def test_data_suggestions_cover_related_data_roles(api_client):
+    data = assert_success(api_client.get("/api/job/suggestions", params={"q": "数据"}))
+
+    names = [item["role_name"] for item in data["items"]]
+    assert {
+        "数据工程师",
+        "数据分析师",
+        "数据库运维工程师",
+        "数据清洗专员",
+        "数据标注专员",
+    }.issubset(names)
+
+
 def test_blank_suggestion_query_returns_no_items(api_client):
     data = assert_success(api_client.get("/api/job/suggestions", params={"q": "   "}))
 

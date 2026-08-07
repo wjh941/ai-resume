@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest"
 
-import { queryJobConsultation, queryJobSuggestions, reviewResumeText } from "../services/resume-api"
+import {
+  queryJobConsultation,
+  queryJobMarketSearch,
+  queryJobSuggestions,
+  reviewResumeText,
+} from "../services/resume-api"
 
 type CapturedRequest = { url: string; data?: unknown }
 
@@ -20,6 +25,27 @@ beforeEach(() => {
               items: [
                 { role_name: "数据工程师", category: "数据与平台" },
                 { role_name: "AI Agent工程师", category: "人工智能" },
+              ],
+            },
+          },
+        }
+      }
+      if (String(options.url).includes("/api/job/market-search")) {
+        return {
+          statusCode: 200,
+          data: {
+            code: "ok",
+            data: {
+              enabled: true,
+              provider: "tavily",
+              notice: "Use public sources as references.",
+              results: [
+                {
+                  title: "Data role demand",
+                  url: "https://example.com/data-role",
+                  snippet: "Public market source.",
+                  published_date: "2026-08-01",
+                },
               ],
             },
           },
@@ -144,6 +170,20 @@ describe("consultation API mapping", () => {
     expect(result.careerGrowthRoute.stages[2].roleName).toBe("Senior Data Engineer")
     expect(result.customRequirementNotes).toEqual(["Applied: Hangzhou"])
     expect(calls[0].data).toMatchObject({ custom_requirement: "Prefer Hangzhou" })
+  })
+
+  it("maps an optional market search report without changing job analysis requests", async () => {
+    const report = await queryJobMarketSearch("数据工程师")
+
+    expect(report.enabled).toBe(true)
+    expect(report.provider).toBe("tavily")
+    expect(report.results[0]).toEqual({
+      title: "Data role demand",
+      url: "https://example.com/data-role",
+      snippet: "Public market source.",
+      publishedDate: "2026-08-01",
+    })
+    expect(calls[0].url).toContain("/api/job/market-search?role_name=")
   })
 
   it("maps the match report and forwards the supplementary resume requirement", async () => {

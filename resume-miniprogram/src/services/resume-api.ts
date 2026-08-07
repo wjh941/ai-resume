@@ -3,6 +3,7 @@ import type {
   AdviceTopic,
   CareerAdvice,
   JobConsultation,
+  MarketSearchReport,
   JobSuggestion,
   ResumeReview,
 } from "../types/consultation"
@@ -17,6 +18,18 @@ type BackendJob = {
 type BackendJobSuggestion = {
   role_name: string
   category: string
+}
+
+type BackendMarketSearchReport = {
+  enabled: boolean
+  provider: string
+  notice: string
+  results: Array<{
+    title: string
+    url: string
+    snippet: string
+    published_date: string | null
+  }>
 }
 
 type BackendConsultationSection = {
@@ -107,6 +120,23 @@ export async function queryJobSuggestions(query: string): Promise<JobSuggestion[
     roleName: item.role_name,
     category: item.category,
   }))
+}
+
+export async function queryJobMarketSearch(roleName: string): Promise<MarketSearchReport> {
+  const response = await request<BackendMarketSearchReport>(
+    `/api/job/market-search?role_name=${encodeURIComponent(roleName)}`,
+  )
+  return {
+    enabled: response.enabled,
+    provider: response.provider,
+    notice: response.notice,
+    results: response.results.map((item) => ({
+      title: item.title,
+      url: item.url,
+      snippet: item.snippet,
+      publishedDate: item.published_date,
+    })),
+  }
 }
 
 export async function queryJobConsultation(

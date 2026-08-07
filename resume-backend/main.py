@@ -20,6 +20,7 @@ from app.services.export_pdf import PdfRendererUnavailableError
 from app.services.job_cache import JobCache
 from app.services.rewrite_guard import RewriteFactViolation
 from app.services.template_service import TemplateService
+from app.services.web_search import build_web_search_client
 
 
 @asynccontextmanager
@@ -51,6 +52,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.ai_client = build_ai_client(settings)
     app.state.job_cache = JobCache(settings.database_path, settings.cache_expire_day)
     app.state.job_catalog = JobCatalog(settings.database_path)
+    app.state.web_search_client = build_web_search_client(settings)
     app.state.download_service = DownloadService(
         settings.database_path,
         settings.temp_file_path,

@@ -31,6 +31,10 @@ class Settings:
     export_file_expire_minutes: int
     pdf_renderer: str
     playwright_browsers_path: str
+    web_search_provider: str = "disabled"
+    tavily_api_key: str = ""
+    web_search_base_url: str = "https://api.tavily.com"
+    web_search_max_results: int = 5
 
 
 def load_settings() -> Settings:
@@ -52,4 +56,8 @@ def load_settings() -> Settings:
         playwright_browsers_path=os.getenv(
             "PLAYWRIGHT_BROWSERS_PATH", "D:/Projects/ai-resume-miniprogram/.cache/playwright"
         ),
+        web_search_provider=os.getenv("WEB_SEARCH_PROVIDER", "disabled"),
+        tavily_api_key=os.getenv("TAVILY_API_KEY", ""),
+        web_search_base_url=os.getenv("WEB_SEARCH_BASE_URL", "https://api.tavily.com"),
+        web_search_max_results=int(os.getenv("WEB_SEARCH_MAX_RESULTS", "5")),
     )

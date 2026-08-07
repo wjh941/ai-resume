@@ -23,7 +23,7 @@ from app.services.career_consultation import (
 )
 from app.services.job_cache import normalize_role_name
 
-MOCK_CACHE_KEY = "mock-v3"
+MOCK_CACHE_KEY = "mock-v4"
 
 
 class AIClient(Protocol):
@@ -83,6 +83,70 @@ def mock_job_profile(role_name: str) -> JobIntelligence:
         "required_skills": ["Python", "SQL", "Data warehousing"],
         "bonus_skills": ["Airflow", "Spark", "Cloud platforms"],
         "career_route": ["Data Engineer", "Senior Data Engineer", "Data Platform Lead"],
+    }
+    data_analyst_profile = {
+        "salary_by_experience": {
+            "graduate": "9k-15k",
+            "1-3_years": "15k-24k",
+            "3-5_years": "24k-36k",
+            "5_plus_years": "36k-50k",
+        },
+        "responsibilities": [
+            "Translate business questions into metric definitions, analysis plans, and decision-ready reports.",
+            "Validate data quality, explain changes, and work with business teams on measurable experiments.",
+        ],
+        "hard_requirements": ["Bachelor degree or equivalent practical experience."],
+        "required_skills": ["SQL", "Excel or BI tools", "Business analysis"],
+        "bonus_skills": ["Python", "A/B testing", "Data visualization"],
+        "career_route": ["Data Analyst", "Senior Data Analyst", "Analytics Lead"],
+    }
+    database_operations_profile = {
+        "salary_by_experience": {
+            "graduate": "9k-14k",
+            "1-3_years": "14k-23k",
+            "3-5_years": "23k-34k",
+            "5_plus_years": "34k-48k",
+        },
+        "responsibilities": [
+            "Maintain database availability, backup recovery plans, and performance monitoring.",
+            "Support schema changes and capacity planning with development and platform teams.",
+        ],
+        "hard_requirements": ["Bachelor degree or equivalent practical experience."],
+        "required_skills": ["MySQL or PostgreSQL", "SQL tuning", "Backup and recovery"],
+        "bonus_skills": ["Linux", "Cloud databases", "Monitoring and alerting"],
+        "career_route": ["Database Operations Engineer", "Senior DBA", "Database Platform Lead"],
+    }
+    data_cleaning_profile = {
+        "salary_by_experience": {
+            "graduate": "7k-11k",
+            "1-3_years": "11k-18k",
+            "3-5_years": "18k-27k",
+            "5_plus_years": "27k-38k",
+        },
+        "responsibilities": [
+            "Apply documented rules to clean, validate, and reconcile structured datasets.",
+            "Record quality issues and collaborate on repeatable data quality checks.",
+        ],
+        "hard_requirements": ["Clear attention to detail and basic spreadsheet or SQL capability."],
+        "required_skills": ["Excel", "Data validation", "Basic SQL"],
+        "bonus_skills": ["Python", "Data quality rules", "ETL tools"],
+        "career_route": ["Data Cleaning Specialist", "Data Quality Specialist", "Data Quality Lead"],
+    }
+    data_annotation_profile = {
+        "salary_by_experience": {
+            "graduate": "6k-10k",
+            "1-3_years": "10k-16k",
+            "3-5_years": "16k-24k",
+            "5_plus_years": "24k-34k",
+        },
+        "responsibilities": [
+            "Annotate text, image, audio, or video data according to quality and security standards.",
+            "Report ambiguous cases, maintain consistency, and support annotation quality review.",
+        ],
+        "hard_requirements": ["Careful execution of annotation guidelines and confidentiality requirements."],
+        "required_skills": ["Annotation guidelines", "Quality awareness", "Detail orientation"],
+        "bonus_skills": ["Domain knowledge", "Spreadsheet tools", "Quality sampling"],
+        "career_route": ["Data Annotation Specialist", "Annotation Quality Specialist", "Annotation Operations Lead"],
     }
     agent_profile = {
         "salary_by_experience": {
@@ -170,6 +234,14 @@ def mock_job_profile(role_name: str) -> JobIntelligence:
 
     if any(keyword in normalized_role for keyword in ("agent", "llm", "大模型", "智能体")):
         profile = agent_profile
+    elif any(keyword in normalized_role for keyword in ("数据库", "dba", "database")):
+        profile = database_operations_profile
+    elif any(keyword in normalized_role for keyword in ("数据分析", "data analyst", "bi分析")):
+        profile = data_analyst_profile
+    elif any(keyword in normalized_role for keyword in ("数据清洗", "数据质量", "数据治理", "data cleaning")):
+        profile = data_cleaning_profile
+    elif any(keyword in normalized_role for keyword in ("数据标注", "data annotation", "标注")):
+        profile = data_annotation_profile
     elif any(keyword in normalized_role for keyword in ("数据", "data", "etl", "数仓")):
         profile = data_profile
     elif any(keyword in normalized_role for keyword in ("前端", "frontend", "vue", "react")):

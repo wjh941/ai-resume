@@ -42,11 +42,14 @@ describe("prepareResumeForJob", () => {
     ])
     expect(draft.resume.basic.name).toBe("张三")
     expect(draft.resume.education).toEqual([])
-    expect(draft.resume.employment).toEqual([])
-    expect(draft.resume.projects).toHaveLength(1)
+    expect(draft.resume.employment).toHaveLength(1)
+    expect(draft.resume.employment[0].company).toContain("[待确认]")
+    expect(draft.resume.projects).toHaveLength(2)
     expect(draft.resume.projects[0].name).toContain("[待确认]")
     expect(draft.resume.projects[0].description).toContain("TypeScript")
     expect(draft.resume.projects[0].description).toContain("真实业务场景")
+    expect(draft.resume.projects[1].name).toContain("[待确认]")
+    expect(draft.resume.projects[1].name).not.toBe(draft.resume.projects[0].name)
   })
 
   it("does not overwrite fields the user already completed", () => {
@@ -54,12 +57,28 @@ describe("prepareResumeForJob", () => {
     draft.resume.job.expectedSalary = "20k-25k"
     draft.resume.skills.skills = ["Python"]
     draft.resume.selfEvaluation = "已有自我评价"
+    draft.resume.employment.push({
+      company: "真实公司",
+      position: "真实岗位",
+      startDate: "2025-01",
+      endDate: "2025-06",
+      description: "真实经历",
+    })
+    draft.resume.projects.push({
+      name: "真实项目",
+      role: "负责人",
+      startDate: "2025-02",
+      endDate: "2025-05",
+      description: "真实项目内容",
+    })
 
     prepareResumeForJob(draft, frontendJob)
 
     expect(draft.resume.job.expectedSalary).toBe("20k-25k")
     expect(draft.resume.skills.skills).toEqual(["Python"])
     expect(draft.resume.selfEvaluation).toBe("已有自我评价")
+    expect(draft.resume.employment).toHaveLength(1)
+    expect(draft.resume.projects).toHaveLength(1)
   })
 
   it("creates an optional internship draft with explicit unknown company and dates", () => {

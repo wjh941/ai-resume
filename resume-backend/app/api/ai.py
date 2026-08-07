@@ -17,6 +17,15 @@ async def query_job_suggestions(request: Request, q: str = ""):
     return success({"items": [item.model_dump() for item in items]})
 
 
+@router.get("/api/job/market-search")
+async def search_job_market(request: Request, role_name: str):
+    normalized_role = " ".join(role_name.split())
+    report = await request.app.state.web_search_client.search(
+        f"{normalized_role} 招聘要求 薪资 职业发展"
+    )
+    return success(report.model_dump())
+
+
 @router.post("/api/job/query")
 async def query_job(payload: JobQueryRequest, request: Request):
     role_name = " ".join(payload.role_name.split())
