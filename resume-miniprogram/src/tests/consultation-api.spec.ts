@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest"
 
-import { queryJobConsultation, reviewResumeText } from "../services/resume-api"
+import { queryJobConsultation, queryJobSuggestions, reviewResumeText } from "../services/resume-api"
 
 type CapturedRequest = { url: string; data?: unknown }
 
@@ -11,6 +11,20 @@ beforeEach(() => {
   ;(globalThis as typeof globalThis & { uni: unknown }).uni = {
     request: async (options: Record<string, unknown>) => {
       calls.push({ url: String(options.url), data: options.data })
+      if (String(options.url).includes("/api/job/suggestions")) {
+        return {
+          statusCode: 200,
+          data: {
+            code: "ok",
+            data: {
+              items: [
+                { role_name: "数据工程师", category: "数据与平台" },
+                { role_name: "AI Agent工程师", category: "人工智能" },
+              ],
+            },
+          },
+        }
+      }
       if (String(options.url).endsWith("/api/consultation/job-analysis")) {
         return {
           statusCode: 200,
@@ -113,6 +127,16 @@ beforeEach(() => {
 })
 
 describe("consultation API mapping", () => {
+  it("maps job catalog suggestions from the backend", async () => {
+    const suggestions = await queryJobSuggestions("工程师")
+
+    expect(suggestions).toEqual([
+      { roleName: "数据工程师", category: "数据与平台" },
+      { roleName: "AI Agent工程师", category: "人工智能" },
+    ])
+    expect(calls[0].url).toContain("/api/job/suggestions?q=")
+  })
+
   it("maps the career growth route and forwards the supplementary job requirement", async () => {
     const result = await queryJobConsultation("Data Engineer", "2", "Prefer Hangzhou")
 

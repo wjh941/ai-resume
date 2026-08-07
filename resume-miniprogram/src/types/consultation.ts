@@ -9,6 +9,11 @@ export interface ConsultationSection {
   items: string[]
 }
 
+export interface JobSuggestion {
+  roleName: string
+  category: string
+}
+
 export interface IdentityPlan {
   title: string
   sections: ConsultationSection[]

@@ -1,18 +1,28 @@
 <script setup lang="ts">
-import { computed, ref } from "vue"
+import { computed, ref, watch } from "vue"
 
 import {
   extractResumePdf,
   queryCareerAdvice,
   queryJobConsultation,
+  queryJobSuggestions,
   reviewResumeText,
 } from "../../services/resume-api"
 import { IDENTITY_OPTIONS, IDENTITY_PROMPT, useConsultationStore } from "../../stores/consultation"
 import { useResumeStore } from "../../stores/resume"
-import type { AdviceTopic, CareerAdvice, JobConsultation, ResumeReview } from "../../types/consultation"
+import type {
+  AdviceTopic,
+  CareerAdvice,
+  JobConsultation,
+  JobSuggestion,
+  ResumeReview,
+} from "../../types/consultation"
 import { prepareResumeForJob } from "../../utils/resume-autofill"
 
 const roleName = ref("")
+const selectedRoles = ref<string[]>([])
+const suggestions = ref<JobSuggestion[]>([])
+const suggestionLoading = ref(false)
 const resumeText = ref("")
 const customRequirement = ref("")
 const adviceQuestion = ref("")
@@ -24,13 +34,23 @@ const pdfLoading = ref(false)
 const error = ref("")
 const reviewError = ref("")
 const adviceError = ref("")
-const jobConsultation = ref<JobConsultation | null>(null)
+const jobConsultations = ref<JobConsultation[]>([])
+const activeJobIndex = ref(0)
 const resumeReview = ref<ResumeReview | null>(null)
 const careerAdvice = ref<CareerAdvice | null>(null)
+const showTargetPicker = ref(false)
+
 const store = useResumeStore()
 const consultation = useConsultationStore()
 const identityPromptLines = IDENTITY_PROMPT.split("\n")
 const canReviewResume = computed(() => consultation.identityCode !== null)
+const jobConsultation = computed(
+  () => jobConsultations.value[activeJobIndex.value] ?? null,
+)
+const activeRoleName = computed(() => jobConsultation.value?.jobIntelligence.roleName ?? "")
+const visibleSuggestions = computed(() =>
+  suggestions.value.filter((suggestion) => !selectedRoles.value.includes(suggestion.roleName)),
+)
 const adviceTopics: Array<{ topic: AdviceTopic; label: string }> = [
   { topic: "simulation_interview", label: "模拟面试" },
   { topic: "salary_negotiation", label: "薪资谈判" },
@@ -44,48 +64,111 @@ const adviceTopics: Array<{ topic: AdviceTopic; label: string }> = [
 ]
 const selectedAdviceTopic = computed(() => adviceTopics[selectedAdviceIndex.value] ?? adviceTopics[0])
 
+let suggestionRequestId = 0
+
+watch(roleName, (value) => {
+  void refreshSuggestions(value)
+})
+
+function selectedOrTypedRoles(): string[] {
+  if (selectedRoles.value.length) return [...selectedRoles.value]
+  const typedRole = roleName.value.trim()
+  return typedRole ? [typedRole] : []
+}
+
+async function refreshSuggestions(value: string) {
+  const query = value.trim()
+  const requestId = ++suggestionRequestId
+  if (!query) {
+    suggestions.value = []
+    suggestionLoading.value = false
+    return
+  }
+
+  suggestionLoading.value = true
+  try {
+    const items = await queryJobSuggestions(query)
+    if (requestId === suggestionRequestId) suggestions.value = items
+  } catch {
+    if (requestId === suggestionRequestId) suggestions.value = []
+  } finally {
+    if (requestId === suggestionRequestId) suggestionLoading.value = false
+  }
+}
+
+function selectSuggestion(suggestion: JobSuggestion) {
+  if (selectedRoles.value.includes(suggestion.roleName)) return
+  if (selectedRoles.value.length >= 3) {
+    error.value = "一次最多对比 3 个岗位，请先移除不需要的岗位。"
+    return
+  }
+  error.value = ""
+  selectedRoles.value.push(suggestion.roleName)
+  roleName.value = ""
+  suggestions.value = []
+}
+
+function removeSelectedRole(role: string) {
+  selectedRoles.value = selectedRoles.value.filter((item) => item !== role)
+  jobConsultations.value = jobConsultations.value.filter(
+    (item) => item.jobIntelligence.roleName !== role,
+  )
+  if (activeJobIndex.value >= jobConsultations.value.length) {
+    activeJobIndex.value = Math.max(0, jobConsultations.value.length - 1)
+  }
+  if (jobConsultation.value) store.setJobIntelligence(jobConsultation.value.jobIntelligence)
+}
+
 function resetResults() {
-  jobConsultation.value = null
+  jobConsultations.value = []
+  activeJobIndex.value = 0
   resumeReview.value = null
   careerAdvice.value = null
   reviewError.value = ""
   adviceError.value = ""
+  showTargetPicker.value = false
 }
 
 async function beginConsultation() {
-  const role = roleName.value.trim()
-  if (!role) {
-    error.value = "请输入岗位名称"
+  const roles = selectedOrTypedRoles()
+  if (!roles.length) {
+    error.value = "请输入岗位名称，或从下方建议中选择岗位。"
     return
   }
+
   error.value = ""
   resetResults()
-  const nextStep = consultation.beginRoleConsultation(role)
+  const nextStep = consultation.beginRoleConsultation(roles[0])
   if (nextStep === "identity-selection") return
-  await loadJobAnalysis(consultation.identityCode!)
+  await loadJobAnalyses(consultation.identityCode!)
 }
 
 function changeIdentity() {
   resetResults()
-  consultation.beginIdentitySelection(consultation.pendingRoleName || roleName.value)
+  consultation.beginIdentitySelection(activeRoleName.value || selectedOrTypedRoles()[0] || "")
 }
 
 async function selectIdentity(identityCode: (typeof IDENTITY_OPTIONS)[number]["code"]) {
   consultation.selectIdentity(identityCode)
-  await loadJobAnalysis(identityCode)
+  await loadJobAnalyses(identityCode)
 }
 
-async function loadJobAnalysis(identityCode: (typeof IDENTITY_OPTIONS)[number]["code"]) {
+async function loadJobAnalyses(identityCode: (typeof IDENTITY_OPTIONS)[number]["code"]) {
+  const roles = selectedOrTypedRoles()
+  const rolesToLoad = roles.length ? roles : [consultation.pendingRoleName].filter(Boolean)
+  if (!rolesToLoad.length) return
+
   loading.value = true
   error.value = ""
   try {
-    const result = await queryJobConsultation(
-      consultation.pendingRoleName,
-      identityCode,
-      customRequirement.value.trim(),
+    const results = await Promise.all(
+      rolesToLoad.map((role) =>
+        queryJobConsultation(role, identityCode, customRequirement.value.trim()),
+      ),
     )
-    jobConsultation.value = result
-    store.setJobIntelligence(result.jobIntelligence)
+    jobConsultations.value = results
+    activeJobIndex.value = 0
+    store.setJobIntelligence(results[0].jobIntelligence)
     consultation.showJobAnalysis()
   } catch (reason) {
     error.value = reason instanceof Error ? reason.message : "岗位解析失败"
@@ -94,9 +177,23 @@ async function loadJobAnalysis(identityCode: (typeof IDENTITY_OPTIONS)[number]["
   }
 }
 
-function startResume() {
-  if (!jobConsultation.value) return
-  prepareResumeForJob(store.draft, jobConsultation.value.jobIntelligence)
+function selectJobConsultation(index: number) {
+  const next = jobConsultations.value[index]
+  if (!next) return
+  activeJobIndex.value = index
+  showTargetPicker.value = false
+  store.setJobIntelligence(next.jobIntelligence)
+}
+
+function openResumeTargetPicker() {
+  showTargetPicker.value = true
+}
+
+function generateResumeForRole(index: number) {
+  selectJobConsultation(index)
+  const selected = jobConsultations.value[index]
+  if (!selected) return
+  prepareResumeForJob(store.draft, selected.jobIntelligence)
   store.checkpoint()
   uni.navigateTo({ url: "/pages/template-picker/index" })
 }
@@ -104,11 +201,11 @@ function startResume() {
 async function reviewResume() {
   const text = resumeText.value.trim()
   if (!text) {
-    reviewError.value = "请粘贴需要优化的简历内容，或先上传 PDF"
+    reviewError.value = "请粘贴需要优化的简历内容，或先上传 PDF。"
     return
   }
   if (!consultation.identityCode) {
-    reviewError.value = "请先选择求职身份"
+    reviewError.value = "请先选择求职身份。"
     return
   }
   reviewLoading.value = true
@@ -118,7 +215,7 @@ async function reviewResume() {
     resumeReview.value = await reviewResumeText(
       text,
       consultation.identityCode,
-      jobConsultation.value?.jobIntelligence.roleName || consultation.pendingRoleName,
+      activeRoleName.value || consultation.pendingRoleName,
       customRequirement.value.trim(),
     )
   } catch (reason) {
@@ -140,7 +237,7 @@ type ChooseFile = (options: {
 function chooseResumePdf() {
   const chooseFile = (globalThis as typeof globalThis & { uni?: { chooseFile?: ChooseFile } }).uni?.chooseFile
   if (!chooseFile) {
-    reviewError.value = "当前运行环境不支持 PDF 文件选择，请直接粘贴简历文本"
+    reviewError.value = "当前运行环境不支持 PDF 文件选择，请直接粘贴简历文本。"
     return
   }
   chooseFile({
@@ -150,7 +247,7 @@ function chooseResumePdf() {
     success: async (result) => {
       const filePath = result.tempFiles?.[0]?.path
       if (!filePath) {
-        reviewError.value = "未读取到 PDF 文件"
+        reviewError.value = "未读取到 PDF 文件。"
         return
       }
       pdfLoading.value = true
@@ -164,7 +261,7 @@ function chooseResumePdf() {
       }
     },
     fail: () => {
-      reviewError.value = "未选择 PDF 文件"
+      reviewError.value = "未选择 PDF 文件。"
     },
   })
 }
@@ -179,7 +276,7 @@ function selectAdviceTopic(event: Event) {
 
 async function requestCareerAdvice() {
   if (!consultation.identityCode) {
-    adviceError.value = "请先选择求职身份"
+    adviceError.value = "请先选择求职身份。"
     return
   }
   adviceLoading.value = true
@@ -189,7 +286,7 @@ async function requestCareerAdvice() {
     careerAdvice.value = await queryCareerAdvice(
       consultation.identityCode,
       selectedAdviceTopic.value.topic,
-      jobConsultation.value?.jobIntelligence.roleName || consultation.pendingRoleName,
+      activeRoleName.value || consultation.pendingRoleName,
       adviceQuestion.value.trim(),
     )
   } catch (reason) {
@@ -208,15 +305,39 @@ function isRiskItem(item: string) {
   <view class="page">
     <view class="hero">
       <text class="title">AI 求职顾问</text>
-      <text class="subtitle">岗位解析、简历批改与求职工具，按你的身份给出可执行方案</text>
+      <text class="subtitle">岗位解析、简历批改与求职工具，按你的身份给出可执行方案。</text>
     </view>
 
     <view class="search-card">
-      <input v-model="roleName" placeholder="例如：数据工程师" confirm-type="search" @confirm="beginConsultation" />
+      <input v-model="roleName" placeholder="例如：工程师、数据工程师、Agent 工程师" confirm-type="search" @confirm="beginConsultation" />
+      <text v-if="suggestionLoading" class="suggestion-hint">正在匹配相关岗位…</text>
+      <view v-if="visibleSuggestions.length" class="suggestion-list">
+        <text class="suggestion-title">相关岗位，点击加入本次对比</text>
+        <button
+          v-for="suggestion in visibleSuggestions"
+          :key="suggestion.roleName"
+          class="suggestion-button"
+          @click="selectSuggestion(suggestion)"
+        >
+          <text>{{ suggestion.roleName }}</text>
+          <text class="suggestion-category">{{ suggestion.category }}</text>
+        </button>
+      </view>
+      <view v-if="selectedRoles.length" class="selected-role-area">
+        <text class="selected-role-title">本次要分析的岗位（最多 3 个）</text>
+        <view class="role-chip-list">
+          <button
+            v-for="role in selectedRoles"
+            :key="role"
+            class="role-chip"
+            @click="removeSelectedRole(role)"
+          >{{ role }} ×</button>
+        </view>
+      </view>
       <textarea
         v-model="customRequirement"
         class="custom-requirement-input"
-        placeholder="可选：补充你的岗位偏好或特殊需求，例如目标城市、双休、行业方向"
+        placeholder="可选：补充岗位偏好或特殊需求，例如目标城市、双休、行业方向。"
         auto-height
       />
       <button class="primary" :loading="loading" @click="beginConsultation">查询岗位情报</button>
@@ -240,6 +361,14 @@ function isRiskItem(item: string) {
     </view>
 
     <view v-if="jobConsultation" class="result">
+      <view v-if="jobConsultations.length > 1" class="role-tab-list">
+        <button
+          v-for="(item, index) in jobConsultations"
+          :key="item.jobIntelligence.roleName"
+          :class="['role-tab', { 'role-tab-active': index === activeJobIndex }]"
+          @click="selectJobConsultation(index)"
+        >{{ item.jobIntelligence.roleName }}</button>
+      </view>
       <view class="result-header">
         <view>
           <text class="role">{{ jobConsultation.jobIntelligence.roleName }}</text>
@@ -282,7 +411,17 @@ function isRiskItem(item: string) {
         <text v-for="item in section.items" :key="item" class="list-item">- {{ item }}</text>
       </view>
       <text class="follow-up">{{ jobConsultation.followUpQuestion }}</text>
-      <button class="primary" @click="startResume">以此岗位生成简历</button>
+      <button class="primary" @click="openResumeTargetPicker">选择岗位并制作简历</button>
+      <view v-if="showTargetPicker" class="target-picker">
+        <text class="target-picker-title">请选择要用于简历优化的目标岗位</text>
+        <text class="target-picker-hint">会按所选岗位补充关键词与可编辑草案，不会自动虚构你的真实经历。</text>
+        <button
+          v-for="(item, index) in jobConsultations"
+          :key="item.jobIntelligence.roleName"
+          class="target-role-button"
+          @click="generateResumeForRole(index)"
+        >按“{{ item.jobIntelligence.roleName }}”优化并制作简历</button>
+      </view>
     </view>
 
     <view v-if="canReviewResume" class="review-card">
@@ -291,7 +430,7 @@ function isRiskItem(item: string) {
       <textarea
         v-model="resumeText"
         class="resume-textarea"
-        placeholder="直接粘贴简历文本。系统会保留真实经历，只将未知信息标为[待确认]。"
+        placeholder="直接粘贴简历文本。系统会保留真实经历，只将未知信息标为 [待确认]。"
         auto-height
       />
       <view class="button-row">
@@ -310,7 +449,7 @@ function isRiskItem(item: string) {
       <text class="keywords">{{ resumeReview.keywords.join(" / ") }}</text>
       <text class="result-title">## 可复制完整简历文本</text>
       <text class="copy-text">{{ resumeReview.optimizedResumeText }}</text>
-      <text class="result-title">## 1分钟面试自我介绍</text>
+      <text class="result-title">## 1 分钟面试自我介绍</text>
       <text class="copy-text">{{ resumeReview.interviewIntro }}</text>
       <view v-if="resumeReview.customRequirementNotes.length" class="custom-note">
         <text class="block-title">## 已纳入你的补充需求</text>
@@ -338,7 +477,7 @@ function isRiskItem(item: string) {
     <view v-if="canReviewResume" class="toolkit-card">
       <text class="review-title">求职工具箱</text>
       <picker :range="adviceTopics" range-key="label" @change="selectAdviceTopic">
-        <view class="picker-value">{{ selectedAdviceTopic.label }} ▾</view>
+        <view class="picker-value">{{ selectedAdviceTopic.label }} ▼</view>
       </picker>
       <textarea
         v-model="adviceQuestion"
@@ -372,12 +511,20 @@ function isRiskItem(item: string) {
 input,.resume-textarea,.question-textarea,.custom-requirement-input,.picker-value {
   width: 100%; box-sizing: border-box; padding: 20rpx; background: #f7f8fa; border-radius: 12rpx;
 }
-input { height: 80rpx; margin-bottom: 18rpx; }
+input { height: 80rpx; margin-bottom: 12rpx; }
 .resume-textarea { min-height: 180rpx; margin: 20rpx 0; line-height: 1.6; }
 .question-textarea { min-height: 120rpx; margin: 20rpx 0; line-height: 1.6; }
-.custom-requirement-input { min-height: 96rpx; margin: 4rpx 0 8rpx; line-height: 1.6; }
+.custom-requirement-input { min-height: 96rpx; margin: 18rpx 0 8rpx; line-height: 1.6; }
 .primary { margin-top: 12rpx; color: #fff; background: #1677ff; }
 .secondary { margin-top: 12rpx; color: #4e5969; background: #f2f3f5; }
+.suggestion-hint,.suggestion-title,.selected-role-title { display: block; margin-top: 12rpx; color: #86909c; font-size: 24rpx; }
+.suggestion-list,.selected-role-area { margin-top: 16rpx; padding: 16rpx; background: #f7faff; border-radius: 12rpx; }
+.suggestion-button { display: flex; justify-content: space-between; align-items: center; margin-top: 12rpx; color: #1677ff; background: #e8f3ff; border: 1rpx solid #b7d8ff; font-size: 26rpx; }
+.suggestion-category { color: #86909c; font-size: 22rpx; }
+.role-chip-list,.role-tab-list { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 14rpx; }
+.role-chip,.role-tab { margin: 0; padding: 6rpx 18rpx; color: #1677ff; background: #e8f3ff; border: 1rpx solid #b7d8ff; border-radius: 999rpx; font-size: 24rpx; line-height: 1.6; }
+.role-tab-active { color: #fff; background: #1677ff; border-color: #1677ff; }
+.role-tab-list { margin: 0 0 22rpx; padding-bottom: 18rpx; border-bottom: 1rpx solid #e5e6eb; }
 .identity-prompt { display: block; margin-bottom: 12rpx; font-weight: 600; color: #1f2329; }
 .identity-options { display: flex; flex-direction: column; gap: 14rpx; margin-top: 24rpx; }
 .identity-button { margin: 0; text-align: left; color: #1677ff; background: #e8f3ff; border: 1rpx solid #b7d8ff; }
@@ -391,10 +538,14 @@ input { height: 80rpx; margin-bottom: 18rpx; }
 .block { display: flex; flex-direction: column; gap: 10rpx; margin: 24rpx 0; color: #4e5969; }
 .block-title { color: #1f2329; font-weight: 600; }.list-item { line-height: 1.65; }
 .plan-block { padding: 20rpx; background: #f7faff; border-radius: 12rpx; }
-.custom-note,.growth-stage,.priority-gap { margin-top: 20rpx; padding: 20rpx; background: #f7faff; border-radius: 12rpx; }
+.custom-note,.growth-stage,.priority-gap,.target-picker { margin-top: 20rpx; padding: 20rpx; background: #f7faff; border-radius: 12rpx; }
 .growth-stage { border-left: 6rpx solid #4096ff; }
 .growth-meta { display: block; margin: 10rpx 0; color: #1677ff; font-size: 24rpx; }
 .risk-item { padding: 12rpx; color: #ad4e00; background: #fff7e8; border-radius: 10rpx; }
+.target-picker { border: 1rpx solid #b7d8ff; background: #f5faff; }
+.target-picker-title { display: block; color: #1f2329; font-weight: 700; }
+.target-picker-hint { display: block; margin-top: 10rpx; color: #86909c; line-height: 1.55; }
+.target-role-button { margin-top: 14rpx; color: #1677ff; background: #e8f3ff; border: 1rpx solid #b7d8ff; text-align: left; }
 .match-score-card { display: flex; align-items: baseline; gap: 16rpx; margin: 18rpx 0; padding: 20rpx; color: #0958d9; background: #e6f4ff; border-radius: 12rpx; }
 .match-score { font-size: 52rpx; font-weight: 700; }.match-score-label { font-size: 26rpx; color: #4e5969; }
 .priority-gap { background: #fff7e8; border: 1rpx solid #ffe7ba; }.priority-gap-title { display: block; margin-bottom: 10rpx; color: #d46b08; font-weight: 700; }

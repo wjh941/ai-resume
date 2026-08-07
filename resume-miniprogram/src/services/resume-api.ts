@@ -3,6 +3,7 @@ import type {
   AdviceTopic,
   CareerAdvice,
   JobConsultation,
+  JobSuggestion,
   ResumeReview,
 } from "../types/consultation"
 import type { JobIntelligence, ResumeDraft, ResumePayload } from "../types/resume"
@@ -11,6 +12,11 @@ type BackendJob = {
   version: 1; role_name: string; salary_by_experience: Record<string, string>
   responsibilities: string[]; hard_requirements: string[]; required_skills: string[]
   bonus_skills: string[]; career_route: string[]
+}
+
+type BackendJobSuggestion = {
+  role_name: string
+  category: string
 }
 
 type BackendConsultationSection = {
@@ -91,6 +97,16 @@ function toBackendResume(resume: ResumePayload) {
 
 export async function queryJob(roleName: string): Promise<JobIntelligence> {
   return fromBackendJob(await request<BackendJob>("/api/job/query", "POST", { role_name: roleName }))
+}
+
+export async function queryJobSuggestions(query: string): Promise<JobSuggestion[]> {
+  const response = await request<{ items: BackendJobSuggestion[] }>(
+    `/api/job/suggestions?q=${encodeURIComponent(query)}`,
+  )
+  return response.items.map((item) => ({
+    roleName: item.role_name,
+    category: item.category,
+  }))
 }
 
 export async function queryJobConsultation(
