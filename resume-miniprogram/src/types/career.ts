@@ -80,3 +80,35 @@ export type CareerRecommendationResult = {
   }
   tiers: Record<RecommendationTier, RoleRecommendation[]>
 }
+
+export type ComparisonActionPlan = {
+  sevenDay: string[]
+  thirtyDay: string[]
+  ninetyDay: string[]
+}
+
+export type CareerComparisonItem = {
+  role: RoleRecommendation["role"]
+  totalScore: number
+  matchingLevel: MatchingLevel
+  scoreBreakdown: ScoreBreakdown[]
+  matchingAdvantages: string[]
+  missingSkills: string[]
+  alternatives: string[]
+  riskNotice: string
+  actionPlan: ComparisonActionPlan
+}
+
+export type CareerComparisonResult = {
+  profile: CareerProfile
+  items: CareerComparisonItem[]
+  commonStrengths: string[]
+  recommendationNotice: string
+}
+
+export type WeeklyCareerTarget = {
+  roleName: string
+  family: string
+  totalScore: number
+  matchingLevel: MatchingLevel
+}

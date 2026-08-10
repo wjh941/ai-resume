@@ -2,6 +2,8 @@ import { request } from "./http"
 import type {
   CareerProfile,
   CareerProfilePayload,
+  CareerComparisonItem,
+  CareerComparisonResult,
   CareerRecommendationResult,
   MajorSuggestion,
   RoleRecommendation,
@@ -43,6 +45,21 @@ const toProfile = (profile: CareerProfilePayload) => ({
   skills: profile.skills,
   draft_id: profile.draftId || undefined,
 })
+
+const mapRole = (role: Record<string, unknown>): RoleRecommendation["role"] => ({
+  roleName: role.role_name as string, family: role.family as string, aliases: role.aliases as string[],
+  recommendedMajors: role.recommended_majors as string[], adjacentMajors: role.adjacent_majors as string[],
+  relevantCourses: role.relevant_courses as string[], requiredSkills: role.required_skills as string[],
+  entrySkills: role.entry_skills as string[], alternativeRoles: role.alternative_roles as string[],
+  internshipRoles: role.internship_roles as string[], entryDifficulty: role.entry_difficulty as number,
+  industryTags: role.industry_tags as string[], description: role.description as string,
+})
+
+const mapScoreBreakdown = (items: Array<Record<string, unknown>>) => items.map((score) => ({
+  key: score.key as string, label: score.label as string, score: score.score as number,
+  maxScore: score.max_score as number, reason: score.reason as string,
+  missingEvidence: score.missing_evidence as string[],
+}))
 
 export async function queryRoleSuggestions(query: string): Promise<RoleSuggestion[]> {
   const data = await request<{ items: Array<{ role_name: string; family: string; description: string }> }>(
@@ -87,24 +104,12 @@ export async function generateCareerRecommendations(clientId: string): Promise<C
     tiers: Record<string, Array<Record<string, unknown>>>
   }>(`/api/career/recommend?client_id=${encodeURIComponent(clientId)}`, "POST")
   const mapRecommendation = (item: Record<string, unknown>) => {
-    const role = item.role as Record<string, unknown>
     return {
-      role: {
-        roleName: role.role_name as string, family: role.family as string, aliases: role.aliases as string[],
-        recommendedMajors: role.recommended_majors as string[], adjacentMajors: role.adjacent_majors as string[],
-        relevantCourses: role.relevant_courses as string[], requiredSkills: role.required_skills as string[],
-        entrySkills: role.entry_skills as string[], alternativeRoles: role.alternative_roles as string[],
-        internshipRoles: role.internship_roles as string[], entryDifficulty: role.entry_difficulty as number,
-        industryTags: role.industry_tags as string[], description: role.description as string,
-      },
+      role: mapRole(item.role as Record<string, unknown>),
       tier: item.tier as "stretch" | "stable" | "safe",
       totalScore: item.total_score as number,
       matchingLevel: item.matching_level as RoleRecommendation["matchingLevel"],
-      scoreBreakdown: (item.score_breakdown as Array<Record<string, unknown>>).map((score) => ({
-        key: score.key as string, label: score.label as string, score: score.score as number,
-        maxScore: score.max_score as number, reason: score.reason as string,
-        missingEvidence: score.missing_evidence as string[],
-      })),
+      scoreBreakdown: mapScoreBreakdown(item.score_breakdown as Array<Record<string, unknown>>),
       matchingAdvantages: item.matching_advantages as string[],
       missingSkills: item.missing_skills as string[],
       actionPlan: item.action_plan as string[],
@@ -129,5 +134,41 @@ export async function generateCareerRecommendations(clientId: string): Promise<C
       stable: data.tiers.stable.map(mapRecommendation),
       safe: data.tiers.safe.map(mapRecommendation),
     },
+  }
+}
+
+export async function compareRoles(
+  clientId: string,
+  roleNames: string[],
+): Promise<CareerComparisonResult> {
+  const data = await request<{
+    profile: BackendProfile
+    items: Array<Record<string, unknown>>
+    common_strengths: string[]
+    recommendation_notice: string
+  }>("/api/career/compare", "POST", {
+    client_id: clientId,
+    role_names: roleNames,
+  })
+  const items: CareerComparisonItem[] = data.items.map((item) => ({
+    role: mapRole(item.role as Record<string, unknown>),
+    totalScore: item.total_score as number,
+    matchingLevel: item.matching_level as CareerComparisonItem["matchingLevel"],
+    scoreBreakdown: mapScoreBreakdown(item.score_breakdown as Array<Record<string, unknown>>),
+    matchingAdvantages: item.matching_advantages as string[],
+    missingSkills: item.missing_skills as string[],
+    alternatives: item.alternatives as string[],
+    riskNotice: item.risk_notice as string,
+    actionPlan: {
+      sevenDay: (item.action_plan as Record<string, string[]>).seven_day,
+      thirtyDay: (item.action_plan as Record<string, string[]>).thirty_day,
+      ninetyDay: (item.action_plan as Record<string, string[]>).ninety_day,
+    },
+  }))
+  return {
+    profile: fromProfile(data.profile),
+    items,
+    commonStrengths: data.common_strengths,
+    recommendationNotice: data.recommendation_notice,
   }
 }

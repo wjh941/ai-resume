@@ -5,6 +5,7 @@ import type {
   CareerRecommendationResult,
   RecommendationTier,
   RoleRecommendation,
+  WeeklyCareerTarget,
 } from "../types/career"
 
 const CHECKPOINT_KEY = "resume_demo_career_planner"
@@ -19,6 +20,8 @@ export const useCareerStore = defineStore("career", {
     result: null as CareerRecommendationResult | null,
     selectedTier: "stable" as RecommendationTier,
     selectedRole: null as RoleRecommendation | null,
+    comparisonRoleNames: [] as string[],
+    weeklyTarget: null as WeeklyCareerTarget | null,
   }),
   actions: {
     checkpoint(): void {
@@ -26,6 +29,8 @@ export const useCareerStore = defineStore("career", {
         profile: this.profile,
         selectedTier: this.selectedTier,
         selectedRole: this.selectedRole,
+        comparisonRoleNames: this.comparisonRoleNames,
+        weeklyTarget: this.weeklyTarget,
       }))
     },
     restoreCheckpoint(): void {
@@ -34,6 +39,8 @@ export const useCareerStore = defineStore("career", {
       this.profile = saved.profile ?? null
       this.selectedTier = saved.selectedTier ?? "stable"
       this.selectedRole = saved.selectedRole ?? null
+      this.comparisonRoleNames = saved.comparisonRoleNames ?? []
+      this.weeklyTarget = saved.weeklyTarget ?? null
     },
     setProfile(profile: CareerProfilePayload): void {
       this.profile = clone(profile)
@@ -52,6 +59,31 @@ export const useCareerStore = defineStore("career", {
     },
     selectRole(role: RoleRecommendation): void {
       this.selectedRole = clone(role)
+      this.checkpoint()
+    },
+    toggleComparisonRole(roleName: string): boolean {
+      const index = this.comparisonRoleNames.indexOf(roleName)
+      if (index >= 0) {
+        this.comparisonRoleNames.splice(index, 1)
+      } else if (this.comparisonRoleNames.length >= 4) {
+        return false
+      } else {
+        this.comparisonRoleNames.push(roleName)
+      }
+      this.checkpoint()
+      return true
+    },
+    setWeeklyTarget(role: {
+      role: RoleRecommendation["role"]
+      totalScore: number
+      matchingLevel: WeeklyCareerTarget["matchingLevel"]
+    }): void {
+      this.weeklyTarget = {
+        roleName: role.role.roleName,
+        family: role.role.family,
+        totalScore: role.totalScore,
+        matchingLevel: role.matchingLevel,
+      }
       this.checkpoint()
     },
   },
