@@ -54,10 +54,17 @@ uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```powershell
 cd resume-miniprogram
 npm install
+Copy-Item .env.example .env.local
 npm run dev:h5
 ```
 
 控制台会输出本地访问地址，通常为 `http://127.0.0.1:5173`。浏览器打开后，从首页点击“求职志愿规划”即可使用三档职业推荐。
+
+`VITE_RESUME_API_URL` 留空时，H5 开发服务器会将 `/api` 和 `/downloads` 代理到本机后端 `http://127.0.0.1:8000`。部署 H5 或编译微信小程序前，请在 `resume-miniprogram/.env.local` 中填写已部署的 HTTPS 后端地址，例如：
+
+```dotenv
+VITE_RESUME_API_URL=https://api.example.com
+```
 
 ### 3. 构建微信小程序
 
@@ -72,7 +79,7 @@ npm run build:mp-weixin
 resume-miniprogram/dist/build/mp-weixin
 ```
 
-本地调试时，真机或模拟器需要能访问后端地址。正式部署时请将 `resume-miniprogram/src/services/http.ts` 中的 API 地址替换为已配置 HTTPS 的服务端域名，并在微信小程序后台配置合法域名。
+真机、模拟器与正式小程序必须使用可访问的 HTTPS 后端地址：在 `resume-miniprogram/.env.local` 配置 `VITE_RESUME_API_URL` 后重新构建，并在微信小程序后台配置对应的合法域名。无需修改前端源码；前端环境变量不得存放 API Key 等敏感信息。
 
 ## AI 与联网配置
 

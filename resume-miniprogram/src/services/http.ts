@@ -1,12 +1,30 @@
 import type { ApiEnvelope } from "../types/api"
 
-const API_BASE_URL =
-  process.env.UNI_PLATFORM === "h5" ? "" : "http://127.0.0.1:8000"
+const API_BASE_URL = import.meta.env.VITE_RESUME_API_URL || ""
+
+export function resolveApiUrl(
+  configuredBaseUrl: string,
+  platform: string | undefined,
+  path: string,
+): string {
+  const normalizedBaseUrl = configuredBaseUrl.trim().replace(/\/+$/, "")
+  if (normalizedBaseUrl) {
+    return `${normalizedBaseUrl}${path}`
+  }
+
+  if (!platform || platform === "h5") {
+    return path
+  }
+
+  throw new Error(
+    "未配置小程序后端地址，请在 .env.local 中设置 VITE_RESUME_API_URL。",
+  )
+}
 
 type UniRequest = (options: Record<string, unknown>) => Promise<{ statusCode?: number; data: ApiEnvelope<unknown> | unknown }>
 
 export function apiUrl(path: string): string {
-  return `${API_BASE_URL}${path}`
+  return resolveApiUrl(API_BASE_URL, process.env.UNI_PLATFORM, path)
 }
 
 export async function request<T>(path: string, method = "GET", data?: unknown): Promise<T> {
