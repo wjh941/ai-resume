@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { checkResumeReadiness } from "../../services/evidence-api"
 import { useResumeStore } from "../../stores/resume"
 import type { TemplateId } from "../../types/resume"
+import { decideTemplateSelection } from "../../utils/template-selection"
 
 const store = useResumeStore()
 
@@ -11,7 +13,34 @@ const templates: Array<{ id: TemplateId; name: string; description: string }> = 
   { id: "analytics", name: "数据分析/运营精致版", description: "强调数据思维、复盘与业务结果" },
 ]
 
-function chooseTemplate(templateId: TemplateId) {
+function confirmWarnings(warnings: string[]): Promise<boolean> {
+  return new Promise((resolve) => {
+    uni.showModal({
+      title: "请确认待补充项",
+      content: `以下内容需要确认后再导出：\n${warnings.slice(0, 3).join("\n")}`,
+      confirmText: "继续预览",
+      cancelText: "返回修改",
+      success: (result) => resolve(result.confirm),
+      fail: () => resolve(false),
+    })
+  })
+}
+
+async function chooseTemplate(templateId: TemplateId) {
+  try {
+    const report = await checkResumeReadiness(store.draft.resume)
+    const decision = decideTemplateSelection(report)
+    if (decision.blocked) {
+      uni.showToast({ title: `请先补充${report.blockingItems[0]}`, icon: "none" })
+      return
+    }
+    if (decision.requiresWarningConfirmation && !(await confirmWarnings(report.warningItems))) {
+      return
+    }
+  } catch {
+    uni.showToast({ title: "简历检查失败，请稍后重试", icon: "none" })
+    return
+  }
   store.draft.templateId = templateId
   store.checkpoint()
   uni.navigateTo({ url: "/pages/resume-editor/index" })
