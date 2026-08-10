@@ -176,14 +176,24 @@ def initialize_database(database_path: Path) -> None:
                 internship_roles_json TEXT NOT NULL,
                 entry_difficulty INTEGER NOT NULL CHECK (entry_difficulty BETWEEN 1 AND 5),
                 industry_tags_json TEXT NOT NULL,
-                description TEXT NOT NULL
+                description TEXT NOT NULL,
+                catalog_origin TEXT NOT NULL DEFAULT 'seed',
+                source_key TEXT,
+                source_version TEXT,
+                source_url TEXT,
+                updated_at TEXT
             );
             CREATE TABLE IF NOT EXISTS major_catalog (
                 major_name TEXT PRIMARY KEY,
                 category TEXT NOT NULL,
                 aliases_json TEXT NOT NULL,
                 related_families_json TEXT NOT NULL,
-                transferable_skills_json TEXT NOT NULL
+                transferable_skills_json TEXT NOT NULL,
+                catalog_origin TEXT NOT NULL DEFAULT 'seed',
+                source_key TEXT,
+                source_version TEXT,
+                source_url TEXT,
+                updated_at TEXT
             );
             CREATE TABLE IF NOT EXISTS career_profile (
                 client_id TEXT PRIMARY KEY,
@@ -199,8 +209,33 @@ def initialize_database(database_path: Path) -> None:
                 draft_id TEXT,
                 updated_at TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS official_dataset_source (
+                source_key TEXT PRIMARY KEY,
+                display_name TEXT NOT NULL,
+                direct_url TEXT,
+                allowed_hosts_json TEXT NOT NULL DEFAULT '[]',
+                file_format TEXT NOT NULL,
+                parser_kind TEXT NOT NULL,
+                enabled INTEGER NOT NULL DEFAULT 0,
+                disabled_reason TEXT,
+                last_version TEXT,
+                last_checksum TEXT,
+                last_synced_at TEXT
+            );
+            CREATE TABLE IF NOT EXISTS knowledge_sync_run (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                mode TEXT NOT NULL,
+                status TEXT NOT NULL,
+                started_at TEXT NOT NULL,
+                completed_at TEXT,
+                added_roles INTEGER NOT NULL DEFAULT 0,
+                added_majors INTEGER NOT NULL DEFAULT 0,
+                skipped_rows INTEGER NOT NULL DEFAULT 0,
+                errors_json TEXT NOT NULL DEFAULT '[]'
+            );
             """
         )
+        _migrate_catalog_provenance(connection)
         connection.executemany(
             """
             INSERT OR IGNORE INTO template_table (id, name, description, config_json)
@@ -264,3 +299,27 @@ def _migrate_legacy_job_cache(connection: sqlite3.Connection) -> None:
         DROP TABLE job_cache_legacy;
         """
     )
+
+
+def _migrate_catalog_provenance(connection: sqlite3.Connection) -> None:
+    migrations = {
+        "role_profile": (
+            ("catalog_origin", "TEXT NOT NULL DEFAULT 'seed'"),
+            ("source_key", "TEXT"),
+            ("source_version", "TEXT"),
+            ("source_url", "TEXT"),
+            ("updated_at", "TEXT"),
+        ),
+        "major_catalog": (
+            ("catalog_origin", "TEXT NOT NULL DEFAULT 'seed'"),
+            ("source_key", "TEXT"),
+            ("source_version", "TEXT"),
+            ("source_url", "TEXT"),
+            ("updated_at", "TEXT"),
+        ),
+    }
+    for table, columns in migrations.items():
+        existing = {str(row["name"]) for row in connection.execute(f"PRAGMA table_info({table})")}
+        for column, definition in columns:
+            if column not in existing:
+                connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")

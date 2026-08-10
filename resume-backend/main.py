@@ -7,18 +7,20 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.api import ai, career, consultation, drafts, exports, templates
+from app.api import ai, career, consultation, drafts, exports, knowledgebase, templates
 from app.config import Settings, load_settings
 from app.db import initialize_database
 from app.repositories.career_catalog import CareerCatalogRepository
 from app.repositories.career_profiles import CareerProfileNotFoundError, CareerProfileRepository
 from app.repositories.drafts import DraftNotFoundError, DraftRepository
+from app.repositories.knowledgebase import KnowledgebaseRepository, KnowledgebaseRoleNotFoundError
 from app.repositories.templates import TemplateRepository
 from app.schemas.common import error, success
 from app.services.ai_client import build_ai_client
 from app.services.career_recommender import CareerRecommender
 from app.services.downloads import DownloadNotFoundError, DownloadService
 from app.services.job_catalog import JobCatalog
+from app.services.official_dataset_sync import OfficialDatasetSyncService
 from app.services.export_pdf import PdfRendererUnavailableError
 from app.services.job_cache import JobCache
 from app.services.rewrite_guard import RewriteFactViolation
@@ -55,6 +57,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.ai_client = build_ai_client(settings)
     app.state.job_cache = JobCache(settings.database_path, settings.cache_expire_day)
     app.state.job_catalog = JobCatalog(settings.database_path)
+    app.state.knowledgebase_repository = KnowledgebaseRepository(settings.database_path)
+    app.state.official_dataset_sync_service = OfficialDatasetSyncService(
+        app.state.knowledgebase_repository
+    )
     app.state.career_catalog_repository = CareerCatalogRepository(settings.database_path)
     app.state.career_profile_repository = CareerProfileRepository(settings.database_path)
     app.state.career_recommender = CareerRecommender(
@@ -70,6 +76,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.exception_handler(DraftNotFoundError)
     def draft_not_found(_: Request, __: DraftNotFoundError):
         return JSONResponse(status_code=404, content=error("not_found", "Draft not found"))
+
+    @app.exception_handler(KnowledgebaseRoleNotFoundError)
+    def knowledgebase_role_not_found(_: Request, __: KnowledgebaseRoleNotFoundError):
+        return JSONResponse(
+            status_code=404, content=error('not_found', 'Knowledgebase role not found')
+        )
 
     @app.exception_handler(CareerProfileNotFoundError)
     def career_profile_not_found(_: Request, __: CareerProfileNotFoundError):
@@ -109,6 +121,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(consultation.router)
     app.include_router(drafts.router)
     app.include_router(exports.router)
+    app.include_router(knowledgebase.router)
     app.include_router(templates.router)
     return app
 
