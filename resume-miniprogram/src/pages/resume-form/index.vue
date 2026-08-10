@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, watch } from "vue"
+import { computed, ref, watch } from "vue"
 
 import FormField from "../../components/FormField.vue"
+import { getEvidenceSuggestions } from "../../services/evidence-api"
 import { saveDraft } from "../../services/resume-api"
 import { useResumeStore } from "../../stores/resume"
 import { getClientId } from "../../stores/session"
+import type { EvidenceSuggestion } from "../../types/evidence"
 import {
   createRoleBasedInternshipDraft,
   createRoleBasedProjectDraft,
@@ -15,8 +17,13 @@ import { validateResume } from "../../utils/validators"
 const store = useResumeStore()
 const resume = computed(() => store.draft.resume)
 const activeJob = computed(() => store.activeJob ?? store.draft.jobIntelligence)
+const evidenceSuggestions = ref<EvidenceSuggestion[]>([])
 
 watch(() => store.draft, () => store.checkpoint(), { deep: true })
+watch(activeJob, (job) => {
+  evidenceSuggestions.value = []
+  if (job) void loadEvidenceSuggestions(job.roleName)
+}, { immediate: true })
 
 function addEducation() {
   resume.value.education.push({ school: "", major: "", degree: "", startDate: "", endDate: "", courses: "" })
@@ -45,6 +52,26 @@ function addSuggestedInternship() {
   resume.value.employment.push(createRoleBasedInternshipDraft(activeJob.value))
   store.checkpoint()
   uni.showToast({ title: "已添加实习草案，请替换待确认信息", icon: "none" })
+}
+
+async function loadEvidenceSuggestions(roleName: string) {
+  try {
+    evidenceSuggestions.value = await getEvidenceSuggestions(getClientId(), roleName)
+  } catch {
+    evidenceSuggestions.value = []
+  }
+}
+
+function openEvidenceLibrary() {
+  uni.navigateTo({ url: "/pages/evidence/index" })
+}
+
+function applyEvidenceSuggestion(suggestion: EvidenceSuggestion) {
+  if (!store.applyEvidenceSuggestion(suggestion)) {
+    uni.showToast({ title: "已有对应经历，不会覆盖", icon: "none" })
+    return
+  }
+  uni.showToast({ title: "已写入空白经历，请补充待确认信息", icon: "success" })
 }
 
 async function save() {
@@ -96,6 +123,28 @@ function prepareAndChooseTemplate() {
       <view class="enrichment-actions">
         <button class="secondary" @click="addSuggestedProject">添加项目经历草案</button>
         <button class="primary" @click="addSuggestedInternship">添加实习经历草案</button>
+      </view>
+      <view class="evidence-entry">
+        <view>
+          <text class="evidence-entry-title">经历证据库</text>
+          <text class="evidence-entry-hint">先录入真实经历，再按当前岗位生成可确认草案。</text>
+        </view>
+        <button size="mini" class="secondary" @click="openEvidenceLibrary">管理经历</button>
+      </view>
+      <view v-if="evidenceSuggestions.length" class="suggestion-list">
+        <view
+          v-for="suggestion in evidenceSuggestions"
+          :key="suggestion.sourceEvidenceId"
+          class="suggestion-card"
+        >
+          <view class="suggestion-top">
+            <text>{{ suggestion.sourceTitle }}</text>
+            <text>{{ suggestion.targetSection === "project" ? "项目经历" : "实习/工作经历" }}</text>
+          </view>
+          <text class="suggestion-description">{{ suggestion.description }}</text>
+          <text v-if="suggestion.riskNote" class="suggestion-risk">{{ suggestion.riskNote }}</text>
+          <button size="mini" class="secondary" @click="applyEvidenceSuggestion(suggestion)">写入空白区</button>
+        </view>
       </view>
     </view>
 
@@ -165,4 +214,9 @@ textarea { width: 100%; min-height: 130rpx; margin: 16rpx 0; padding: 16rpx; box
 .enrichment-card { background: #f7faff; border-color: #b7d8ff; }
 .enrichment-hint { display: block; margin-top: 14rpx; color: #4e5969; line-height: 1.6; }
 .enrichment-actions { display: flex; gap: 16rpx; margin-top: 20rpx; }.enrichment-actions button { flex: 1; font-size: 24rpx; }
+.evidence-entry { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; margin-top: 22rpx; padding: 18rpx; background: #eef6ff; border: 1rpx solid #cfe4ff; border-radius: 14rpx; }
+.evidence-entry-title, .evidence-entry-hint { display: block; }.evidence-entry-title { color: #245b99; font-size: 25rpx; font-weight: 700; }.evidence-entry-hint { margin-top: 5rpx; color: #66788b; font-size: 21rpx; }.evidence-entry button { flex-shrink: 0; }
+.suggestion-list { margin-top: 16rpx; }.suggestion-card { margin-top: 12rpx; padding: 16rpx; background: #fff; border: 1rpx solid #d8e8f8; border-radius: 12rpx; }
+.suggestion-top { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; color: #245b99; font-size: 24rpx; font-weight: 700; }.suggestion-top text:last-child { color: #86909c; font-size: 20rpx; font-weight: 400; }
+.suggestion-description, .suggestion-risk { display: block; margin-top: 10rpx; color: #4e5969; font-size: 22rpx; line-height: 1.55; white-space: pre-line; }.suggestion-risk { color: #b26a00; }.suggestion-card button { margin-top: 12rpx; }
 </style>

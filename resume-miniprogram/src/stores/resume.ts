@@ -1,6 +1,8 @@
 import { defineStore } from "pinia"
 
 import { createEmptyDraft, type JobIntelligence, type ResumeDraft } from "../types/resume"
+import type { EvidenceSuggestion } from "../types/evidence"
+import { applyEvidenceSuggestion as applyToDraft } from "../utils/evidence-suggestions"
 
 const CHECKPOINT_KEY = "resume_demo_checkpoint"
 
@@ -39,6 +41,11 @@ export const useResumeStore = defineStore("resume", {
       if (!this.draft.jobTitle.trim()) this.draft.jobTitle = job.roleName
       if (!this.draft.resume.job.targetRole.trim()) this.draft.resume.job.targetRole = job.roleName
       this.checkpoint()
+    },
+    applyEvidenceSuggestion(suggestion: EvidenceSuggestion): boolean {
+      const applied = applyToDraft(this.draft, suggestion)
+      if (applied) this.checkpoint()
+      return applied
     },
     resetDraft(): void {
       this.activeJob = null

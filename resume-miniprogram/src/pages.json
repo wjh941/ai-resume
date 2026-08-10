@@ -4,6 +4,7 @@
     { "path": "pages/career-planner/index", "style": { "navigationBarTitleText": "求职志愿规划" } },
     { "path": "pages/career-assessment/index", "style": { "navigationBarTitleText": "职业测评" } },
     { "path": "pages/knowledgebase/index", "style": { "navigationBarTitleText": "知识库" } },
+    { "path": "pages/evidence/index", "style": { "navigationBarTitleText": "经历证据" } },
     { "path": "pages/resume-form/index", "style": { "navigationBarTitleText": "填写简历" } },
     { "path": "pages/template-picker/index", "style": { "navigationBarTitleText": "选择模板" } },
     { "path": "pages/resume-editor/index", "style": { "navigationBarTitleText": "编辑简历" } },
