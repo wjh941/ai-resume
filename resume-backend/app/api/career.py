@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from app.repositories.assessment import AssessmentNotFoundError
-from app.schemas.career import CareerProfilePayload
+from app.schemas.career import CareerComparisonRequest, CareerProfilePayload
 from app.schemas.common import success
 
 
@@ -60,3 +60,19 @@ async def career_recommend(request: Request, client_id: str):
         assessment_result=assessment["result"] if assessment else None,
     )
     return success(recommendation.model_dump())
+
+
+@router.post("/api/career/compare")
+async def career_compare(payload: CareerComparisonRequest, request: Request):
+    profile = request.app.state.career_profile_repository.get(payload.client_id)
+    try:
+        roles = request.app.state.career_catalog_repository.get_roles_by_names(
+            payload.role_names
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    comparison = request.app.state.career_recommender.compare(
+        profile,
+        roles,
+    )
+    return success(comparison.model_dump())

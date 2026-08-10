@@ -142,3 +142,48 @@ class CareerRecommendationResponse(BaseModel):
     major_report: MajorFitReport
     assessment_guidance: AssessmentGuidance | None = None
     tiers: dict[RecommendationTier, list[CareerRecommendation]]
+
+
+class CareerComparisonRequest(BaseModel):
+    client_id: str = Field(min_length=1, max_length=120)
+    role_names: list[str] = Field(min_length=2, max_length=4)
+
+    @field_validator("client_id")
+    @classmethod
+    def normalize_comparison_client_id(cls, value: str) -> str:
+        return _normalize_text(value, "client_id")
+
+    @field_validator("role_names")
+    @classmethod
+    def normalize_unique_role_names(cls, values: list[str]) -> list[str]:
+        normalized = _normalize_list(values)
+        if len(normalized) != len(values):
+            raise ValueError("role_names must contain unique non-empty names")
+        if len(normalized) < 2:
+            raise ValueError("role_names must contain at least two roles")
+        return normalized
+
+
+class ComparisonActionPlan(BaseModel):
+    seven_day: list[str]
+    thirty_day: list[str]
+    ninety_day: list[str]
+
+
+class CareerComparisonItem(BaseModel):
+    role: RoleProfile
+    total_score: int = Field(ge=0, le=100)
+    matching_level: MatchingLevel
+    score_breakdown: list[ScoreBreakdown] = Field(min_length=5, max_length=5)
+    matching_advantages: list[str]
+    missing_skills: list[str]
+    alternatives: list[str]
+    risk_notice: str
+    action_plan: ComparisonActionPlan
+
+
+class CareerComparisonResponse(BaseModel):
+    profile: CareerProfile
+    items: list[CareerComparisonItem] = Field(min_length=2, max_length=4)
+    common_strengths: list[str]
+    recommendation_notice: str

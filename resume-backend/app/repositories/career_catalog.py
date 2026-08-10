@@ -137,6 +137,13 @@ class CareerCatalogRepository:
             ).fetchall()
         return [self._to_role_profile(row) for row in rows]
 
+    def get_roles_by_names(self, role_names: list[str]) -> list[RoleProfile]:
+        catalog = {role.role_name: role for role in self.list_roles()}
+        unknown = [name for name in role_names if name not in catalog]
+        if unknown:
+            raise ValueError(f"Unknown role names: {', '.join(unknown)}")
+        return [catalog[name] for name in role_names]
+
     @staticmethod
     def _to_role_profile(row) -> RoleProfile:
         return RoleProfile(

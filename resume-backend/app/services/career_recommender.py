@@ -5,9 +5,12 @@ from datetime import datetime, timezone
 from app.repositories.career_catalog import CareerCatalogRepository
 from app.schemas.career import (
     AssessmentGuidance,
+    CareerComparisonItem,
+    CareerComparisonResponse,
     CareerProfile,
     CareerRecommendation,
     CareerRecommendationResponse,
+    ComparisonActionPlan,
     MajorFitReport,
     MatchingLevel,
     RoleProfile,
@@ -43,6 +46,71 @@ class CareerRecommender:
             major_report=major_report,
             assessment_guidance=self._assessment_guidance(assessment_result),
             tiers=tiers,
+        )
+
+    def compare(
+        self,
+        profile: CareerProfile,
+        roles: list[RoleProfile],
+    ) -> CareerComparisonResponse:
+        items = [
+            self._comparison_item(profile, role)
+            for role in roles
+        ]
+        common_strengths = (
+            list(
+                set.intersection(
+                    *(set(item.matching_advantages) for item in items)
+                )
+            )
+            if items
+            else []
+        )
+        return CareerComparisonResponse(
+            profile=profile,
+            items=items,
+            common_strengths=sorted(common_strengths),
+            recommendation_notice=(
+                "对比仅使用本地岗位库、已填写职业画像与已确认经历作为方向支持，"
+                "不代表录用概率、薪资承诺或市场实时预测。"
+            ),
+        )
+
+    def _comparison_item(
+        self,
+        profile: CareerProfile,
+        role: RoleProfile,
+    ) -> CareerComparisonItem:
+        recommendation = self._score_role(profile, role)
+        priorities = recommendation.missing_skills[:3] or role.entry_skills[:3]
+        action_plan = ComparisonActionPlan(
+            seven_day=[
+                f"完成 {skill} 的基础练习，并保留代码、笔记或截图证据。"
+                for skill in priorities[:2]
+            ],
+            thirty_day=[
+                f"围绕 {role.role_name} 完成一个小型练习项目，记录真实职责、过程和结果。",
+                "将练习过程整理为可复核材料；没有结果时保留[待确认]。",
+            ],
+            ninety_day=[
+                f"投递或参与与“{role.internship_roles[0]}”相关的真实机会，并复盘反馈。",
+                f"根据真实反馈更新 {role.role_name} 的技能缺口和下一轮行动。",
+            ],
+        )
+        advantages = [*recommendation.matching_advantages]
+        return CareerComparisonItem(
+            role=role,
+            total_score=recommendation.total_score,
+            matching_level=recommendation.matching_level,
+            score_breakdown=recommendation.score_breakdown,
+            matching_advantages=advantages,
+            missing_skills=recommendation.missing_skills,
+            alternatives=recommendation.alternatives,
+            risk_notice=(
+                f"{self._feasibility_reason(profile, role)} "
+                "评分仅用于方向比较，不代表录用概率、薪资承诺或岗位保证。"
+            ),
+            action_plan=action_plan,
         )
 
     @staticmethod
