@@ -71,8 +71,10 @@ async def career_compare(payload: CareerComparisonRequest, request: Request):
         )
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
+    evidence = request.app.state.evidence_repository.list(payload.client_id)
     comparison = request.app.state.career_recommender.compare(
         profile,
         roles,
+        verified_evidence=[item for item in evidence if item.verified],
     )
     return success(comparison.model_dump())

@@ -78,3 +78,50 @@ def test_compare_rejects_duplicate_or_out_of_range_role_names(api_client):
         },
     )
     assert too_many.status_code == 422
+
+
+def test_compare_uses_only_verified_existing_skill_evidence(api_client):
+    save_profile(api_client, client_id="evidence-client", skills=[])
+    for payload in (
+        {
+            "client_id": "evidence-client",
+            "kind": "project",
+            "title": "Python 数据处理课程项目",
+            "context": "课程练习",
+            "actions": "使用 Python 清洗并校验示例数据。",
+            "outcome": "",
+            "proof_note": "本地课程作业",
+            "verified": True,
+        },
+        {
+            "client_id": "evidence-client",
+            "kind": "project",
+            "title": "SQL 练习",
+            "context": "自学记录",
+            "actions": "学习 SQL 查询。",
+            "outcome": "",
+            "proof_note": "",
+            "verified": False,
+        },
+    ):
+        assert_success(api_client.post("/api/evidence", json=payload))
+
+    data = assert_success(
+        api_client.post(
+            "/api/career/compare",
+            json={
+                "client_id": "evidence-client",
+                "role_names": ["数据工程师", "数据分析师"],
+            },
+        )
+    )
+    data_engineer = data["items"][0]
+    skills_reason = next(
+        item["reason"]
+        for item in data_engineer["score_breakdown"]
+        if item["key"] == "skills"
+    )
+
+    assert "Python" not in data_engineer["missing_skills"]
+    assert "SQL" in data_engineer["missing_skills"]
+    assert "已确认经历证据补充：Python" in skills_reason

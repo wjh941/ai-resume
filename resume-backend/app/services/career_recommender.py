@@ -16,6 +16,7 @@ from app.schemas.career import (
     RoleProfile,
     ScoreBreakdown,
 )
+from app.schemas.evidence import ResumeEvidence
 
 
 class CareerRecommender:
@@ -52,9 +53,16 @@ class CareerRecommender:
         self,
         profile: CareerProfile,
         roles: list[RoleProfile],
+        verified_evidence: list[ResumeEvidence],
     ) -> CareerComparisonResponse:
+        evidence_text = _normalized(
+            " ".join(
+                " ".join([item.title, item.context, item.actions, item.outcome])
+                for item in verified_evidence
+            )
+        )
         items = [
-            self._comparison_item(profile, role)
+            self._comparison_item(profile, role, evidence_text)
             for role in roles
         ]
         common_strengths = (
@@ -80,8 +88,33 @@ class CareerRecommender:
         self,
         profile: CareerProfile,
         role: RoleProfile,
+        verified_evidence_text: str,
     ) -> CareerComparisonItem:
-        recommendation = self._score_role(profile, role)
+        evidence_skills = [
+            skill
+            for skill in role.required_skills
+            if _normalized(skill) and _normalized(skill) in verified_evidence_text
+        ]
+        known_skills = {_normalized(skill) for skill in profile.skills}
+        supplementary_skills = [
+            skill for skill in evidence_skills if _normalized(skill) not in known_skills
+        ]
+        scored_profile = profile.model_copy(
+            update={"skills": [*profile.skills, *supplementary_skills]}
+        )
+        recommendation = self._score_role(scored_profile, role)
+        score_breakdown = [
+            score.model_copy(
+                update={
+                    "reason": (
+                        f"{score.reason} 已确认经历证据补充：{'、'.join(supplementary_skills)}。"
+                        if score.key == "skills" and supplementary_skills
+                        else score.reason
+                    )
+                }
+            )
+            for score in recommendation.score_breakdown
+        ]
         priorities = recommendation.missing_skills[:3] or role.entry_skills[:3]
         action_plan = ComparisonActionPlan(
             seven_day=[
@@ -98,11 +131,13 @@ class CareerRecommender:
             ],
         )
         advantages = [*recommendation.matching_advantages]
+        if supplementary_skills:
+            advantages.append(f"已确认经历可证明：{'、'.join(supplementary_skills)}。")
         return CareerComparisonItem(
             role=role,
             total_score=recommendation.total_score,
             matching_level=recommendation.matching_level,
-            score_breakdown=recommendation.score_breakdown,
+            score_breakdown=score_breakdown,
             matching_advantages=advantages,
             missing_skills=recommendation.missing_skills,
             alternatives=recommendation.alternatives,
