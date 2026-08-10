@@ -13,6 +13,7 @@ import { useResumeStore } from "../../stores/resume"
 import { getClientId } from "../../stores/session"
 import type { CareerIdentityCode, CareerProfilePayload, MajorSuggestion, RecommendationTier, RoleRecommendation } from "../../types/career"
 import { prepareResumeForJob } from "../../utils/resume-autofill"
+import { canOpenComparison } from "../../utils/role-comparison"
 
 const store = useCareerStore()
 const resumeStore = useResumeStore()
@@ -58,6 +59,7 @@ const selectedTier = computed({
 })
 const recommendations = computed(() => store.result?.tiers[selectedTier.value] ?? [])
 const majorReport = computed(() => store.result?.majorReport ?? null)
+const comparisonCount = computed(() => store.comparisonRoleNames.length)
 
 watch(majorQuery, async (value) => {
   const query = value.trim()
@@ -100,6 +102,24 @@ function buildPayload(): CareerProfilePayload {
 
 function openCareerAssessment() {
   uni.navigateTo({ url: '/pages/career-assessment/index' })
+}
+
+function isInComparison(roleName: string): boolean {
+  return store.comparisonRoleNames.includes(roleName)
+}
+
+function toggleComparison(roleName: string) {
+  if (!store.toggleComparisonRole(roleName)) {
+    uni.showToast({ title: "最多对比 4 个岗位", icon: "none" })
+  }
+}
+
+function openComparison() {
+  if (!canOpenComparison(store.comparisonRoleNames)) {
+    uni.showToast({ title: "请先选择 2-4 个岗位进行对比", icon: "none" })
+    return
+  }
+  uni.navigateTo({ url: "/pages/role-comparison/index" })
 }
 
 async function generatePlan() {
@@ -220,6 +240,13 @@ void loadSavedProfile()
       </view>
 
       <template v-if="store.result">
+        <view v-if="comparisonCount" class="comparison-bar">
+          <view>
+            <text class="comparison-title">岗位横向对比</text>
+            <text class="comparison-hint">已选 {{ comparisonCount }}/4 个岗位，比较本地画像、技能缺口和行动计划。</text>
+          </view>
+          <button class="comparison-button" size="mini" @click="openComparison">查看对比</button>
+        </view>
         <view class="card report-card">
           <view class="section-heading"><text>专业匹配报告</text><text class="level">{{ majorReport?.matchingLevel }}</text></view>
           <text class="report-title">{{ majorReport?.major }} 的发展建议</text>
@@ -248,7 +275,14 @@ void loadSavedProfile()
           <view class="action-box">
             <text v-for="item in recommendation.actionPlan.slice(0, 3)" :key="item">- {{ item }}</text>
           </view>
-          <button class="secondary" :loading="resumeLoading === recommendation.role.roleName" @click="useForResume(recommendation)">按此岗位优化简历</button>
+          <view class="role-actions">
+            <button
+              class="compare-button"
+              :class="{ selected: isInComparison(recommendation.role.roleName) }"
+              @click="toggleComparison(recommendation.role.roleName)"
+            >{{ isInComparison(recommendation.role.roleName) ? "取消对比" : "加入对比" }}</button>
+            <button class="secondary" :loading="resumeLoading === recommendation.role.roleName" @click="useForResume(recommendation)">按此岗位优化简历</button>
+          </view>
         </view>
         <text class="notice">{{ store.result.recommendationNotice }}</text>
       </template>
@@ -266,6 +300,8 @@ void loadSavedProfile()
 .assessment-brief { display: flex; align-items: center; justify-content: space-between; gap: 20rpx; margin-top: 20rpx; padding: 20rpx 22rpx; background: #f0f7ff; border: 1rpx solid #cfe4fb; border-radius: 16rpx; }
 .assessment-brief > view { min-width: 0; }.assessment-brief-title,.assessment-brief-text { display: block; }.assessment-brief-title { color: #245b99; font-size: 27rpx; font-weight: 700; }.assessment-brief-text { margin-top: 6rpx; color: #59728d; font-size: 22rpx; line-height: 1.5; }
 .assessment-entry { flex-shrink: 0; margin: 0; padding: 0 22rpx; color: #1677ff; background: rgba(255,255,255,.82); border: 1rpx solid #a9d1ff; border-radius: 999rpx; font-size: 24rpx; line-height: 62rpx; }
+.comparison-bar { display: flex; align-items: center; justify-content: space-between; gap: 18rpx; margin-top: 20rpx; padding: 20rpx 22rpx; background: #eef8ff; border: 1rpx solid #c7e5ff; border-radius: 16rpx; }
+.comparison-title,.comparison-hint { display: block; }.comparison-title { color: #245b99; font-size: 27rpx; font-weight: 700; }.comparison-hint { margin-top: 6rpx; color: #59728d; font-size: 22rpx; line-height: 1.45; }.comparison-button { flex-shrink: 0; margin: 0; color: #fff; background: #1677ff; font-size: 23rpx; }
 .card { background: #fff; border: 1rpx solid #e7edf5; border-radius: 20rpx; padding: 24rpx; margin-top: 20rpx; box-shadow: 0 8rpx 24rpx rgba(35, 78, 130, 0.06); }
 .section-heading, .role-top { display: flex; justify-content: space-between; align-items: center; gap: 16rpx; font-weight: 700; font-size: 30rpx; }
 .hint, .level, .role-family { font-size: 22rpx; color: #6b7280; font-weight: 400; }
@@ -298,5 +334,7 @@ button { margin-top: 24rpx; border-radius: 12rpx; font-size: 28rpx; }
 .description, .notice { display: block; margin-top: 16rpx; color: #64748b; font-size: 24rpx; line-height: 1.6; }
 .score-list { padding: 14rpx 0; }.score-list text, .action-box text { display: block; margin-top: 8rpx; color: #64748b; line-height: 1.5; font-size: 22rpx; }
 .action-box { margin-top: 10rpx; padding: 14rpx; border-radius: 12rpx; background: #f8fafc; }
+.role-actions { display: flex; gap: 14rpx; margin-top: 20rpx; }.role-actions button { flex: 1; margin-top: 0; font-size: 23rpx; }
+.compare-button { color: #4e5969; background: #f2f3f5; border: 1rpx solid #dfe4ea; }.compare-button.selected { color: #1677ff; background: #e8f3ff; border-color: #91caff; }
 .notice { padding: 8rpx 8rpx 0; font-size: 21rpx; }
 </style>

@@ -2,6 +2,7 @@
   "pages": [
     { "path": "pages/job-search/index", "style": { "navigationBarTitleText": "岗位情报" } },
     { "path": "pages/career-planner/index", "style": { "navigationBarTitleText": "求职志愿规划" } },
+    { "path": "pages/role-comparison/index", "style": { "navigationBarTitleText": "岗位对比" } },
     { "path": "pages/career-assessment/index", "style": { "navigationBarTitleText": "职业测评" } },
     { "path": "pages/knowledgebase/index", "style": { "navigationBarTitleText": "知识库" } },
     { "path": "pages/evidence/index", "style": { "navigationBarTitleText": "经历证据" } },
