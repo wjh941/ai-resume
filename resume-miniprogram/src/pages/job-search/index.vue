@@ -351,6 +351,10 @@ async function requestCareerAdvice() {
 function isRiskItem(item: string) {
   return item.includes("【避雷】") || item.includes("【高频坑】")
 }
+function openCareerPlanner() {
+  uni.navigateTo({ url: '/pages/career-planner/index' })
+}
+
 </script>
 
 <template>
@@ -360,6 +364,7 @@ function isRiskItem(item: string) {
         <text class="hero-kicker">CAREER WORKSPACE</text>
         <text class="title">AI 求职顾问</text>
         <text class="subtitle">从岗位方向、市场信息到简历草案，按你的求职身份给出可执行方案。</text>
+        <button class="planner-entry" @click="openCareerPlanner">求职志愿规划</button>
       </view>
 
       <view class="search-card">
@@ -750,4 +755,5 @@ function isRiskItem(item: string) {
   .button-row { flex-direction: column; }
   .market-card-header .compact,.result-header .compact { min-width: 116rpx; font-size: 20rpx; }
 }
+.planner-entry { margin-top: 18rpx; padding: 0 24rpx; line-height: 62rpx; border: 1rpx solid #9bc8ff; border-radius: 999rpx; background: rgba(255,255,255,.76); color: #1677ff; font-size: 24rpx; }
 </style>
