@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.schemas.resume import ResumePayload
+
 
 class EvidenceSuggestion(BaseModel):
     source_evidence_id: str
@@ -19,7 +21,16 @@ class EvidenceSuggestionResponse(BaseModel):
     items: list[EvidenceSuggestion] = Field(default_factory=list)
 
 
+class EvidenceSuggestionRequest(BaseModel):
+    client_id: str = Field(min_length=1, max_length=120)
+    role_name: str = Field(min_length=1, max_length=160)
+
+
 class ResumeReadinessReport(BaseModel):
     ready: bool
     blocking_items: list[str] = Field(default_factory=list)
     warning_items: list[str] = Field(default_factory=list)
+
+
+class ResumeReadinessRequest(BaseModel):
+    resume: ResumePayload

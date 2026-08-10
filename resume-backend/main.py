@@ -7,13 +7,14 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.api import ai, assessment, career, consultation, drafts, exports, knowledgebase, templates
+from app.api import ai, assessment, career, consultation, drafts, evidence, exports, knowledgebase, templates
 from app.config import Settings, load_settings
 from app.db import initialize_database
 from app.repositories.assessment import AssessmentNotFoundError, AssessmentRepository
 from app.repositories.career_catalog import CareerCatalogRepository
 from app.repositories.career_profiles import CareerProfileNotFoundError, CareerProfileRepository
 from app.repositories.drafts import DraftNotFoundError, DraftRepository
+from app.repositories.evidence import EvidenceRepository
 from app.repositories.knowledgebase import KnowledgebaseRepository, KnowledgebaseRoleNotFoundError
 from app.repositories.templates import TemplateRepository
 from app.schemas.common import error, success
@@ -54,6 +55,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(title="Resume Demo API", lifespan=lifespan)
     app.state.settings = settings
     app.state.draft_repository = DraftRepository(settings.database_path)
+    app.state.evidence_repository = EvidenceRepository(settings.database_path)
     app.state.assessment_repository = AssessmentRepository(settings.database_path)
     app.state.template_service = TemplateService(TemplateRepository(settings.database_path))
     app.state.ai_client = build_ai_client(settings)
@@ -130,6 +132,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(career.router)
     app.include_router(consultation.router)
     app.include_router(drafts.router)
+    app.include_router(evidence.router)
     app.include_router(exports.router)
     app.include_router(knowledgebase.router)
     app.include_router(templates.router)
