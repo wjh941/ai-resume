@@ -134,6 +134,21 @@ def initialize_database(database_path: Path) -> None:
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS resume_evidence (
+                id TEXT PRIMARY KEY,
+                client_id TEXT NOT NULL,
+                kind TEXT NOT NULL,
+                title TEXT NOT NULL,
+                context TEXT NOT NULL,
+                actions TEXT NOT NULL,
+                outcome TEXT NOT NULL,
+                proof_note TEXT NOT NULL,
+                verified INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_resume_evidence_client_updated
+            ON resume_evidence (client_id, updated_at DESC, id DESC);
             CREATE TABLE IF NOT EXISTS template_table (
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
