@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Query, Request
 
+from app.repositories.assessment import AssessmentNotFoundError
 from app.schemas.career import CareerProfilePayload
 from app.schemas.common import success
 
@@ -50,5 +51,12 @@ async def get_career_profile(request: Request, client_id: str):
 @router.post("/api/career/recommend")
 async def career_recommend(request: Request, client_id: str):
     profile = request.app.state.career_profile_repository.get(client_id)
-    recommendation = request.app.state.career_recommender.recommend(profile)
+    try:
+        assessment = request.app.state.assessment_repository.get(client_id)
+    except AssessmentNotFoundError:
+        assessment = None
+    recommendation = request.app.state.career_recommender.recommend(
+        profile,
+        assessment_result=assessment["result"] if assessment else None,
+    )
     return success(recommendation.model_dump())

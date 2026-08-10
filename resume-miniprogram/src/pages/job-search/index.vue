@@ -355,6 +355,10 @@ function openCareerPlanner() {
   uni.navigateTo({ url: '/pages/career-planner/index' })
 }
 
+function openCareerAssessment() {
+  uni.navigateTo({ url: '/pages/career-assessment/index' })
+}
+
 function openKnowledgebase() {
   uni.navigateTo({ url: '/pages/knowledgebase/index' })
 }
@@ -368,7 +372,7 @@ function openKnowledgebase() {
         <text class="hero-kicker">CAREER WORKSPACE</text>
         <text class="title">AI 求职顾问</text>
         <text class="subtitle">从岗位方向、市场信息到简历草案，按你的求职身份给出可执行方案。</text>
-        <view class="hero-actions"><button class="planner-entry" @click="openCareerPlanner">求职志愿规划</button><button class="planner-entry" @click="openKnowledgebase">岗位知识库</button></view>
+        <view class="hero-actions"><button class="planner-entry" @click="openCareerPlanner">求职志愿规划</button><button class="planner-entry" @click="openCareerAssessment">职业测评</button><button class="planner-entry" @click="openKnowledgebase">岗位知识库</button></view>
       </view>
 
       <view class="search-card">

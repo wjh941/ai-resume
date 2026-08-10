@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from app.repositories.career_catalog import CareerCatalogRepository
 from app.schemas.career import (
+    AssessmentGuidance,
     CareerProfile,
     CareerRecommendation,
     CareerRecommendationResponse,
@@ -20,7 +21,11 @@ class CareerRecommender:
     def __init__(self, catalog_repository: CareerCatalogRepository) -> None:
         self._catalog_repository = catalog_repository
 
-    def recommend(self, profile: CareerProfile) -> CareerRecommendationResponse:
+    def recommend(
+        self,
+        profile: CareerProfile,
+        assessment_result: dict[str, object] | None = None,
+    ) -> CareerRecommendationResponse:
         ranked = [
             self._score_role(profile, role)
             for role in self._catalog_repository.list_roles()
@@ -36,7 +41,38 @@ class CareerRecommender:
                 "不代表录用概率、薪资承诺或岗位保证。"
             ),
             major_report=major_report,
+            assessment_guidance=self._assessment_guidance(assessment_result),
             tiers=tiers,
+        )
+
+    @staticmethod
+    def _assessment_guidance(
+        assessment_result: dict[str, object] | None,
+    ) -> AssessmentGuidance | None:
+        if not assessment_result:
+            return None
+
+        raw_interests = assessment_result.get("top_interests", [])
+        top_interest_keys = [
+            str(item["key"])
+            for item in raw_interests
+            if isinstance(item, dict) and item.get("key")
+        ]
+        raw_evidence = assessment_result.get("strength_evidence", [])
+        strength_evidence = [str(item) for item in raw_evidence if str(item).strip()]
+        raw_plan = assessment_result.get("action_plan", {})
+        action_plan = {
+            key: [str(item) for item in raw_plan.get(key, []) if str(item).strip()]
+            for key in ("seven_day", "thirty_day", "ninety_day")
+            if isinstance(raw_plan, dict)
+        }
+        return AssessmentGuidance(
+            top_interest_keys=top_interest_keys,
+            strength_evidence=strength_evidence,
+            action_plan=action_plan,
+            notice=(
+                "测评结果只作为补充的职业决策支持，请结合真实经历、岗位要求和实际反馈调整方向。"
+            ),
         )
 
     def _score_role(

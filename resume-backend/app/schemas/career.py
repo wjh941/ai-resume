@@ -128,9 +128,17 @@ class MajorFitReport(BaseModel):
     practice_tasks: list[str]
 
 
+class AssessmentGuidance(BaseModel):
+    top_interest_keys: list[str] = Field(default_factory=list)
+    strength_evidence: list[str] = Field(default_factory=list)
+    action_plan: dict[str, list[str]] = Field(default_factory=dict)
+    notice: str
+
+
 class CareerRecommendationResponse(BaseModel):
     profile: CareerProfile
     generated_at: str
     recommendation_notice: str
     major_report: MajorFitReport
+    assessment_guidance: AssessmentGuidance | None = None
     tiers: dict[RecommendationTier, list[CareerRecommendation]]

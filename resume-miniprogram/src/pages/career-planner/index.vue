@@ -98,6 +98,10 @@ function buildPayload(): CareerProfilePayload {
   }
 }
 
+function openCareerAssessment() {
+  uni.navigateTo({ url: '/pages/career-assessment/index' })
+}
+
 async function generatePlan() {
   const payload = buildPayload()
   if (!payload.major) {
@@ -167,6 +171,13 @@ void loadSavedProfile()
         <text class="subtitle">用专业、技能和偏好比较冲刺、稳妥、保底方向，不承诺录用结果。</text>
       </view>
 
+      <view class="assessment-brief">
+        <view>
+          <text class="assessment-brief-title">职业测评与年度洞察</text>
+          <text class="assessment-brief-text">先整理兴趣、真实证据与现实约束，再结合专业生成更可执行的方向建议。</text>
+        </view>
+        <button class="assessment-entry" @click="openCareerAssessment">开始测评</button>
+      </view>
       <view class="card profile-card">
         <view class="section-heading">
           <text>建立求职画像</text>
@@ -252,6 +263,9 @@ void loadSavedProfile()
 .eyebrow { display: block; color: #1677ff; font-size: 21rpx; font-weight: 700; letter-spacing: 1rpx; }
 .title { display: block; font-size: 44rpx; font-weight: 700; margin-top: 10rpx; }
 .subtitle { display: block; color: #6b7280; line-height: 1.6; margin-top: 12rpx; font-size: 25rpx; }
+.assessment-brief { display: flex; align-items: center; justify-content: space-between; gap: 20rpx; margin-top: 20rpx; padding: 20rpx 22rpx; background: #f0f7ff; border: 1rpx solid #cfe4fb; border-radius: 16rpx; }
+.assessment-brief > view { min-width: 0; }.assessment-brief-title,.assessment-brief-text { display: block; }.assessment-brief-title { color: #245b99; font-size: 27rpx; font-weight: 700; }.assessment-brief-text { margin-top: 6rpx; color: #59728d; font-size: 22rpx; line-height: 1.5; }
+.assessment-entry { flex-shrink: 0; margin: 0; padding: 0 22rpx; color: #1677ff; background: rgba(255,255,255,.82); border: 1rpx solid #a9d1ff; border-radius: 999rpx; font-size: 24rpx; line-height: 62rpx; }
 .card { background: #fff; border: 1rpx solid #e7edf5; border-radius: 20rpx; padding: 24rpx; margin-top: 20rpx; box-shadow: 0 8rpx 24rpx rgba(35, 78, 130, 0.06); }
 .section-heading, .role-top { display: flex; justify-content: space-between; align-items: center; gap: 16rpx; font-weight: 700; font-size: 30rpx; }
 .hint, .level, .role-family { font-size: 22rpx; color: #6b7280; font-weight: 400; }

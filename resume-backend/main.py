@@ -7,9 +7,10 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.api import ai, career, consultation, drafts, exports, knowledgebase, templates
+from app.api import ai, assessment, career, consultation, drafts, exports, knowledgebase, templates
 from app.config import Settings, load_settings
 from app.db import initialize_database
+from app.repositories.assessment import AssessmentNotFoundError, AssessmentRepository
 from app.repositories.career_catalog import CareerCatalogRepository
 from app.repositories.career_profiles import CareerProfileNotFoundError, CareerProfileRepository
 from app.repositories.drafts import DraftNotFoundError, DraftRepository
@@ -53,6 +54,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(title="Resume Demo API", lifespan=lifespan)
     app.state.settings = settings
     app.state.draft_repository = DraftRepository(settings.database_path)
+    app.state.assessment_repository = AssessmentRepository(settings.database_path)
     app.state.template_service = TemplateService(TemplateRepository(settings.database_path))
     app.state.ai_client = build_ai_client(settings)
     app.state.job_cache = JobCache(settings.database_path, settings.cache_expire_day)
@@ -90,6 +92,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             content=error("not_found", "Career profile not found"),
         )
 
+    @app.exception_handler(AssessmentNotFoundError)
+    def assessment_not_found(_: Request, __: AssessmentNotFoundError):
+        return JSONResponse(
+            status_code=404,
+            content=error("not_found", "Career assessment not found"),
+        )
+
     @app.exception_handler(RequestValidationError)
     def request_validation_error(_: Request, __: RequestValidationError):
         return JSONResponse(status_code=422, content=error("validation_error", "Request validation failed"))
@@ -117,6 +126,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return success({"status": "healthy"})
 
     app.include_router(ai.router)
+    app.include_router(assessment.router)
     app.include_router(career.router)
     app.include_router(consultation.router)
     app.include_router(drafts.router)

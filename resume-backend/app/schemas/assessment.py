@@ -1,0 +1,62 @@
+from __future__ import annotations
+
+from datetime import date
+
+from pydantic import BaseModel, Field, StrictInt, field_validator
+
+
+def _normalized_text(value: str, field_name: str, maximum: int) -> str:
+    normalized = " ".join(value.split())
+    if not normalized:
+        raise ValueError(f"{field_name} must not be blank")
+    if len(normalized) > maximum:
+        raise ValueError(f"{field_name} is too long")
+    return normalized
+
+
+class AssessmentSubmitPayload(BaseModel):
+    client_id: str = Field(min_length=1, max_length=120)
+    answers: dict[str, StrictInt] = Field(default_factory=dict, max_length=40)
+
+    @field_validator("client_id")
+    @classmethod
+    def normalize_client_id(cls, value: str) -> str:
+        return _normalized_text(value, "client_id", 120)
+
+    @field_validator("answers")
+    @classmethod
+    def validate_answers(cls, values: dict[str, StrictInt]) -> dict[str, int]:
+        normalized: dict[str, int] = {}
+        for key, value in values.items():
+            normalized_key = " ".join(key.split())
+            if not normalized_key or len(normalized_key) > 120:
+                raise ValueError("assessment answer key is invalid")
+            if not 1 <= value <= 5:
+                raise ValueError("assessment answer must use the five-point scale")
+            normalized[normalized_key] = int(value)
+        return normalized
+
+
+class AnnualInsightPayload(BaseModel):
+    year: int = Field(ge=2000, le=2100)
+    scope: str = Field(min_length=1, max_length=80)
+    audience: str = Field(min_length=1, max_length=80)
+    category: str = Field(min_length=1, max_length=80)
+    title: str = Field(min_length=1, max_length=160)
+    content: str = Field(min_length=1, max_length=3000)
+    source_label: str = Field(min_length=1, max_length=200)
+    publication_date: date
+    confidence_note: str = Field(min_length=1, max_length=300)
+
+    @field_validator(
+        "scope",
+        "audience",
+        "category",
+        "title",
+        "content",
+        "source_label",
+        "confidence_note",
+    )
+    @classmethod
+    def normalize_text_fields(cls, value: str) -> str:
+        return _normalized_text(value, "text", 3000)

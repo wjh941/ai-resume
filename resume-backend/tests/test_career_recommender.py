@@ -38,3 +38,38 @@ def test_career_recommendation_has_non_overlapping_stretch_stable_safe_tiers(api
     assert len(stable_families) >= 3
     assert all(len(item["score_breakdown"]) == 5 for item in all_items)
     assert "不代表录用概率" in data["recommendation_notice"]
+
+
+def test_career_recommendation_adds_guidance_only_after_assessment(api_client):
+    profile = {
+        "client_id": "assessment-recommend-client",
+        "identity_code": "2",
+        "major": "Computer Science",
+        "education_level": "Bachelor",
+        "skills": ["Python", "SQL"],
+    }
+    assert_success(api_client.post("/api/career/profile/save", json=profile))
+    assert_success(
+        api_client.post(
+            "/api/career/assessment/submit",
+            json={
+                "client_id": "assessment-recommend-client",
+                "answers": {
+                    "interest_investigative_1": 5,
+                    "evidence_sql_1": 4,
+                    "style_structure_1": 5,
+                },
+            },
+        )
+    )
+
+    data = assert_success(
+        api_client.post(
+            "/api/career/recommend",
+            params={"client_id": "assessment-recommend-client"},
+        )
+    )
+
+    assert data["assessment_guidance"]["top_interest_keys"] == ["investigative"]
+    assert data["assessment_guidance"]["strength_evidence"]
+    assert data["assessment_guidance"]["action_plan"]["thirty_day"]

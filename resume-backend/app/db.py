@@ -209,6 +209,26 @@ def initialize_database(database_path: Path) -> None:
                 draft_id TEXT,
                 updated_at TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS career_assessment (
+                client_id TEXT PRIMARY KEY,
+                assessment_version INTEGER NOT NULL,
+                answers_json TEXT NOT NULL,
+                result_json TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS annual_employment_insight (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                year INTEGER NOT NULL,
+                scope TEXT NOT NULL,
+                audience TEXT NOT NULL,
+                category TEXT NOT NULL,
+                title TEXT NOT NULL,
+                content TEXT NOT NULL,
+                source_label TEXT NOT NULL,
+                publication_date TEXT NOT NULL,
+                confidence_note TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
             CREATE TABLE IF NOT EXISTS official_dataset_source (
                 source_key TEXT PRIMARY KEY,
                 display_name TEXT NOT NULL,
