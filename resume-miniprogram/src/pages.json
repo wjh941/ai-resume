@@ -2,6 +2,7 @@
   "pages": [
     { "path": "pages/job-search/index", "style": { "navigationBarTitleText": "岗位情报" } },
     { "path": "pages/career-planner/index", "style": { "navigationBarTitleText": "求职志愿规划" } },
+    { "path": "pages/knowledgebase/index", "style": { "navigationBarTitleText": "知识库" } },
     { "path": "pages/resume-form/index", "style": { "navigationBarTitleText": "填写简历" } },
     { "path": "pages/template-picker/index", "style": { "navigationBarTitleText": "选择模板" } },
     { "path": "pages/resume-editor/index", "style": { "navigationBarTitleText": "编辑简历" } },
