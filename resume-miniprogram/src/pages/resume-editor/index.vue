@@ -14,6 +14,14 @@ function backToForm() {
   uni.navigateTo({ url: "/pages/resume-form/index" })
 }
 
+function openApplicationTracker() {
+  const params = new URLSearchParams()
+  if (resume.value.job.targetRole) params.set("roleName", resume.value.job.targetRole)
+  if (resume.value.basic.city) params.set("city", resume.value.basic.city)
+  if (store.draft.id) params.set("draftId", store.draft.id)
+  uni.navigateTo({ url: `/pages/applications/index?${params}` })
+}
+
 async function save() {
   const errors = validateResume(resume.value)
   if (errors.length) {
@@ -41,6 +49,7 @@ async function save() {
       </view>
       <view class="toolbar-actions">
         <button size="mini" @click="backToForm">返回填写</button>
+        <button size="mini" @click="openApplicationTracker">加入投递计划</button>
         <button size="mini" class="primary" @click="save">保存草稿</button>
       </view>
     </view>

@@ -122,6 +122,17 @@ function openComparison() {
   uni.navigateTo({ url: "/pages/role-comparison/index" })
 }
 
+function openApplicationTracker() {
+  const roleName = store.weeklyTarget?.roleName
+  if (!roleName) {
+    uni.showToast({ title: "请先在岗位对比页设置本周主目标", icon: "none" })
+    return
+  }
+  uni.navigateTo({
+    url: `/pages/applications/index?roleName=${encodeURIComponent(roleName)}`,
+  })
+}
+
 async function generatePlan() {
   const payload = buildPayload()
   if (!payload.major) {
@@ -197,6 +208,13 @@ void loadSavedProfile()
           <text class="assessment-brief-text">先整理兴趣、真实证据与现实约束，再结合专业生成更可执行的方向建议。</text>
         </view>
         <button class="assessment-entry" @click="openCareerAssessment">开始测评</button>
+      </view>
+      <view v-if="store.weeklyTarget" class="weekly-target">
+        <view>
+          <text class="weekly-target-title">本周主目标：{{ store.weeklyTarget.roleName }}</text>
+          <text class="weekly-target-text">将方向转成手动确认的投递计划与复盘记录。</text>
+        </view>
+        <button class="assessment-entry" @click="openApplicationTracker">创建计划</button>
       </view>
       <view class="card profile-card">
         <view class="section-heading">
@@ -298,6 +316,8 @@ void loadSavedProfile()
 .title { display: block; font-size: 44rpx; font-weight: 700; margin-top: 10rpx; }
 .subtitle { display: block; color: #6b7280; line-height: 1.6; margin-top: 12rpx; font-size: 25rpx; }
 .assessment-brief { display: flex; align-items: center; justify-content: space-between; gap: 20rpx; margin-top: 20rpx; padding: 20rpx 22rpx; background: #f0f7ff; border: 1rpx solid #cfe4fb; border-radius: 16rpx; }
+.weekly-target { display: flex; align-items: center; justify-content: space-between; gap: 20rpx; margin-top: 14rpx; padding: 20rpx 22rpx; background: #f2fbf8; border: 1rpx solid #cfeee4; border-radius: 16rpx; }
+.weekly-target-title,.weekly-target-text { display: block; }.weekly-target-title { color: #26735c; font-size: 27rpx; font-weight: 700; }.weekly-target-text { margin-top: 6rpx; color: #598575; font-size: 22rpx; line-height: 1.5; }
 .assessment-brief > view { min-width: 0; }.assessment-brief-title,.assessment-brief-text { display: block; }.assessment-brief-title { color: #245b99; font-size: 27rpx; font-weight: 700; }.assessment-brief-text { margin-top: 6rpx; color: #59728d; font-size: 22rpx; line-height: 1.5; }
 .assessment-entry { flex-shrink: 0; margin: 0; padding: 0 22rpx; color: #1677ff; background: rgba(255,255,255,.82); border: 1rpx solid #a9d1ff; border-radius: 999rpx; font-size: 24rpx; line-height: 62rpx; }
 .comparison-bar { display: flex; align-items: center; justify-content: space-between; gap: 18rpx; margin-top: 20rpx; padding: 20rpx 22rpx; background: #eef8ff; border: 1rpx solid #c7e5ff; border-radius: 16rpx; }
