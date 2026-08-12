@@ -7,7 +7,8 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.api import ai, assessment, career, consultation, drafts, evidence, exports, knowledgebase, templates
+from app.api import ai, applications, assessment, career, consultation, drafts, evidence, exports, knowledgebase, templates
+from app.repositories.applications import ApplicationNotFoundError, ApplicationRepository
 from app.config import Settings, load_settings
 from app.db import initialize_database
 from app.repositories.assessment import AssessmentNotFoundError, AssessmentRepository
@@ -55,6 +56,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(title="Resume Demo API", lifespan=lifespan)
     app.state.settings = settings
     app.state.draft_repository = DraftRepository(settings.database_path)
+    app.state.application_repository = ApplicationRepository(settings.database_path)
     app.state.evidence_repository = EvidenceRepository(settings.database_path)
     app.state.assessment_repository = AssessmentRepository(settings.database_path)
     app.state.template_service = TemplateService(TemplateRepository(settings.database_path))
@@ -80,6 +82,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.exception_handler(DraftNotFoundError)
     def draft_not_found(_: Request, __: DraftNotFoundError):
         return JSONResponse(status_code=404, content=error("not_found", "Draft not found"))
+
+    @app.exception_handler(ApplicationNotFoundError)
+    def application_not_found(_: Request, __: ApplicationNotFoundError):
+        return JSONResponse(
+            status_code=404,
+            content=error("not_found", "Application not found"),
+        )
 
     @app.exception_handler(KnowledgebaseRoleNotFoundError)
     def knowledgebase_role_not_found(_: Request, __: KnowledgebaseRoleNotFoundError):
@@ -128,6 +137,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return success({"status": "healthy"})
 
     app.include_router(ai.router)
+    app.include_router(applications.router)
     app.include_router(assessment.router)
     app.include_router(career.router)
     app.include_router(consultation.router)

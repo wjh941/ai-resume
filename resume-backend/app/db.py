@@ -149,6 +149,24 @@ def initialize_database(database_path: Path) -> None:
             );
             CREATE INDEX IF NOT EXISTS idx_resume_evidence_client_updated
             ON resume_evidence (client_id, updated_at DESC, id DESC);
+            CREATE TABLE IF NOT EXISTS application_tracker (
+                id TEXT PRIMARY KEY,
+                client_id TEXT NOT NULL,
+                company TEXT NOT NULL,
+                role_name TEXT NOT NULL,
+                city TEXT NOT NULL,
+                source TEXT NOT NULL,
+                status TEXT NOT NULL,
+                applied_at TEXT,
+                next_action_at TEXT,
+                interview_notes TEXT NOT NULL,
+                draft_id TEXT,
+                notes TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_application_tracker_client_status
+            ON application_tracker (client_id, status, next_action_at, updated_at DESC);
             CREATE TABLE IF NOT EXISTS template_table (
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
