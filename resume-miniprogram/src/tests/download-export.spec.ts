@@ -96,6 +96,28 @@ describe("downloadExport", () => {
     expect(downloadCalls).toHaveLength(1)
     expect(saveCalls).toHaveLength(1)
     expect(saveCalls[0].tempFilePath).toBe("wxfile://resume.docx")
+    expect(downloadCalls[0].url).toContain("filename=resume.docx")
+  })
+
+  it("falls back when mp-weixin reports a failed HTTP status", async () => {
+    const uni = (globalThis as typeof globalThis & { uni: Record<string, unknown> }).uni
+    uni.downloadFile = (options: {
+      url: string
+      success: (result: { tempFilePath: string; statusCode: number }) => void
+    }) => {
+      downloadCalls.push({ url: options.url })
+      options.success({ tempFilePath: "wxfile://error.html", statusCode: 500 })
+    }
+    uni.saveFile = (options: { tempFilePath: string; success: (result: unknown) => void }) => {
+      saveCalls.push({ tempFilePath: options.tempFilePath })
+      options.success({})
+    }
+
+    await downloadExport("/downloads/token?expires=1#fragment", "resume final.docx", "mp-weixin")
+
+    expect(saveCalls).toHaveLength(0)
+    expect(clipboardCalls[0]).toContain("filename=resume%20final.docx")
+    expect(toastCalls[0]).toContain("filename=resume%20final.docx")
   })
 
   it("copies a readable fallback URL when a platform download fails", async () => {
