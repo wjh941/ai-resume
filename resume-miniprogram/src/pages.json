@@ -10,7 +10,8 @@
     { "path": "pages/resume-form/index", "style": { "navigationBarTitleText": "填写简历" } },
     { "path": "pages/template-picker/index", "style": { "navigationBarTitleText": "选择模板" } },
     { "path": "pages/resume-editor/index", "style": { "navigationBarTitleText": "编辑简历" } },
-    { "path": "pages/drafts/index", "style": { "navigationBarTitleText": "草稿箱" } }
+    { "path": "pages/drafts/index", "style": { "navigationBarTitleText": "草稿箱" } },
+    { "path": "pages/privacy/index", "style": { "navigationBarTitleText": "本地隐私" } }
   ],
   "globalStyle": { "navigationBarTextStyle": "black", "navigationBarBackgroundColor": "#ffffff", "backgroundColor": "#f7f8fa" }
 }

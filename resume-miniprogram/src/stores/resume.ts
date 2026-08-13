@@ -47,10 +47,10 @@ export const useResumeStore = defineStore("resume", {
       if (applied) this.checkpoint()
       return applied
     },
-    resetDraft(): void {
+    resetDraft(checkpoint = true): void {
       this.activeJob = null
       this.draft = createEmptyDraft()
-      this.checkpoint()
+      if (checkpoint) this.checkpoint()
     },
   },
 })

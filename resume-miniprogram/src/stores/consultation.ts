@@ -2,7 +2,7 @@ import { defineStore } from "pinia"
 
 import type { ConsultationStage, IdentityCode } from "../types/consultation"
 
-const CONSULTATION_STATE_KEY = "resume_demo_consultation_state"
+const CONSULTATION_STATE_KEY = "resume_demo_consultation"
 
 export const IDENTITY_PROMPT =
   "请选择你当前求职身份（回复对应数字）：\n" +
@@ -83,6 +83,12 @@ export const useConsultationStore = defineStore("consultation", {
         pendingRoleName: this.pendingRoleName,
         identityCode: this.identityCode,
       })
+    },
+    resetConsultation(persist = true): void {
+      this.stage = "role-entry"
+      this.pendingRoleName = ""
+      this.identityCode = null
+      if (persist) this.persist()
     },
   },
 })

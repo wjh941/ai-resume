@@ -86,5 +86,14 @@ export const useCareerStore = defineStore("career", {
       }
       this.checkpoint()
     },
+    resetPlanner(checkpoint = true): void {
+      this.profile = null
+      this.result = null
+      this.selectedTier = "stable"
+      this.selectedRole = null
+      this.comparisonRoleNames = []
+      this.weeklyTarget = null
+      if (checkpoint) this.checkpoint()
+    },
   },
 })
