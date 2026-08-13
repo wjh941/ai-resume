@@ -252,6 +252,31 @@
     .delivery-card { background: var(--surface); }
     .empty { display: grid; min-height: 116px; place-items: center; padding: 20px; border: 1px dashed #ccd8e3; border-radius: 12px; color: var(--muted); text-align: center; font-size: 12px; }
     .empty strong { display: block; margin-bottom: 4px; color: var(--muted); font-size: 13px; }
+    .extension-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .extension-grid .full { grid-column: 1 / -1; }
+    .stat-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; margin-top: 14px; }
+    .stat-mini { padding: 12px; border-radius: 12px; background: var(--surface-muted); }
+    .stat-mini strong { display: block; color: var(--blue-strong); font-size: 20px; }
+    .stat-mini span { color: var(--muted); font-size: 11px; }
+    .mini-calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; margin-top: 14px; }
+    .calendar-day { min-height: 50px; padding: 6px; border: 1px solid var(--line); border-radius: 9px; color: var(--muted); background: var(--surface-muted); font-size: 11px; }
+    .calendar-day.today { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(99,139,179,.14); }
+    .calendar-day.due { color: var(--blue-strong); background: var(--blue-soft); }
+    .calendar-day.expired { color: var(--red); background: var(--red-soft); }
+    .calendar-label { color: var(--faint); font-size: 10px; text-align: center; }
+    .favorite-star { border: 0; color: var(--faint); background: transparent; font-size: 20px; line-height: 1; }
+    .favorite-star.active { color: var(--amber); }
+    .attachment-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .attachment-thumb { width: 58px; height: 48px; object-fit: cover; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-muted); }
+    .sortable-row { cursor: grab; }
+    .sortable-row.dragging { opacity: .45; }
+    .shortcut-row { display: grid; grid-template-columns: 130px 1fr; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+    .shortcut-row:last-child { border-bottom: 0; }
+    .storage-meter { height: 8px; overflow: hidden; border-radius: 99px; background: var(--line); }
+    .storage-meter > span { display: block; height: 100%; border-radius: inherit; background: var(--teal); }
+    .storage-meter > span.warning { background: var(--amber); }
+    .masked-value { font-variant-numeric: tabular-nums; }
+    .extension-note { padding: 11px 12px; border-radius: 11px; color: var(--muted); background: var(--surface-blue); font-size: 11px; }
     .modal-backdrop { position: fixed; z-index: 50; inset: 0; display: grid; place-items: center; padding: 20px; visibility: hidden; opacity: 0; background: rgba(33, 45, 60, .22); backdrop-filter: blur(8px); transition: var(--ease); }
     .modal-backdrop.open { visibility: visible; opacity: 1; }
     .modal { width: min(600px, 100%); max-height: 90vh; overflow: auto; padding: 22px; border: 1px solid var(--line); border-radius: 17px; background: var(--surface); box-shadow: 0 24px 70px rgba(36, 49, 64, .22); transform: translateY(9px) scale(.98); transition: var(--ease); }
@@ -300,6 +325,8 @@
       .stepper { grid-template-columns: repeat(2, 1fr); }
       .score-row { grid-template-columns: 38px 1fr 38px 31px; }
       .topbar-title h1 { font-size: 18px; }
+      .extension-grid, .stat-strip { grid-template-columns: 1fr; }
+      .extension-grid .full { grid-column: auto; }
     }
   </style>
 </head>
@@ -314,6 +341,7 @@
       <nav class="nav" id="nav">
         <button class="nav-item active" data-page="dashboard"><span class="nav-icon">⌂</span><span>总览</span></button>
         <button class="nav-item" data-page="jobs"><span class="nav-icon">◌</span><span>岗位情报</span></button>
+        <button class="nav-item" data-page="favorites"><span class="nav-icon">★</span><span>收藏岗位</span></button>
         <button class="nav-item" data-page="evidence"><span class="nav-icon">◇</span><span>经历证据库</span></button>
         <button class="nav-item" data-page="resume"><span class="nav-icon">▤</span><span>简历编辑器</span></button>
         <button class="nav-item" data-page="assessment"><span class="nav-icon">◒</span><span>职业测评</span></button>
@@ -379,11 +407,18 @@
         <!-- Module 2: job intelligence, related jobs, comparison, and planning -->
         <section class="page-section" id="page-jobs">
           <div class="hero-row"><div><div class="eyebrow">Job intelligence</div><h2>找到适合你当前阶段的岗位。</h2><p>先看方向，再看技能缺口。岗位信息用于比较和行动规划，不代表录用承诺。</p></div><span id="jobSourceTag" class="tag green">本地知识库优先</span></div>
-          <div class="card card-pad"><div class="search-panel"><div class="job-search-wrap"><input class="input" id="jobSearchInput" autocomplete="off" aria-autocomplete="list" aria-controls="jobSuggestions" aria-expanded="false" placeholder="输入岗位名称，例如：数据、工程师、产品经理"><div class="job-suggestions hidden" id="jobSuggestions" role="listbox"></div></div><button class="btn primary" id="jobSearchBtn">查询岗位</button></div><p class="field-help" id="jobSearchHint" style="margin-top:12px">输入关键词查看实时关联岗位；按回车或点击“查询岗位”加载下方候选。</p></div>
+          <div class="card card-pad"><div class="search-panel"><div class="job-search-wrap"><input class="input" id="jobSearchInput" autocomplete="off" aria-autocomplete="list" aria-controls="jobSuggestions" aria-expanded="false" placeholder="输入岗位名称，例如：数据、工程师、产品经理"><div class="job-suggestions hidden" id="jobSuggestions" role="listbox"></div></div><button class="btn primary" id="jobSearchBtn">查询岗位</button></div><div class="toolbar-group" style="margin-top:13px"><button class="btn small" id="toggleJobFiltersBtn">高级筛选</button><button class="btn small soft" id="clearSearchHistoryBtn">清空历史</button><div id="jobSearchHistory" class="tag-row"></div></div><div id="jobAdvancedFilters" class="extension-grid" style="display:none;margin-top:14px"><div class="field"><label>最低薪资（k）</label><input class="input" id="jobSalaryMin" type="number" min="0" max="200" step="1"></div><div class="field"><label>最高薪资（k）</label><input class="input" id="jobSalaryMax" type="number" min="0" max="300" step="1"></div><div class="field"><label>行业大类</label><select class="select" id="jobFamilyFilter"><option value="">全部行业</option></select></div><div class="field"><label>城市</label><input class="input" id="jobCityFilter" maxlength="30" placeholder="如：上海"></div><div class="field"><label>岗位难度</label><select class="select" id="jobDifficultyFilter"><option value="">全部难度</option><option value="easy">入门</option><option value="medium">进阶</option><option value="hard">挑战</option></select></div></div><p class="field-help" id="jobSearchHint" style="margin-top:12px">输入关键词查看实时关联岗位；按回车或点击“查询岗位”加载下方候选。</p></div>
           <div class="section-block"><div class="section-head"><div><h3>岗位候选</h3><p>选择 2–4 个岗位进行横向比较</p></div><div class="toolbar-group"><button class="btn small" id="clearJobSelection">清空选择</button><button class="btn small soft" id="openSearchSettingsBtn">市场检索设置</button></div></div><div id="jobCards" class="job-grid"></div><div id="jobPagination"></div></div>
+          <div class="section-block"><details class="card collapse static" open><summary><div><h3>岗位晋升路线</h3><p style="margin-top:3px;color:var(--muted);font-size:11px">查看当前岗位的上下游与长期进阶方向</p></div><span class="tag blue">长期参考</span></summary><div class="collapse-content" id="jobCareerRoute"></div></details></div>
           <div class="section-block"><details class="card collapse static" id="comparisonPanel" open><summary><div><h3>岗位横向比较</h3><p style="margin:3px 0 0;color:var(--muted);font-size:11px">把方向差异转化成下一步判断</p></div><span id="compareCount" class="tag blue">已选 0 个</span></summary><div class="collapse-content"><div id="comparisonContent"></div></div></details></div>
           <div class="section-block"><details class="card collapse static" id="matchReportPanel" open><summary><div><h3>专业匹配报告</h3><p style="margin:3px 0 0;color:var(--muted);font-size:11px">根据当前技能、经历和岗位方向展示缺口</p></div><span id="matchScoreTag" class="tag blue">待计算</span></summary><div class="collapse-content" id="matchReportContent"></div></details></div>
           <div class="section-block"><div class="section-head"><div><h3>三档职业规划</h3><p>把理想、现实与兜底放进同一张行动地图</p></div></div><div id="tierPlans" class="grid grid-3"></div></div>
+        </section>
+
+        <section class="page-section" id="page-favorites">
+          <div class="hero-row"><div><div class="eyebrow">Saved roles</div><h2>把真正想投的岗位留下来。</h2><p>收藏数据保存在当前浏览器中，刷新或双击重新打开页面后仍可继续比较。</p></div><span class="tag blue" id="favoriteCountTag">0 个收藏</span></div>
+          <div class="card card-pad"><div class="section-head"><div><h3>我的收藏岗位</h3><p>支持单独比较，并快速生成三档职业规划。</p></div><div class="toolbar-group"><button class="btn small" id="compareFavoritesBtn">比较收藏</button><button class="btn small soft" id="favoritePlansBtn">生成三档规划</button></div></div><div id="favoriteJobCards" class="job-grid" style="margin-top:15px"></div></div>
+          <div class="section-block"><div class="card card-pad" id="favoritePlanContent"><div class="empty">收藏岗位后，这里会出现专属职业规划。</div></div></div>
         </section>
 
         <!-- Module 3: evidence library, editing, import, export, and custom categories -->
@@ -543,6 +578,8 @@
       page: "dashboard",
       jobs: [...mock.jobs],
       selectedJobs: [],
+      favoriteJobs: [],
+      jobAdvancedFilters: { salaryMin: "", salaryMax: "", family: "", city: "", difficulty: "" },
       jobLoading: false,
       jobError: "",
       jobSource: "mock",
@@ -591,6 +628,28 @@
       requestSequence: 0,
       saveStatusTimer: null
     };
+    const extensionDefaults = {
+      version: 1,
+      favoriteJobs: [],
+      jobFilters: { salaryMin: "", salaryMax: "", family: "", city: "", difficulty: "" },
+      searchHistory: [],
+      maskSensitive: false,
+      snapshots: [],
+      backups: [],
+      lastAutoBackupAt: 0,
+      customTemplates: {},
+      templateSettings: { fontSize: 14, margin: 28, sections: { summary: true, project: true, skills: true } },
+      evidenceCategories: ["项目", "课程", "实习", "校园实践"],
+      evidenceOrder: [],
+      evidenceAttachments: {},
+      evidenceTags: [],
+      interviewNotes: {},
+      assessmentArchives: [],
+      assessmentCustomQuestions: [],
+      shortcutConfig: { save: "s", export: "e", newDelivery: "n", toggleSidebar: "b", search: "k" },
+      lastBackupAt: 0
+    };
+    state.extension = { ...extensionDefaults, ...loadLocal("resume-dashboard-extension", {}) };
     saveLocal("resume-dashboard-client-id", state.clientId);
 
     const $ = (selector, root = document) => root.querySelector(selector);
@@ -599,6 +658,7 @@
     const pageMeta = {
       dashboard: ["求职工作台", "把真实经历，整理成下一步行动。"],
       jobs: ["岗位情报", "先看方向，再看技能缺口。"],
+      favorites: ["收藏岗位", "把看中的岗位整理成冲刺、稳妥和保底路径。"],
       evidence: ["经历证据库", "只用真实经历，写出有证据的简历。"],
       resume: ["简历编辑器", "把信息整理成可以交付的版本。"],
       assessment: ["职业测评", "先理解自己，再决定方向。"],
@@ -618,6 +678,136 @@
     }
     function saveLocal(key, value) {
       try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Direct-file mode may block storage. */ }
+    }
+    function normalizeExtension(value = {}) {
+      const source = value && typeof value === "object" ? value : {};
+      return {
+        ...extensionDefaults,
+        ...source,
+        favoriteJobs: asArray(source.favoriteJobs).map(normalizeJob).filter(item => item.roleName !== "鈥?").slice(0, 300),
+        jobFilters: { ...extensionDefaults.jobFilters, ...(source.jobFilters || {}) },
+        searchHistory: [...new Set(asArray(source.searchHistory).map(item => String(item).trim()).filter(Boolean))].slice(0, 30),
+        snapshots: asArray(source.snapshots).slice(0, 30),
+        backups: asArray(source.backups).slice(0, 20),
+        customTemplates: source.customTemplates && typeof source.customTemplates === "object" ? source.customTemplates : {},
+        templateSettings: { ...extensionDefaults.templateSettings, ...(source.templateSettings || {}), sections: { ...extensionDefaults.templateSettings.sections, ...((source.templateSettings || {}).sections || {}) } },
+        evidenceCategories: [...new Set([...extensionDefaults.evidenceCategories, ...asArray(source.evidenceCategories).map(item => String(item).trim()).filter(Boolean)])].slice(0, 60),
+        evidenceOrder: asArray(source.evidenceOrder),
+        evidenceAttachments: source.evidenceAttachments && typeof source.evidenceAttachments === "object" ? source.evidenceAttachments : {},
+        evidenceTags: [...new Set(asArray(source.evidenceTags).map(item => String(item).trim()).filter(Boolean))].slice(0, 100),
+        interviewNotes: source.interviewNotes && typeof source.interviewNotes === "object" ? source.interviewNotes : {},
+        assessmentArchives: asArray(source.assessmentArchives).slice(0, 30),
+        assessmentCustomQuestions: asArray(source.assessmentCustomQuestions).slice(0, 100),
+        shortcutConfig: { ...extensionDefaults.shortcutConfig, ...(source.shortcutConfig || {}) }
+      };
+    }
+    function saveExtension() {
+      state.extension = normalizeExtension(state.extension);
+      state.favoriteJobs = state.extension.favoriteJobs;
+      state.jobAdvancedFilters = state.extension.jobFilters;
+      saveLocal("resume-dashboard-extension", state.extension);
+      checkStorageCapacity();
+    }
+    function safeJsonParse(value, fallback = null) {
+      try { return JSON.parse(value); } catch { return fallback; }
+    }
+    function storageUsage() {
+      try {
+        let used = 0;
+        for (let index = 0; index < localStorage.length; index += 1) {
+          const key = localStorage.key(index) || "";
+          used += (key.length + String(localStorage.getItem(key) || "").length) * 2;
+        }
+        const quota = 5 * 1024 * 1024;
+        return { used, quota, ratio: used / quota, percent: Math.round((used / quota) * 100) };
+      } catch { return { used: 0, quota: 5 * 1024 * 1024, ratio: 0, percent: 0 }; }
+    }
+    function checkStorageCapacity() {
+      const usage = storageUsage();
+      if (usage.ratio >= 0.9 && !state.extension.storageWarningShown) {
+        state.extension.storageWarningShown = true;
+        saveLocal("resume-dashboard-extension", state.extension);
+        if (typeof openModal === "function" && $("#modalBackdrop")) {
+          openModal("本地存储空间即将用尽", `<p style="margin:0;color:var(--muted)">当前本地数据约占 ${usage.percent}%。建议先导出全量备份，再清理旧草稿或过期投递记录。</p><div class="storage-meter" style="margin-top:15px"><span class="warning" style="width:${Math.min(100, usage.percent)}%"></span></div>`, exportAllBusinessData, "导出全量备份");
+        }
+      }
+      return usage;
+    }
+    function maskSensitiveText(value, enabled = state.extension?.maskSensitive) {
+      const text = String(value ?? "");
+      if (!enabled || !text) return text;
+      if (text.includes("@")) {
+        const [name, domain] = text.split("@");
+        return `${name.slice(0, 1)}***@${domain}`;
+      }
+      if (/^1\d{10}$/.test(text.replace(/\s/g, ""))) return `${text.slice(0, 3)}****${text.slice(-4)}`;
+      if (text.length <= 2) return `${text.slice(0, 1)}*`;
+      return `${text.slice(0, 1)}${"*".repeat(Math.max(1, text.length - 2))}${text.slice(-1)}`;
+    }
+    function maskResume(resume = state.resume) {
+      return { ...resume, name: maskSensitiveText(resume.name), phone: maskSensitiveText(resume.phone), email: maskSensitiveText(resume.email) };
+    }
+    function localBusinessSnapshot() {
+      const extension = { ...state.extension, snapshots: [], backups: [] };
+      return { exportedAt: new Date().toISOString(), clientId: state.clientId, evidence: state.evidence, deliveries: state.deliveries, drafts: state.drafts, assessmentHistory: state.assessmentHistory, assessmentResult: state.assessmentResult, resume: state.resume, extension };
+    }
+    function createSnapshot(label = "手动快照") {
+      const snapshot = { id: `snapshot-${Date.now()}`, label, createdAt: new Date().toISOString(), data: localBusinessSnapshot() };
+      state.extension.snapshots = [snapshot, ...asArray(state.extension.snapshots)].slice(0, 30);
+      saveExtension();
+      return snapshot;
+    }
+    function restoreSnapshot(id) {
+      const snapshot = state.extension.snapshots.find(item => String(item.id) === String(id));
+      if (!snapshot?.data) return false;
+      const data = snapshot.data;
+      state.evidence = asArray(data.evidence).map(normalizeEvidence);
+      state.deliveries = asArray(data.deliveries).map(normalizeDelivery);
+      state.drafts = asArray(data.drafts).map(normalizeDraft);
+      state.assessmentHistory = asArray(data.assessmentHistory);
+      state.assessmentResult = data.assessmentResult || null;
+      state.resume = { ...defaultResume, ...(data.resume || {}) };
+      saveLocal("resume-dashboard-evidence", state.evidence);
+      saveLocal("resume-dashboard-deliveries", state.deliveries);
+      saveLocal("resume-dashboard-drafts", state.drafts);
+      saveLocal("resume-dashboard-assessment-history", state.assessmentHistory);
+      saveLocal("resume-dashboard-assessment-result", state.assessmentResult);
+      saveLocal("resume-dashboard-resume", state.resume);
+      fillResume(); renderEvidence(); renderDeliveries(); renderDrafts(); renderAssessment(); renderDashboard();
+      return true;
+    }
+    function maybeCreateAutoSnapshot() {
+      const age = Date.now() - Number(state.extension.lastAutoBackupAt || 0);
+      if (age < 7 * 86400000) return false;
+      createSnapshot("7天自动快照");
+      state.extension.lastAutoBackupAt = Date.now();
+      saveExtension();
+      return true;
+    }
+    function exportAllBusinessData() {
+      const data = localBusinessSnapshot();
+      return downloadText("ai-resume-full-backup.json", JSON.stringify(data, null, 2), "application/json");
+    }
+    function importAllBusinessData(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const data = safeJsonParse(reader.result, null);
+        if (!data || typeof data !== "object") { showToast("备份文件格式不正确"); return; }
+        createSnapshot("导入前自动保护");
+        state.evidence = asArray(data.evidence).map(normalizeEvidence);
+        state.deliveries = asArray(data.deliveries).map(normalizeDelivery);
+        state.drafts = asArray(data.drafts).map(normalizeDraft);
+        state.assessmentHistory = asArray(data.assessmentHistory);
+        state.assessmentResult = data.assessmentResult || null;
+        state.resume = { ...defaultResume, ...(data.resume || {}) };
+        state.extension = normalizeExtension(data.extension || state.extension);
+        [
+          ["resume-dashboard-evidence", state.evidence], ["resume-dashboard-deliveries", state.deliveries], ["resume-dashboard-drafts", state.drafts],
+          ["resume-dashboard-assessment-history", state.assessmentHistory], ["resume-dashboard-assessment-result", state.assessmentResult], ["resume-dashboard-resume", state.resume]
+        ].forEach(([key, value]) => saveLocal(key, value));
+        saveExtension(); fillResume(); renderEvidence(); renderDeliveries(); renderDrafts(); renderAssessment(); renderDashboard(); renderPrivacy(); showToast("全量本地数据已导入");
+      };
+      reader.readAsText(file, "utf-8");
     }
     function asArray(value) {
       return Array.isArray(value) ? value : [];
@@ -688,7 +878,12 @@
     state.evidence = asArray(state.evidence).map(normalizeEvidence);
     state.deliveries = asArray(state.deliveries).map(normalizeDelivery);
     state.drafts = asArray(state.drafts).map(normalizeDraft);
-    state.resume = { ...defaultResume, ...(state.resume || {}) };
+      state.resume = { ...defaultResume, ...(state.resume || {}) };
+    state.extension = normalizeExtension(state.extension);
+    state.assessmentQuestions = state.assessmentQuestions.map(step => ({ ...step, items: [...step.items] }));
+    if (state.extension.assessmentCustomQuestions.length) state.assessmentQuestions[0].items.push(...state.extension.assessmentCustomQuestions.filter(item => !state.assessmentQuestions[0].items.includes(item)));
+    state.favoriteJobs = state.extension.favoriteJobs;
+    state.jobAdvancedFilters = state.extension.jobFilters;
     function isExpiredDate(value) {
       return validDate(value) && value < todayString();
     }
@@ -803,8 +998,13 @@
       $("#pageTitle").textContent = pageMeta[page][0];
       $("#pageSubtitle").textContent = pageMeta[page][1];
       $("#sidebar").classList.remove("open");
-      if (page === "assessment") renderAssessment();
+      if (page === "assessment") { renderAssessmentExtensionPanel(); renderAssessment(); }
       if (page === "delivery") renderDeliveries();
+      if (page === "favorites") renderFavorites();
+      if (page === "jobs") { renderJobSearchHistory(); renderJobs(); }
+      if (page === "evidence") { renderEvidence(); bindEvidenceAttachments(); }
+      if (page === "resume") { renderResumeExtensionPanel(); updateResumePreview(); }
+      if (page === "privacy") renderPrivacyExtensionControls();
       if (page === "privacy") { renderDrafts(); renderPrivacy(); }
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -1061,6 +1261,37 @@
         related: []
       };
     }
+    function salaryBounds(value) {
+      const numbers = String(value || "").match(/\d+(?:\.\d+)?/g)?.map(Number) || [];
+      return { min: numbers[0] || 0, max: numbers[1] || numbers[0] || 0 };
+    }
+    function jobDifficulty(job) {
+      const score = safeNumber(job.score, 0);
+      return score >= 82 ? "hard" : score >= 72 ? "medium" : "easy";
+    }
+    function filterJobs(items, filters = state.jobAdvancedFilters) {
+      const min = safeNumber(filters.salaryMin, 0);
+      const max = safeNumber(filters.salaryMax, Infinity);
+      return asArray(items).filter(job => {
+        const bounds = salaryBounds(job.salary);
+        return (!filters.family || job.family === filters.family)
+          && (!filters.city || `${job.city || ""} ${job.description}`.toLowerCase().includes(String(filters.city).toLowerCase()))
+          && (!filters.difficulty || jobDifficulty(job) === filters.difficulty)
+          && (!filters.salaryMin || bounds.max >= min)
+          && (!filters.salaryMax || bounds.min <= max);
+      });
+    }
+    function toggleFavoriteJob(roleName) {
+      const job = state.jobs.find(item => item.roleName === roleName) || mock.jobs.find(item => item.roleName === roleName);
+      if (!job) return;
+      const index = state.favoriteJobs.findIndex(item => item.roleName === roleName);
+      if (index >= 0) state.favoriteJobs.splice(index, 1);
+      else state.favoriteJobs.unshift(normalizeJob(job));
+      state.extension.favoriteJobs = state.favoriteJobs;
+      saveExtension();
+      renderJobs(); renderFavorites();
+      showToast(index >= 0 ? "已取消收藏岗位" : "岗位已加入收藏");
+    }
     function buildJobCandidates(items, query) {
       const candidates = mergeSuggestions(items, localJobSuggestions(query)).map(jobCardFromSuggestion);
       return candidates.length ? candidates : mock.jobs.filter(job => jobMatchesQuery(job, query));
@@ -1072,10 +1303,14 @@
         return;
       }
       state.jobs = state.jobs.map(normalizeJob);
-      const page = paginate(state.jobs, state.jobPage, state.pageSize);
+      const families = [...new Set(state.jobs.map(job => job.family).filter(Boolean))];
+      const familySelect = $("#jobFamilyFilter");
+      if (familySelect) familySelect.innerHTML = `<option value="">全部行业</option>${families.map(family => `<option value="${escapeHtml(family)}">${escapeHtml(family)}</option>`).join("")}`;
+      if (familySelect) familySelect.value = state.jobAdvancedFilters.family || "";
+      const page = paginate(filterJobs(state.jobs), state.jobPage, state.pageSize);
       state.jobPage = page.currentPage;
       $("#jobCards").innerHTML = page.items.map(job => `<article class="card job-card ${state.selectedJobs.includes(job.roleName) ? "selected" : ""}">
-        <div class="job-card-top"><div><h4>${escapeHtml(job.roleName)}</h4><span class="field-help">${escapeHtml(job.family)}</span></div><input type="checkbox" data-job-check="${escapeHtml(job.roleName)}" ${state.selectedJobs.includes(job.roleName) ? "checked" : ""} aria-label="选择${escapeHtml(job.roleName)}"></div>
+        <div class="job-card-top"><div><h4>${escapeHtml(job.roleName)}</h4><span class="field-help">${escapeHtml(job.family)} · ${jobDifficulty(job) === "hard" ? "挑战" : jobDifficulty(job) === "medium" ? "进阶" : "入门"}</span></div><div class="toolbar-group"><button class="favorite-star ${state.favoriteJobs.some(item => item.roleName === job.roleName) ? "active" : ""}" data-favorite-job="${escapeHtml(job.roleName)}" aria-label="收藏岗位">★</button><input type="checkbox" data-job-check="${escapeHtml(job.roleName)}" ${state.selectedJobs.includes(job.roleName) ? "checked" : ""} aria-label="选择${escapeHtml(job.roleName)}"></div></div>
         <p>${escapeHtml(job.description)}</p><div class="metric-top"><div class="tag-row">${job.skills.map(skill => `<span class="tag">${escapeHtml(skill)}</span>`).join("")}</div><span class="job-score">${job.score}</span></div>
         <div class="delivery-meta"><span>参考薪资 ${escapeHtml(job.salary)}</span><span>·</span><span>${escapeHtml(job.risk)}</span></div>
         <div class="tag-row" style="margin-top:10px">${(job.related || []).map(item => `<span class="tag green">${escapeHtml(item)}</span>`).join("")}</div>
@@ -1087,8 +1322,10 @@
         else event.target.checked = false;
         renderJobs(); renderComparison(); renderMatchReport(); renderTiers();
       }));
+      $$('[data-favorite-job]').forEach(button => button.addEventListener("click", () => toggleFavoriteJob(button.dataset.favoriteJob)));
       renderComparison();
       renderMatchReport();
+      renderJobCareerRoute();
       renderPagination("jobPagination", page.currentPage, page.total, nextPage => {
         state.jobPage = nextPage;
         renderJobs();
@@ -1096,6 +1333,35 @@
     }
     function selectedJobs() {
       return state.jobs.map(normalizeJob).filter(job => state.selectedJobs.includes(job.roleName));
+    }
+    function renderFavorites() {
+      const jobs = state.favoriteJobs.map(normalizeJob);
+      const target = $("#favoriteJobCards");
+      if (!target) return;
+      $("#favoriteCountTag").textContent = `${jobs.length} 个收藏`;
+      target.innerHTML = jobs.length ? jobs.map(job => `<article class="card job-card"><div class="job-card-top"><div><h4>${escapeHtml(job.roleName)}</h4><span class="field-help">${escapeHtml(job.family)}</span></div><button class="favorite-star active" data-favorite-remove="${escapeHtml(job.roleName)}">★</button></div><p>${escapeHtml(job.description)}</p><div class="tag-row" style="margin-top:13px">${job.skills.map(skill => `<span class="tag blue">${escapeHtml(skill)}</span>`).join("")}</div><div class="delivery-meta"><span>参考薪资：${escapeHtml(job.salary)}</span><span>·</span><span>${escapeHtml(job.risk)}</span></div></article>`).join("") : '<div class="empty" style="grid-column:1/-1"><strong>还没有收藏岗位</strong><p>在岗位情报页点击星标，收藏会永久保存在当前浏览器。</p><button class="btn small primary" data-page="jobs" style="margin-top:12px">去浏览岗位</button></div>';
+      $("#favoritePlanContent").innerHTML = jobs.length ? `<div class="grid grid-3">${jobs.slice(0, 3).map((job, index) => `<article class="tier ${index === 1 ? "safe" : index === 2 ? "backup" : ""}"><span class="tag ${index === 1 ? "green" : index === 2 ? "amber" : "blue"}">${index === 0 ? "冲刺" : index === 1 ? "稳妥" : "保底"}</span><h4 style="margin-top:13px">${escapeHtml(job.roleName)}</h4><ul class="action-list"><li>7天：补齐 ${escapeHtml(job.skills[0] || "岗位核心技能")} 的真实练习</li><li>30天：完成一项可展示成果</li><li>90天：按面试反馈更新简历版本</li></ul></article>`).join("")}</div>` : '<div class="empty">收藏岗位后，这里会出现专属职业规划。</div>';
+      $$('[data-favorite-remove]').forEach(button => button.addEventListener("click", () => toggleFavoriteJob(button.dataset.favoriteRemove)));
+      $$('[data-page]', target).forEach(button => button.addEventListener("click", () => setPage(button.dataset.page)));
+    }
+    function renderJobSearchHistory() {
+      const target = $("#jobSearchHistory");
+      if (!target) return;
+      target.innerHTML = state.extension.searchHistory.length ? state.extension.searchHistory.map(item => `<button class="tag blue" data-search-history="${escapeHtml(item)}">${escapeHtml(item)}</button>`).join("") : '<span class="field-help">暂无历史关键词</span>';
+      $$('[data-search-history]', target).forEach(button => button.addEventListener("click", () => { $("#jobSearchInput").value = button.dataset.searchHistory; runJobSearch(button.dataset.searchHistory); }));
+    }
+    function persistJobFilters() {
+      state.jobAdvancedFilters = {
+        salaryMin: $("#jobSalaryMin")?.value || "",
+        salaryMax: $("#jobSalaryMax")?.value || "",
+        family: $("#jobFamilyFilter")?.value || "",
+        city: $("#jobCityFilter")?.value.trim() || "",
+        difficulty: $("#jobDifficultyFilter")?.value || ""
+      };
+      state.extension.jobFilters = state.jobAdvancedFilters;
+      saveExtension();
+      state.jobPage = 1;
+      renderJobs();
     }
     function renderComparison() {
       const selected = selectedJobs();
@@ -1141,10 +1407,22 @@
       $$("[data-page]", $("#tierPlans")).forEach(button => button.addEventListener("click", () => { if (button.dataset.prefillRole) state.resume.role = button.dataset.prefillRole; setPage(button.dataset.page, true); fillResume(); }));
       $$("[data-prefill-delivery]", $("#tierPlans")).forEach(button => button.addEventListener("click", () => openDeliveryPrefill(button.dataset.prefillDelivery)));
     }
+    function renderJobCareerRoute() {
+      const target = $("#jobCareerRoute");
+      if (!target) return;
+      const role = selectedJobs()[0] || state.jobs[0];
+      if (!role) { target.innerHTML = '<div class="empty">搜索岗位后显示晋升路线。</div>'; return; }
+      const upstream = asArray(role.related).slice(0, 2);
+      const downstream = [...new Set([`${role.roleName} 高级`, `${role.roleName} 负责人`, ...asArray(role.related)])].slice(0, 4);
+      target.innerHTML = `<div class="grid grid-3"><div class="tier backup"><span class="tag amber">上游基础</span><h4 style="margin-top:12px">${escapeHtml(upstream.join(" / ") || "通用基础能力")}</h4><p style="margin-top:8px">先补齐 ${escapeHtml(role.skills.slice(0, 2).join("、") || "岗位基础技能")}，建立可验证的项目证据。</p></div><div class="tier safe"><span class="tag green">当前目标</span><h4 style="margin-top:12px">${escapeHtml(role.roleName)}</h4><p style="margin-top:8px">以 7 / 30 / 90 天计划持续积累真实成果和面试反馈。</p></div><div class="tier"><span class="tag blue">进阶方向</span><div class="tag-row" style="margin-top:12px">${downstream.map(item => `<span class="tag blue">${escapeHtml(item)}</span>`).join("")}</div><p style="margin-top:8px">按业务影响力、复杂度和协作范围逐步升级。</p></div></div>`;
+    }
     async function runJobSearch(value = $("#jobSearchInput").value.trim()) {
       const query = String(value || "").trim();
       if (!query || query.length > 60) { showToast(query ? "岗位名称不能超过 60 个字符" : "请输入岗位名称"); return; }
       $("#jobSearchInput").value = query;
+      state.extension.searchHistory = [query, ...state.extension.searchHistory.filter(item => item !== query)].slice(0, 30);
+      saveExtension();
+      renderJobSearchHistory();
       hideJobSuggestions();
       state.jobLoading = true; renderJobs();
       const suggestions = await requestJobSuggestions(query);
@@ -1184,13 +1462,21 @@
     }
 
     /* Module 3: evidence library CRUD, custom categories, import/export, and safe resume fill. */
+    function orderedEvidence(items) {
+      const order = asArray(state.extension?.evidenceOrder).map(String);
+      return [...items].sort((a, b) => {
+        const aIndex = order.indexOf(String(a.id));
+        const bIndex = order.indexOf(String(b.id));
+        return (aIndex < 0 ? Number.MAX_SAFE_INTEGER : aIndex) - (bIndex < 0 ? Number.MAX_SAFE_INTEGER : bIndex);
+      });
+    }
     function renderEvidence() {
       if (state.evidenceLoading) {
         $("#evidenceList").innerHTML = `<div class="skeleton-panel"></div><div class="skeleton-panel"></div>`;
         $("#evidencePagination").innerHTML = "";
         return;
       }
-      state.evidence = state.evidence.map(normalizeEvidence);
+      state.evidence = orderedEvidence(state.evidence.map(normalizeEvidence));
       const items = state.evidence.filter(item => state.evidenceFilter === "all" || item.status === state.evidenceFilter);
       const page = paginate(items, state.evidencePage, state.pageSize);
       state.evidencePage = page.currentPage;
@@ -1214,6 +1500,7 @@
         renderEvidence();
       });
       saveLocal("resume-dashboard-evidence", state.evidence);
+      bindEvidenceAttachments();
     }
     function evidenceForm(item = {}) {
       return `<div class="form-grid"><div class="field full"><label>经历名称</label><input class="input" id="modalEvidenceTitle" maxlength="100" value="${escapeHtml(item.title || "")}" placeholder="例如：校园数据分析项目"></div><div class="field"><label>分类</label><input class="input" id="modalEvidenceType" maxlength="30" value="${escapeHtml(item.type || "项目")}" placeholder="项目 / 课程 / 实习"></div><div class="field"><label>状态</label><select class="select" id="modalEvidenceStatus"><option value="pending">待确认</option><option value="verified">已验证</option></select></div><div class="field"><label>开始日期</label><input class="input" id="modalEvidenceDate" type="date" value="${escapeHtml(formatDate(item.date) === "待设置" ? "" : formatDate(item.date))}"></div><div class="field"><label>结束日期</label><input class="input" id="modalEvidenceEndDate" type="date" value="${escapeHtml(formatDate(item.endDate) === "待设置" ? "" : formatDate(item.endDate))}"></div><div class="field full"><label>标签（用逗号分隔）</label><input class="input" id="modalEvidenceTags" maxlength="240" value="${escapeHtml((item.tags || []).join(", "))}" placeholder="SQL, Excel, 沟通"></div><div class="field full"><label>真实描述</label><textarea class="textarea" id="modalEvidenceDesc" maxlength="1200" placeholder="只写真实做过的事情和结果">${escapeHtml(item.description || "")}</textarea></div></div>`;
@@ -1303,6 +1590,48 @@
       };
       reader.readAsText(file, "utf-8");
     }
+    function openEvidenceOrganizer() {
+      const items = [...state.evidence].sort((a, b) => state.extension.evidenceOrder.indexOf(a.id) - state.extension.evidenceOrder.indexOf(b.id));
+      openModal("经历排序与自定义标签", `<div class="toolbar-group"><input class="input" id="newEvidenceCategory" maxlength="30" placeholder="新增经历分类"><button class="btn small soft" id="addEvidenceCategoryBtn">添加分类</button></div><div class="tag-row" style="margin-top:12px">${state.extension.evidenceCategories.map(item => `<span class="tag blue">${escapeHtml(item)}${!["项目", "课程", "实习", "校园实践"].includes(item) ? ` <button class="btn icon small" data-edit-category="${escapeHtml(item)}">编辑</button><button class="btn icon small" data-remove-category="${escapeHtml(item)}">×</button>` : ""}</span>`).join("")}</div><div class="list" id="evidenceOrganizerList" style="margin-top:15px">${items.map(item => `<div class="list-item sortable-row" draggable="true" data-evidence-sort="${escapeHtml(item.id)}"><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.type)} · 拖动调整顺序</p></div>`).join("")}</div>`, closeModal, "关闭");
+      $("#addEvidenceCategoryBtn").addEventListener("click", () => { const value = $("#newEvidenceCategory").value.trim(); if (!value) { showToast("请输入分类名称"); return; } state.extension.evidenceCategories = [...new Set([...state.extension.evidenceCategories, value])]; saveExtension(); openEvidenceOrganizer(); showToast("分类已保存"); });
+      $$('[data-edit-category]').forEach(button => button.addEventListener("click", () => { const oldValue = button.dataset.editCategory; const value = prompt("修改分类名称", oldValue)?.trim(); if (!value || value === oldValue) return; state.extension.evidenceCategories = state.extension.evidenceCategories.map(item => item === oldValue ? value : item); state.evidence.forEach(item => { if (item.type === oldValue) item.type = value; }); saveExtension(); saveLocal("resume-dashboard-evidence", state.evidence); openEvidenceOrganizer(); renderEvidence(); showToast("分类已更新"); }));
+      $$('[data-remove-category]').forEach(button => button.addEventListener("click", () => { const value = button.dataset.removeCategory; state.extension.evidenceCategories = state.extension.evidenceCategories.filter(item => item !== value); saveExtension(); openEvidenceOrganizer(); showToast("分类已从管理面板移除，历史经历内容保留"); }));
+      bindSortableList($("#evidenceOrganizerList"), "data-evidence-sort", ids => { state.extension.evidenceOrder = ids; saveExtension(); showToast("经历排序已保存"); });
+    }
+    function bindSortableList(container, attribute, onChange) {
+      if (!container) return;
+      let dragged = null;
+      $$(`[${attribute}]`, container).forEach(row => {
+        row.addEventListener("dragstart", () => { dragged = row; row.classList.add("dragging"); });
+        row.addEventListener("dragend", () => { row.classList.remove("dragging"); dragged = null; onChange($$(`[${attribute}]`, container).map(item => item.dataset[attribute.replace("data-", "")])); });
+        row.addEventListener("dragover", event => { event.preventDefault(); if (dragged && dragged !== row) row.parentNode.insertBefore(dragged, row); });
+      });
+    }
+    function attachEvidenceImage(id, file) {
+      if (!file || !file.type.startsWith("image/") || file.size > 2 * 1024 * 1024) { showToast("仅支持2MB以内的图片附件"); return; }
+      const reader = new FileReader();
+      reader.onload = () => { state.extension.evidenceAttachments[id] = reader.result; saveExtension(); renderEvidence(); bindEvidenceAttachments(); showToast("图片附件已保存在本地"); };
+      reader.readAsDataURL(file);
+    }
+    function bindEvidenceAttachments() {
+      const list = $("#evidenceList");
+      if (!list) return;
+      $$('[data-evidence-check]', list).forEach(input => {
+        const item = state.evidence.find(entry => String(entry.id) === String(input.dataset.evidenceCheck));
+        const card = input.closest('.list-item');
+        if (!item || !card || card.querySelector('[data-attach-evidence]')) return;
+        const attachment = state.extension.evidenceAttachments[item.id];
+        card.insertAdjacentHTML('beforeend', `<div class="attachment-row"><button class="btn small" data-attach-evidence="${escapeHtml(item.id)}">添加图片附件</button>${attachment ? `<img class="attachment-thumb" src="${escapeHtml(attachment)}" alt="项目截图">` : '<span class="field-help">仅保存在本地浏览器</span>'}</div>`);
+      });
+      $$('[data-attach-evidence]', list).forEach(button => button.addEventListener('click', () => { const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'; input.onchange = event => attachEvidenceImage(button.dataset.attachEvidence, event.target.files?.[0]); input.click(); }));
+    }
+    function renderEvidenceExtensionPanel() {
+      const page = $("#page-evidence");
+      if (!page || $("#evidenceExtensionPanel")) return;
+      const panel = document.createElement("div"); panel.id = "evidenceExtensionPanel"; panel.className = "section-block card card-pad";
+      panel.innerHTML = `<div class="section-head"><div><h3>经历管理增强</h3><p>支持自定义分类、排序和本地图片附件。</p></div><button class="btn small soft" id="openEvidenceOrganizerBtn">管理分类与排序</button></div><div class="tag-row" style="margin-top:14px">${state.extension.evidenceCategories.map(item => `<span class="tag blue">${escapeHtml(item)}</span>`).join("")}</div>`;
+      page.appendChild(panel); $("#openEvidenceOrganizerBtn").addEventListener("click", openEvidenceOrganizer);
+    }
 
     /* Module 4: resume readiness, versions, AI guard, and exports. */
     function resumeReadiness() {
@@ -1320,6 +1649,30 @@
         : `<div class="section-head"><div><h3>完成基础信息后解锁预览与导出</h3><p>还缺少：${result.missing.join("、")}。系统不会自动编造这些信息。</p></div><span class="tag amber">待补充</span></div>`;
       ["templateSelect", "exportWordBtn", "exportPdfBtn"].forEach(id => { const element = $(`#${id}`); if (element) element.disabled = !result.ready; });
     }
+    function renderResumeExtensionPanel() {
+      const page = $("#page-resume");
+      if (!page || $("#resumeExtensionPanel")) return;
+      const panel = document.createElement("div");
+      panel.id = "resumeExtensionPanel";
+      panel.className = "section-block card card-pad";
+      panel.innerHTML = `<div class="section-head"><div><h3>简历版本与自定义模板</h3><p>每次保存都会生成本地快照；模板参数只影响本地预览，不改变导出接口。</p></div><div class="toolbar-group"><button class="btn small" id="openResumeSnapshotsBtn">查看快照</button><button class="btn small" id="batchResumeVersionsBtn">批量生成三版本</button></div></div><div class="extension-grid" style="margin-top:15px"><div class="field"><label>预览字号</label><input class="input" id="templateFontSize" type="number" min="12" max="20" value="${state.extension.templateSettings.fontSize}"></div><div class="field"><label>预览边距</label><input class="input" id="templateMargin" type="number" min="12" max="60" value="${state.extension.templateSettings.margin}"></div><div class="field full"><label>自定义模板名称</label><div class="toolbar-group"><input class="input" id="customTemplateName" maxlength="40" placeholder="例如：数据岗一页版"><button class="btn small soft" id="saveCustomTemplateBtn">保存模板配置</button><button class="btn small" id="resumeParserPlaceholderBtn">导入外部简历</button></div></div></div><div class="extension-note" style="margin-top:12px">外部简历解析：后端部署PDF/Word解析接口后启用。当前仅保留入口，不上传或伪造解析结果。</div>`;
+      page.appendChild(panel);
+      $("#templateFontSize").addEventListener("input", event => { state.extension.templateSettings.fontSize = Math.min(20, Math.max(12, Number(event.target.value) || 14)); saveExtension(); });
+      $("#templateMargin").addEventListener("input", event => { state.extension.templateSettings.margin = Math.min(60, Math.max(12, Number(event.target.value) || 28)); saveExtension(); });
+      $("#saveCustomTemplateBtn").addEventListener("click", () => { const name = $("#customTemplateName").value.trim(); if (!name) { showToast("请输入模板名称"); return; } state.extension.customTemplates[name] = { ...state.extension.templateSettings }; saveExtension(); showToast("自定义模板已保存"); });
+      $("#resumeParserPlaceholderBtn").addEventListener("click", () => showToast("后端部署PDF/Word解析接口后启用"));
+      $("#openResumeSnapshotsBtn").addEventListener("click", openResumeSnapshots);
+      $("#batchResumeVersionsBtn").addEventListener("click", batchResumeVersions);
+    }
+    function openResumeSnapshots() {
+      const items = state.extension.snapshots;
+      openModal("简历本地快照", items.length ? `<div class="list">${items.map(item => `<div class="list-item"><div class="list-item-head"><div><strong>${escapeHtml(item.label)}</strong><p>${escapeHtml(item.createdAt)}</p></div><button class="btn small soft" data-restore-snapshot="${escapeHtml(item.id)}">回滚</button></div></div>`).join("")}</div>` : '<div class="empty">保存草稿后会生成快照。</div>', closeModal, "关闭");
+      $$('[data-restore-snapshot]').forEach(button => button.addEventListener("click", () => { closeModal(); openModal("回滚简历快照？", "<p style='margin:0;color:var(--muted)'>当前未保存内容会被快照版本替换。建议先保存当前草稿。</p>", () => { createSnapshot("回滚前保护"); restoreSnapshot(button.dataset.restoreSnapshot); showToast("已恢复快照"); }, "确认回滚"); }));
+    }
+    function batchResumeVersions() {
+      ["应届生版", "实习版", "社招版"].forEach((variant, index) => state.drafts.unshift(normalizeDraft({ id: `draft-${variant}-${Date.now()}-${index}`, title: `${state.resume.role || "目标岗位"} · ${variant}`, updatedAt: "刚刚", template: $("#templateName")?.textContent, resume: { ...state.resume, version: variant } })));
+      saveLocal("resume-dashboard-drafts", state.drafts); renderDrafts(); showToast("已生成应届生、实习、社招三套草稿");
+    }
     function updateResumePreview() {
       const fields = ["resumeName", "resumePhone", "resumeEmail", "resumeRole", "resumeCity", "resumeSummary", "resumeProject", "resumeSkills", "resumeVersion", "resumeFilename"];
       fields.forEach(id => {
@@ -1328,8 +1681,9 @@
         const key = id.replace("resume", "").replace(/^./, char => char.toLowerCase());
         if (key in state.resume) state.resume[key] = element.value;
       });
-      $(".preview-name").textContent = state.resume.name || "你的姓名";
-      $(".preview-role").textContent = `${state.resume.role || "目标岗位"} · ${state.resume.city || "所在城市"} · ${state.resume.email || "邮箱"}`;
+      const displayResume = maskResume();
+      $(".preview-name").textContent = displayResume.name || "你的姓名";
+      $(".preview-role").textContent = `${displayResume.role || "目标岗位"} · ${displayResume.city || "所在城市"} · ${displayResume.email || "邮箱"}`;
       $("#previewSummary").textContent = state.resume.summary || "将你的方向、真实优势和可验证成果，用简洁清晰的语言呈现。";
       $("#previewProject").innerHTML = state.resume.project || '尚未填写项目经历 <span class="warning">[待确认]</span>';
       $("#previewSkills").textContent = state.resume.skills || "请补充技能标签";
@@ -1414,6 +1768,16 @@
       const interests = result?.top_interests || [];
       return Math.round(interests.reduce((sum, item) => sum + Number(item.score || 0), 0) / Math.max(1, interests.length) * 20);
     }
+    function renderAssessmentExtensionPanel() {
+      const page = $("#page-assessment");
+      if (!page || $("#assessmentExtensionPanel")) return;
+      const panel = document.createElement("div");
+      panel.id = "assessmentExtensionPanel";
+      panel.className = "section-block card card-pad";
+      panel.innerHTML = `<div class="section-head"><div><h3>测评档案与规划专场</h3><p>查看多次测评结果、比较差异，并用于生成职业规划文档。</p></div><button class="btn small soft" id="openAssessmentExtensionsBtn">打开测评管理</button></div><div class="tag-row" style="margin-top:14px"><span class="tag blue">多次存档</span><span class="tag green">7 / 30 / 90 天规划</span><span class="tag amber">支持自定义问题</span></div>`;
+      page.appendChild(panel);
+      $("#openAssessmentExtensionsBtn").addEventListener("click", openAssessmentExtensions);
+    }
     function renderAssessment() {
       const steps = state.assessmentQuestions;
       $("#assessmentStepper").innerHTML = steps.map((step, index) => `<button class="step-button ${index === state.assessmentStep ? "active" : ""}" data-assessment-step="${index}"><strong>${index + 1}. ${escapeHtml(step.title)}</strong><span>${index < state.assessmentStep ? "已完成" : index === state.assessmentStep ? "正在填写" : "点击进入"}</span></button>`).join("");
@@ -1481,6 +1845,14 @@
         if (item) { state.assessmentResult = item.result; saveLocal("resume-dashboard-assessment-result", item.result); closeModal(); renderAssessment(); showToast("已回看历史测评"); }
       }));
     }
+    function openAssessmentExtensions() {
+      const history = state.assessmentHistory;
+      const current = state.assessmentResult;
+      openModal("测评档案与规划文档", `<div class="toolbar-group"><button class="btn small" id="compareAssessmentBtn">比较两份测评</button><button class="btn small soft" id="downloadAssessmentPlanBtn">生成规划文档</button></div><div class="list" style="margin-top:14px">${history.length ? history.map(item => `<div class="list-item"><strong>${escapeHtml(item.createdAt)}</strong><p>方向清晰度 ${item.score} / 100</p></div>`).join("") : '<div class="empty">完成一次测评后会在这里永久存档。</div>'}</div><div class="field" style="margin-top:14px"><label>新增自定义测评题</label><div class="toolbar-group"><input class="input" id="customAssessmentQuestion" maxlength="120" placeholder="例如：我希望工作包含多少比例的沟通？"><button class="btn small soft" id="saveCustomAssessmentBtn">保存题目</button></div></div>`, closeModal, "关闭");
+      $("#compareAssessmentBtn").onclick = () => { if (history.length < 2) { showToast("至少完成两份测评后才能比较"); return; } const a = history[0], b = history[1]; openModal("测评差异对比", `<div class="compare-table"><table><thead><tr><th>维度</th><th>${escapeHtml(a.createdAt)}</th><th>${escapeHtml(b.createdAt)}</th></tr></thead><tbody><tr><td>分数</td><td>${a.score}</td><td>${b.score}</td></tr><tr><td>推荐岗位</td><td>${escapeHtml(asArray(a.result?.recommended_roles).join("、"))}</td><td>${escapeHtml(asArray(b.result?.recommended_roles).join("、"))}</td></tr></tbody></table></div>`, closeModal, "关闭"); };
+      $("#downloadAssessmentPlanBtn").onclick = () => { if (!current) { showToast("请先完成测评"); return; } const text = `职业规划文档\n评分：${scoreAssessment(current)} / 100\n推荐方向：${asArray(current.recommended_roles).join("、")}\n7天：${asArray(current.action_plan?.seven_day).join("；")}\n30天：${asArray(current.action_plan?.thirty_day).join("；")}\n90天：${asArray(current.action_plan?.ninety_day).join("；")}`; downloadText("职业规划文档.txt", text); };
+      $("#saveCustomAssessmentBtn").onclick = () => { const value = $("#customAssessmentQuestion").value.trim(); if (!value) { showToast("请输入测评问题"); return; } state.extension.assessmentCustomQuestions = [...new Set([...state.extension.assessmentCustomQuestions, value])]; state.assessmentQuestions[0].items.push(value); saveExtension(); showToast("自定义测评题已保存"); };
+    }
 
     /* Module 6: delivery records, prefill, multidimensional filters, queue retry, and export. */
     function renderDeliveryDraftOptions() {
@@ -1540,6 +1912,7 @@
       saveLocal("resume-dashboard-queue", state.pendingQueue);
       renderQueue();
       renderDashboard();
+      renderDeliveryExtensionControls();
     }
     function renderQueue() {
       $("#queueCount").textContent = `${state.pendingQueue.length} 条`;
@@ -1623,12 +1996,74 @@
     }
     function renderPrivacy() {
       $("#clientIdValue").textContent = state.clientId;
+      renderPrivacyExtensionPanel();
+    }
+    function renderPrivacyExtensionPanel() {
+      const page = $("#page-privacy");
+      if (!page || $("#privacyExtensionPanel")) return;
+      const panel = document.createElement("div");
+      panel.id = "privacyExtensionPanel";
+      panel.className = "section-block extension-grid";
+      panel.innerHTML = `<div class="card card-pad"><div class="section-head"><div><h3>数据安全状态</h3><p>本地存储空间、隐私显示与版本快照。</p></div><span class="tag blue" id="storagePercentTag">检测中</span></div><div class="storage-meter" style="margin-top:14px"><span id="storageMeterBar" style="width:0%"></span></div><div class="toolbar-group" style="margin-top:14px"><button class="btn small" id="toggleMaskBtn">切换敏感信息脱敏</button><button class="btn small soft" id="openBackupHistoryBtn">备份/快照记录</button></div><p class="field-help" style="margin-top:10px">脱敏仅影响预览、复制报告和网页文本，不会覆盖原始存储数据。</p></div><div class="card card-pad"><div class="section-head"><div><h3>本地数据迁移</h3><p>全量备份包含证据、草稿、投递、测评、收藏岗位与扩展设置。</p></div></div><div class="toolbar-group" style="margin-top:14px"><button class="btn primary" id="exportAllBusinessBtn">导出全量备份</button><button class="btn" id="importAllBusinessBtn">导入全量备份</button></div><input type="file" class="hidden" id="allBusinessFileInput" accept=".json"><div class="extension-note" style="margin-top:14px">重置 client_id 前必须先导出全量备份，重置只改变匿名隔离标识，不删除本地资料。</div></div><div class="card card-pad full"><div class="section-head"><div><h3>快捷键配置</h3><p>可修改常用操作，快捷键保存在当前浏览器。</p></div><button class="btn small soft" id="saveShortcutConfigBtn">保存快捷键</button></div><div class="extension-grid" id="shortcutConfigForm" style="margin-top:12px"></div></div><div class="card card-pad full"><div class="section-head"><div><h3>部署与扩展预留</h3><p>静态说明，不新增接口。</p></div><span class="tag">规划中</span></div><div class="grid grid-3" style="margin-top:14px"><div class="list-item"><strong>MySQL / PostgreSQL</strong><p>未来可按现有 SQLite 表结构迁移。</p></div><div class="list-item"><strong>企业 ATS 对接</strong><p>仅接入获得授权的官方接口。</p></div><div class="list-item"><strong>多端同步与团队版</strong><p>需要后续身份、权限和 HTTPS 部署。</p></div></div></div>`;
+      page.appendChild(panel);
+      renderPrivacyExtensionControls();
+    }
+    function renderPrivacyExtensionControls() {
+      const usage = checkStorageCapacity();
+      $("#storagePercentTag").textContent = `已使用约 ${usage.percent}%`;
+      $("#storageMeterBar").style.width = `${Math.min(100, usage.percent)}%`;
+      $("#storageMeterBar").classList.toggle("warning", usage.ratio >= .9);
+      $("#toggleMaskBtn").textContent = state.extension.maskSensitive ? "关闭敏感信息脱敏" : "开启敏感信息脱敏";
+      const labels = { save: "保存草稿", export: "导出文件", newDelivery: "新增投递", toggleSidebar: "切换侧边栏", search: "全局搜索" };
+      $("#shortcutConfigForm").innerHTML = Object.entries(labels).map(([key, label]) => `<label class="shortcut-row"><span>${label}</span><input class="input" maxlength="1" data-shortcut-key="${key}" value="${escapeHtml(state.extension.shortcutConfig[key])}"></label>`).join("");
+      $("#toggleMaskBtn").onclick = () => { state.extension.maskSensitive = !state.extension.maskSensitive; saveExtension(); renderPrivacyExtensionControls(); updateResumePreview(); showToast(state.extension.maskSensitive ? "已开启敏感信息脱敏" : "已关闭敏感信息脱敏"); };
+      $("#openBackupHistoryBtn").onclick = openBackupHistory;
+      $("#exportAllBusinessBtn").onclick = exportAllBusinessData;
+      $("#importAllBusinessBtn").onclick = () => $("#allBusinessFileInput").click();
+      $("#allBusinessFileInput").onchange = event => { if (event.target.files?.[0]) importAllBusinessData(event.target.files[0]); event.target.value = ""; };
+      $("#saveShortcutConfigBtn").onclick = () => { const values = Object.fromEntries($$("[data-shortcut-key]").map(input => [input.dataset.shortcutKey, input.value.toLowerCase()])); const keys = Object.values(values).filter(Boolean); if (new Set(keys).size !== keys.length) { showToast("快捷键不能重复"); return; } state.extension.shortcutConfig = { ...state.extension.shortcutConfig, ...values }; saveExtension(); showToast("快捷键配置已保存"); };
+    }
+    function openBackupHistory() {
+      const items = [...state.extension.snapshots].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+      openModal("本地备份与快照", items.length ? `<div class="list">${items.map(item => `<div class="list-item"><div class="list-item-head"><div><strong>${escapeHtml(item.label)}</strong><p>${escapeHtml(item.createdAt)}</p></div><button class="btn small soft" data-restore-snapshot="${escapeHtml(item.id)}">恢复</button></div></div>`).join("")}</div>` : '<div class="empty">暂无备份记录，保存草稿后会自动生成快照。</div>', closeModal, "关闭");
+      $$('[data-restore-snapshot]').forEach(button => button.addEventListener("click", () => { closeModal(); openModal("确认恢复备份？", "<p style='margin:0;color:var(--muted)'>恢复将替换当前本地证据、投递、草稿和测评状态。</p>", () => { createSnapshot("恢复前保护"); restoreSnapshot(button.dataset.restoreSnapshot); showToast("备份已恢复"); }, "恢复"); }));
     }
     function resetClientId() {
-      openModal("重置匿名 client_id？", "<p style='margin:0;color:var(--muted)'>重置后，后端服务会把后续草稿和测评请求视为新的匿名空间。本地历史数据仍会保留。</p>", () => { state.clientId = `demo-${crypto.randomUUID?.() || Date.now()}`; saveLocal("resume-dashboard-client-id", state.clientId); renderPrivacy(); showToast("匿名 client_id 已重置"); }, "重置");
+      openModal("重置匿名 client_id？", "<p style='margin:0;color:var(--muted)'>重置前必须先导出全量本地备份。导出成功后，后端服务会把后续草稿和测评请求视为新的匿名空间，本地历史数据仍会保留。</p>", () => { if (!exportAllBusinessData()) return false; state.clientId = `demo-${crypto.randomUUID?.() || Date.now()}`; saveLocal("resume-dashboard-client-id", state.clientId); renderPrivacy(); showToast("匿名 client_id 已重置"); }, "导出并重置");
     }
     function exportAllLocal() {
-      downloadText("ai-resume-local-backup.json", JSON.stringify({ exportedAt: new Date().toISOString(), clientId: state.clientId, evidence: state.evidence, deliveries: state.deliveries, drafts: state.drafts, assessmentHistory: state.assessmentHistory, resume: state.resume }, null, 2), "application/json");
+      downloadText("ai-resume-local-backup.json", JSON.stringify({ exportedAt: new Date().toISOString(), clientId: state.clientId, evidence: state.evidence, deliveries: state.deliveries, drafts: state.drafts, assessmentHistory: state.assessmentHistory, resume: state.extension.maskSensitive ? maskResume() : state.resume }, null, 2), "application/json");
+    }
+    function deliveryStats() {
+      const total = state.deliveries.length;
+      const interviews = state.deliveries.filter(item => item.status === "interview" || item.status === "offer").length;
+      const offers = state.deliveries.filter(item => item.status === "offer").length;
+      const monthly = state.deliveries.reduce((result, item) => { const month = String(item.appliedDate || "").slice(0, 7) || "未知"; result[month] = (result[month] || 0) + 1; return result; }, {});
+      return { total, interviewRate: total ? Math.round(interviews / total * 100) : 0, offerRate: total ? Math.round(offers / total * 100) : 0, monthly };
+    }
+    function renderDeliveryExtensionPanel() {
+      const page = $("#page-delivery");
+      if (!page || $("#deliveryExtensionPanel")) return;
+      const panel = document.createElement("div"); panel.id = "deliveryExtensionPanel"; panel.className = "section-block extension-grid";
+      panel.innerHTML = `<div class="card card-pad"><div class="section-head"><div><h3>投递数据大盘</h3><p>基于本地投递记录计算，不上传任何数据。</p></div><button class="btn small soft" id="openDeliveryCalendarBtn">投递日历</button></div><div class="stat-strip" id="deliveryStatsStrip"></div></div><div class="card card-pad"><div class="section-head"><div><h3>岗位面试题库</h3><p>Mock 常见问题，可绑定记录并保存答题笔记。</p></div><button class="btn small" id="openInterviewBankBtn">打开题库</button></div><p class="extension-note" style="margin-top:14px">题库内容用于练习参考，不能替代目标公司的真实面试要求。</p></div>`;
+      page.appendChild(panel); renderDeliveryExtensionControls();
+    }
+    function renderDeliveryExtensionControls() {
+      const stats = deliveryStats();
+      $("#deliveryStatsStrip").innerHTML = `<div class="stat-mini"><strong>${stats.total}</strong><span>总投递</span></div><div class="stat-mini"><strong>${stats.interviewRate}%</strong><span>面试/Offer占比</span></div><div class="stat-mini"><strong>${stats.offerRate}%</strong><span>Offer占比</span></div><div class="stat-mini"><strong>${Object.keys(stats.monthly).length}</strong><span>覆盖月份</span></div>`;
+      $("#openDeliveryCalendarBtn").onclick = openDeliveryCalendar;
+      $("#openInterviewBankBtn").onclick = openInterviewBank;
+    }
+    function openDeliveryCalendar() {
+      const grouped = state.deliveries.filter(item => item.nextActionAt).reduce((result, item) => { (result[item.nextActionAt] ||= []).push(item); return result; }, {});
+      const days = Object.keys(grouped).sort();
+      openModal("投递跟进日历", days.length ? `<div class="mini-calendar">${days.map(day => `<div class="calendar-day ${isExpiredDate(day) ? "expired" : "due"} ${day === todayString() ? "today" : ""}"><strong>${escapeHtml(day.slice(5))}</strong><p>${grouped[day].length} 条 · ${escapeHtml(grouped[day][0].company)}</p></div>`).join("")}</div>` : '<div class="empty">暂无带跟进日期的投递记录。</div>', closeModal, "关闭");
+    }
+    function openInterviewBank() {
+      const job = state.resume.role || state.jobs[0]?.roleName || "目标岗位";
+      const questions = [`请介绍你在${job}方向最有代表性的一个真实项目。`, "你如何验证自己的分析或实现结果？", "遇到需求不清或时间紧张时，你会如何推进？"];
+      openModal(`${job} · 面试题库`, `<div class="list">${questions.map((question, index) => `<div class="list-item"><strong>${index + 1}. ${escapeHtml(question)}</strong><textarea class="textarea" data-interview-note="${index}" maxlength="800" placeholder="记录你的回答要点和复盘"></textarea></div>`).join("")}</div>`, () => { questions.forEach((_, index) => { state.extension.interviewNotes[`${job}-${index}`] = $(`[data-interview-note="${index}"]`).value; }); saveExtension(); showToast("面试笔记已保存"); }, "保存笔记");
+      questions.forEach((_, index) => { const input = $(`[data-interview-note="${index}"]`); input.value = state.extension.interviewNotes[`${job}-${index}`] || ""; });
     }
 
     function validateDeliveryForm() {
@@ -1710,6 +2145,8 @@
         state.draftPage = 1;
         state.resumeDirty = false;
         saveLocal("resume-dashboard-drafts", state.drafts);
+        createSnapshot("保存草稿快照");
+        maybeCreateAutoSnapshot();
         renderDrafts();
         setSaveStatus("saved", "已保存");
         showToast(state.runtime === "mock" ? "草稿已保存到本地 Mock 空间" : "草稿已保存到后端");
@@ -1782,6 +2219,11 @@
       });
       $("#clearJobSelection").addEventListener("click", () => { state.selectedJobs = []; renderJobs(); renderMatchReport(); renderTiers(); });
       $("#openSearchSettingsBtn").addEventListener("click", openSearchSettings);
+      $("#toggleJobFiltersBtn").addEventListener("click", () => { const panel = $("#jobAdvancedFilters"); panel.style.display = panel.style.display === "none" ? "grid" : "none"; });
+      ["jobSalaryMin", "jobSalaryMax", "jobFamilyFilter", "jobCityFilter", "jobDifficultyFilter"].forEach(id => $("#" + id)?.addEventListener("input", persistJobFilters));
+      $("#clearSearchHistoryBtn").addEventListener("click", () => { state.extension.searchHistory = []; saveExtension(); renderJobSearchHistory(); showToast("搜索历史已清空"); });
+      $("#compareFavoritesBtn")?.addEventListener("click", () => { state.selectedJobs = state.favoriteJobs.slice(0, 4).map(item => item.roleName); setPage("jobs", true); renderJobs(); renderComparison(); });
+      $("#favoritePlansBtn")?.addEventListener("click", () => { if (!state.favoriteJobs.length) { showToast("请先收藏岗位"); return; } $("#favoritePlanContent")?.scrollIntoView({ behavior: "smooth" }); });
 
       $("#addEvidenceBtn").addEventListener("click", () => openEvidenceEditor());
       $("#importEvidenceBtn").addEventListener("click", () => $("#evidenceFileInput").click());
@@ -1790,6 +2232,7 @@
       $$("#evidenceFilters .filter").forEach(button => button.addEventListener("click", () => { $$("#evidenceFilters .filter").forEach(item => item.classList.remove("active")); button.classList.add("active"); state.evidenceFilter = button.dataset.filter; state.evidencePage = 1; renderEvidence(); }));
       $("#matchEvidenceBtn").addEventListener("click", () => { renderEvidence(); showToast("已按当前目标岗位重新匹配"); });
       $("#deleteSelectedEvidenceBtn").addEventListener("click", () => deleteEvidence([...state.evidenceSelected].map(Number)));
+      $("#matchEvidenceBtn").addEventListener("dblclick", openEvidenceOrganizer);
 
       ["resumeName", "resumePhone", "resumeEmail", "resumeRole", "resumeCity", "resumeSummary", "resumeProject", "resumeSkills", "resumeVersion", "resumeFilename"].forEach(id => $(`#${id}`).addEventListener("input", updateResumePreview));
       updateTextareaMeta("resumeSummary", "resumeSummaryCount", 800);
@@ -1806,8 +2249,10 @@
       $("#exportWordBtn").addEventListener("click", () => exportFile("word"));
       $("#exportPdfBtn").addEventListener("click", () => exportFile("pdf"));
       $("#compareDraftBtn").addEventListener("click", openDraftComparison);
+      renderResumeExtensionPanel();
 
       $("#assessmentHistoryBtn").addEventListener("click", openAssessmentHistory);
+      $("#assessmentHistoryBtn").addEventListener("dblclick", openAssessmentExtensions);
 
       ["deliveryCompany", "deliveryRole", "deliveryCity", "deliveryAppliedDate", "deliveryDate", "deliveryNotes"].forEach(id => $(`#${id}`).addEventListener("input", () => { state.deliveryDirty = true; updateTextareaMeta("deliveryNotes", "deliveryNotesCount", 800); }));
       updateTextareaMeta("deliveryNotes", "deliveryNotesCount", 800);
@@ -1829,6 +2274,7 @@
       });
       $("#syncBtn").addEventListener("click", syncQueue);
       $("#exportDeliveryBtn").addEventListener("click", exportDeliveries);
+      renderDeliveryExtensionPanel();
 
       $("#refreshDraftsBtn").addEventListener("click", () => { renderDrafts(); showToast("草稿列表已刷新"); });
       $("#selectAllDrafts").addEventListener("change", event => { state.drafts.forEach(draft => event.target.checked ? state.selectedDrafts.add(draft.id) : state.selectedDrafts.delete(draft.id)); renderDrafts(); $("#selectAllDrafts").checked = event.target.checked; });
@@ -1836,6 +2282,7 @@
       $("#clearLocalBtn").addEventListener("click", () => openModal("清理本机缓存？", "<p style='margin:0;color:var(--muted)'>将清理当前设备上的简历 checkpoint、职业规划状态、测评答案和投递待同步队列。服务端草稿、经历和投递记录不会删除。</p>", () => { state.pendingQueue = []; state.assessmentResult = null; state.assessmentAnswers = {}; localKeys.filter(key => key.includes("assessment") || key.includes("queue")).forEach(key => localStorage.removeItem(key)); renderDeliveries(); renderAssessment(); showToast("本机缓存已清理"); }));
       $("#resetClientBtn").addEventListener("click", resetClientId);
       $("#exportAllLocalBtn").addEventListener("click", exportAllLocal);
+      $("#openBackupHistoryBtn")?.addEventListener("click", openBackupHistory);
 
       $("#modalClose").addEventListener("click", closeModal);
       $("#modalCancel").addEventListener("click", closeModal);
@@ -1843,6 +2290,11 @@
       $("#modalConfirm").addEventListener("click", () => { const callback = state.modalConfirm; const result = callback ? callback() : true; if (result !== false) closeModal(); });
       document.addEventListener("click", event => { const wrapper = $("#globalSearchResults"); if (wrapper && !event.target.closest(".global-search")) wrapper.classList.add("hidden"); });
       document.addEventListener("keydown", event => {
+        if (event.ctrlKey && event.key.toLowerCase() === state.extension.shortcutConfig.search) { event.preventDefault(); $("#globalSearchInput").focus(); showToast("已聚焦全局搜索"); return; }
+        if (event.ctrlKey && event.key.toLowerCase() === state.extension.shortcutConfig.toggleSidebar) { event.preventDefault(); $("#sidebar").classList.toggle("open"); return; }
+        if (event.ctrlKey && event.key.toLowerCase() === state.extension.shortcutConfig.save) { event.preventDefault(); saveDraft(); return; }
+        if (event.ctrlKey && event.key.toLowerCase() === state.extension.shortcutConfig.export) { event.preventDefault(); exportFile("pdf"); return; }
+        if (event.ctrlKey && event.key.toLowerCase() === state.extension.shortcutConfig.newDelivery) { event.preventDefault(); setPage("delivery"); $("#deliveryCompany").focus(); return; }
         if (event.key === "Escape" && $("#modalBackdrop").classList.contains("open")) { const handler = state.modalEscape; closeModal(); if (handler) handler(); return; }
         if (event.ctrlKey && event.key.toLowerCase() === "k") { event.preventDefault(); $("#globalSearchInput").focus(); showToast("已聚焦全局搜索"); }
         if (event.ctrlKey && event.key.toLowerCase() === "b") { event.preventDefault(); $("#sidebar").classList.toggle("open"); }
@@ -1860,12 +2312,17 @@
       bindEvents();
       renderDashboard();
       renderJobs();
+      renderFavorites();
       renderTiers();
       renderEvidence();
+      bindEvidenceAttachments();
+      renderEvidenceExtensionPanel();
       fillResume();
+      renderAssessmentExtensionPanel();
       renderAssessment();
       renderDeliveries();
       renderDrafts();
+      maybeCreateAutoSnapshot();
       const sources = await apiOrMock("/api/knowledgebase/sources", {}, () => ({ items: [] }), "knowledgebase sources");
       const assessment = await apiOrMock(`/api/career/assessment?client_id=${encodeURIComponent(state.clientId)}`, {}, null, "assessment load");
       if (assessment?.result && !state.assessmentResult) {
