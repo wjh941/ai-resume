@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { useCareerStore } from "../../stores/career"
 import { useConsultationStore } from "../../stores/consultation"
+import { useApplicationsStore } from "../../stores/applications"
 import { useResumeStore } from "../../stores/resume"
 import { clearLocalCareerWorkspace } from "../../utils/local-privacy"
 
 const resumeStore = useResumeStore()
 const careerStore = useCareerStore()
 const consultationStore = useConsultationStore()
+const applicationsStore = useApplicationsStore()
 
 function clearLocalData(): void {
   uni.showModal({
@@ -18,6 +20,7 @@ function clearLocalData(): void {
       resumeStore.resetDraft(false)
       careerStore.resetPlanner(false)
       consultationStore.resetConsultation(false)
+      applicationsStore.clearLocalData()
       uni.showToast({ title: "Local workspace cleared", icon: "success" })
     },
   })
