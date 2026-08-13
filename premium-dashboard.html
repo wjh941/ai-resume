@@ -177,6 +177,16 @@
     .job-suggestion:hover, .job-suggestion:focus-visible { color: var(--blue-strong); outline: 0; background: var(--blue-soft); }
     .job-suggestion small { color: var(--muted); font-size: 11px; white-space: nowrap; }
     .job-suggestion-empty { padding: 12px 11px; color: var(--faint); font-size: 12px; }
+    .pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 7px; margin-top: 16px; }
+    .pagination .btn.active { color: var(--blue-strong); border-color: #b9cee2; background: var(--blue-soft); }
+    .pagination-note { color: var(--muted); font-size: 11px; }
+    .expired-item { border-color: #efd6da; background: color-mix(in srgb, var(--red-soft) 46%, var(--surface-muted)); }
+    .save-status { display: inline-flex; align-items: center; min-height: 24px; padding: 3px 9px; border-radius: 999px; color: var(--muted); background: var(--surface-muted); font-size: 11px; }
+    .save-status.saving { color: #956a3d; background: var(--amber-soft); }
+    .save-status.saved { color: #4e817b; background: var(--teal-soft); }
+    .save-status.error { color: #9f626b; background: var(--red-soft); }
+    .textarea-meta { display: flex; justify-content: flex-end; gap: 4px; color: var(--faint); font-size: 10px; }
+    .textarea-meta .over-limit { color: var(--red); font-weight: 700; }
     .input, .select, .textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; outline: 0; color: var(--ink); background: var(--surface-muted); transition: var(--ease); }
     .input, .select { height: 38px; padding: 0 11px; }
     .textarea { min-height: 91px; resize: vertical; padding: 10px 11px; }
@@ -370,7 +380,7 @@
         <section class="page-section" id="page-jobs">
           <div class="hero-row"><div><div class="eyebrow">Job intelligence</div><h2>找到适合你当前阶段的岗位。</h2><p>先看方向，再看技能缺口。岗位信息用于比较和行动规划，不代表录用承诺。</p></div><span id="jobSourceTag" class="tag green">本地知识库优先</span></div>
           <div class="card card-pad"><div class="search-panel"><div class="job-search-wrap"><input class="input" id="jobSearchInput" autocomplete="off" aria-autocomplete="list" aria-controls="jobSuggestions" aria-expanded="false" placeholder="输入岗位名称，例如：数据、工程师、产品经理"><div class="job-suggestions hidden" id="jobSuggestions" role="listbox"></div></div><button class="btn primary" id="jobSearchBtn">查询岗位</button></div><p class="field-help" id="jobSearchHint" style="margin-top:12px">输入关键词查看实时关联岗位；按回车或点击“查询岗位”加载下方候选。</p></div>
-          <div class="section-block"><div class="section-head"><div><h3>岗位候选</h3><p>选择 2–4 个岗位进行横向比较</p></div><div class="toolbar-group"><button class="btn small" id="clearJobSelection">清空选择</button><button class="btn small soft" id="openSearchSettingsBtn">市场检索设置</button></div></div><div id="jobCards" class="job-grid"></div></div>
+          <div class="section-block"><div class="section-head"><div><h3>岗位候选</h3><p>选择 2–4 个岗位进行横向比较</p></div><div class="toolbar-group"><button class="btn small" id="clearJobSelection">清空选择</button><button class="btn small soft" id="openSearchSettingsBtn">市场检索设置</button></div></div><div id="jobCards" class="job-grid"></div><div id="jobPagination"></div></div>
           <div class="section-block"><details class="card collapse static" id="comparisonPanel" open><summary><div><h3>岗位横向比较</h3><p style="margin:3px 0 0;color:var(--muted);font-size:11px">把方向差异转化成下一步判断</p></div><span id="compareCount" class="tag blue">已选 0 个</span></summary><div class="collapse-content"><div id="comparisonContent"></div></div></details></div>
           <div class="section-block"><details class="card collapse static" id="matchReportPanel" open><summary><div><h3>专业匹配报告</h3><p style="margin:3px 0 0;color:var(--muted);font-size:11px">根据当前技能、经历和岗位方向展示缺口</p></div><span id="matchScoreTag" class="tag blue">待计算</span></summary><div class="collapse-content" id="matchReportContent"></div></details></div>
           <div class="section-block"><div class="section-head"><div><h3>三档职业规划</h3><p>把理想、现实与兜底放进同一张行动地图</p></div></div><div id="tierPlans" class="grid grid-3"></div></div>
@@ -381,12 +391,12 @@
           <div class="hero-row"><div><div class="eyebrow">Evidence library</div><h2>只用真实经历，写出有证据的简历。</h2><p>课程、项目、实习和校园实践都可以记录。未知内容会明确标注 <span class="warning">[待确认]</span>，不替你编造。</p></div><div class="toolbar-group"><button class="btn primary" id="addEvidenceBtn">＋ 添加经历</button><button class="btn small" id="importEvidenceBtn">导入备份</button><button class="btn small soft" id="exportEvidenceBtn">导出备份</button></div></div>
           <input type="file" id="evidenceFileInput" class="hidden" accept=".json,.txt">
           <div class="evidence-grid"><div class="card card-pad"><div class="section-head"><div><h3>证据概览</h3><p>按目标岗位自动匹配可用内容</p></div></div><div class="metric-value" id="evidenceCount">0</div><div class="metric-note">条真实经历 · <span id="verifiedEvidenceCount">0</span> 条已验证</div><div style="margin-top:22px"><div class="field-help">资料可用度</div><div style="height:8px;margin-top:8px;border-radius:99px;background:var(--line);overflow:hidden"><div id="evidenceProgress" style="width:0%;height:100%;border-radius:99px;background:linear-gradient(90deg,#99b7ce,#6f9a9a)"></div></div></div><div class="tag-row" id="evidenceTypeTags" style="margin-top:20px"></div></div><div class="card card-pad"><div class="section-head"><div><h3>岗位匹配建议</h3><p>仅填充简历空白字段，不覆盖已有内容</p></div><button class="btn small soft" id="matchEvidenceBtn">重新匹配</button></div><div id="evidenceSuggestions" class="list" style="margin-top:15px"></div></div></div>
-          <div class="section-block"><div class="section-head"><div><h3>我的经历记录</h3><p>支持自定义分类、编辑、删除与批量备份</p></div><div class="filter-row" id="evidenceFilters"><button class="filter active" data-filter="all">全部</button><button class="filter" data-filter="verified">已验证</button><button class="filter" data-filter="pending">待确认</button></div></div><div id="evidenceList" class="list" style="margin-top:14px"></div></div>
+          <div class="section-block"><div class="section-head"><div><h3>我的经历记录</h3><p>支持自定义分类、编辑、删除与批量备份</p></div><div class="filter-row" id="evidenceFilters"><button class="filter active" data-filter="all">全部</button><button class="filter" data-filter="verified">已验证</button><button class="filter" data-filter="pending">待确认</button></div></div><div id="evidenceList" class="list" style="margin-top:14px"></div><div id="evidencePagination"></div></div>
         </section>
 
         <!-- Module 4: resume editor, readiness guard, versions, templates, and exports -->
         <section class="page-section" id="page-resume">
-          <div class="hero-row"><div><div class="eyebrow">Resume editor</div><h2>把信息整理成可以交付的版本。</h2><p>编辑、保存、预览和导出都在同一个工作区完成。</p></div><div class="toolbar-group"><button class="btn" id="newDraftBtn">新建草稿</button><button class="btn soft" id="blankExperienceBtn">生成空白经历</button><button class="btn primary" id="saveDraftBtn">保存草稿</button></div></div>
+          <div class="hero-row"><div><div class="eyebrow">Resume editor</div><h2>把信息整理成可以交付的版本。</h2><p>编辑、保存、预览和导出都在同一个工作区完成。</p></div><div class="toolbar-group"><span id="saveStatus" class="save-status saved">已保存</span><button class="btn" id="newDraftBtn">新建草稿</button><button class="btn soft" id="blankExperienceBtn">生成空白经历</button><button class="btn primary" id="saveDraftBtn">保存草稿</button></div></div>
           <div id="resumeReadiness" class="card card-pad" style="margin-bottom:14px"></div>
           <div class="resume-layout"><div class="card card-pad"><div class="editor-toolbar"><div><h3>简历信息</h3><span class="field-help">真实内容优先，空白信息不会被悄悄补成事实。</span></div><button class="btn small soft" id="polishBtn">✦ AI 轻度润色</button></div><div class="form-grid">
             <div class="field"><label>姓名</label><input class="input" id="resumeName" maxlength="40" placeholder="例如：林然"></div>
@@ -395,8 +405,8 @@
             <div class="field"><label>目标岗位</label><input class="input" id="resumeRole" maxlength="60" placeholder="例如：数据分析师"></div>
             <div class="field"><label>所在城市</label><input class="input" id="resumeCity" maxlength="30" placeholder="例如：上海"></div>
             <div class="field"><label>导出文件名</label><input class="input" id="resumeFilename" maxlength="80" placeholder="林然-数据分析师-简历"></div>
-            <div class="field full"><label>自我评价</label><textarea class="textarea" id="resumeSummary" maxlength="800" placeholder="用 2–3 句话说明你的方向、优势和当前阶段"></textarea><span class="field-help">AI 润色只优化表达，不改变你输入的事实。</span></div>
-            <div class="field full"><label>项目经历</label><textarea class="textarea" id="resumeProject" maxlength="1600" placeholder="项目背景 · 你的动作 · 可验证结果"></textarea></div>
+             <div class="field full"><label>自我评价</label><textarea class="textarea" id="resumeSummary" maxlength="800" placeholder="用 2–3 句话说明你的方向、优势和当前阶段"></textarea><div class="textarea-meta"><span id="resumeSummaryCount">0 / 800</span></div><span class="field-help">AI 润色只优化表达，不改变你输入的事实。</span></div>
+             <div class="field full"><label>项目经历</label><textarea class="textarea" id="resumeProject" maxlength="1600" placeholder="项目背景 · 你的动作 · 可验证结果"></textarea><div class="textarea-meta"><span id="resumeProjectCount">0 / 1600</span></div></div>
             <div class="field"><label>技能标签</label><input class="input" id="resumeSkills" maxlength="240" placeholder="SQL, Excel, Python"></div>
             <div class="field"><label>版本名称</label><input class="input" id="resumeVersion" maxlength="60" placeholder="数据分析校招版"></div>
           </div></div>
@@ -412,7 +422,7 @@
         <!-- Module 6: delivery console, prefill, filters, queue details, and backups -->
         <section class="page-section" id="page-delivery">
           <div class="hero-row"><div><div class="eyebrow">Delivery console</div><h2>每一次投递，都有下一步。</h2><p>记录状态、跟进日期和面试复盘。网络不可用时，操作会保存到本地待同步队列。</p></div><div class="sync-chip"><span class="sync-dot offline" id="deliverySyncDot"></span><span id="deliverySyncText">待同步 0 条</span></div></div>
-          <div class="delivery-grid"><div class="card card-pad"><div class="section-head"><div><h3>添加投递计划</h3><p>点击保存才会创建记录</p></div></div><div class="form-grid" style="margin-top:17px"><div class="field"><label>公司</label><input class="input" id="deliveryCompany" maxlength="80" placeholder="[待确认]"></div><div class="field"><label>目标岗位</label><input class="input" id="deliveryRole" maxlength="60" placeholder="数据分析师"></div><div class="field"><label>城市</label><input class="input" id="deliveryCity" maxlength="30" placeholder="上海"></div><div class="field"><label>投递日期</label><input class="input" id="deliveryAppliedDate" type="date"></div><div class="field"><label>下一步日期</label><input class="input" id="deliveryDate" type="date"></div><div class="field"><label>状态</label><select class="select" id="deliveryStatus"><option value="saved">待准备</option><option value="applied">已投递</option><option value="screening">筛选中</option><option value="interview">面试</option><option value="offer">Offer</option><option value="closed">已结束</option></select></div><div class="field full"><label>绑定简历草稿</label><select class="select" id="deliveryDraftId"><option value="">不绑定</option></select></div><div class="field full"><label>面试复盘 / 备注</label><textarea class="textarea" id="deliveryNotes" maxlength="800" placeholder="记录真实问题、反馈和下一步改进"></textarea></div></div><button class="btn primary" id="saveDeliveryBtn" style="margin-top:15px">保存投递计划</button></div><div class="card card-pad"><div class="section-head"><div><h3>投递记录</h3><p>共 <span id="deliveryTotal">0</span> 条 · 支持多维筛选与备份</p></div><div class="toolbar-group"><button class="btn small soft" id="exportDeliveryBtn">导出 Excel</button><button class="btn small" id="syncBtn">↻ 重试同步</button></div></div><div class="form-grid" style="margin-top:15px"><div class="field"><label>公司筛选</label><input class="input" id="deliveryCompanyFilter" placeholder="输入公司"></div><div class="field"><label>城市筛选</label><input class="input" id="deliveryCityFilter" placeholder="输入城市"></div><div class="field"><label>投递日期起</label><input class="input" id="deliveryDateFrom" type="date"></div><div class="field"><label>投递日期止</label><input class="input" id="deliveryDateTo" type="date"></div></div><div class="filter-row" id="deliveryFilters" style="margin-top:15px"><button class="filter active" data-status="all">全部</button><button class="filter" data-status="saved">待准备</button><button class="filter" data-status="applied">已投递</button><button class="filter" data-status="screening">筛选中</button><button class="filter" data-status="interview">面试</button><button class="filter" data-status="closed">已结束</button></div><div id="deliveryList" class="list" style="margin-top:14px"></div></div></div>
+           <div class="delivery-grid"><div class="card card-pad"><div class="section-head"><div><h3>添加投递计划</h3><p>点击保存才会创建记录</p></div></div><div class="form-grid" style="margin-top:17px"><div class="field"><label>公司</label><input class="input" id="deliveryCompany" maxlength="80" placeholder="[待确认]"></div><div class="field"><label>目标岗位</label><input class="input" id="deliveryRole" maxlength="60" placeholder="数据分析师"></div><div class="field"><label>城市</label><input class="input" id="deliveryCity" maxlength="30" placeholder="上海"></div><div class="field"><label>投递日期</label><input class="input" id="deliveryAppliedDate" type="date"></div><div class="field"><label>下一步日期</label><input class="input" id="deliveryDate" type="date"></div><div class="field"><label>状态</label><select class="select" id="deliveryStatus"><option value="saved">待准备</option><option value="applied">已投递</option><option value="screening">筛选中</option><option value="interview">面试</option><option value="offer">Offer</option><option value="closed">已结束</option></select></div><div class="field full"><label>绑定简历草稿</label><select class="select" id="deliveryDraftId"><option value="">不绑定</option></select></div><div class="field full"><label>面试复盘 / 备注</label><textarea class="textarea" id="deliveryNotes" maxlength="800" placeholder="记录真实问题、反馈和下一步改进"></textarea><div class="textarea-meta"><span id="deliveryNotesCount">0 / 800</span></div></div></div><button class="btn primary" id="saveDeliveryBtn" style="margin-top:15px">保存投递计划</button></div><div class="card card-pad"><div class="section-head"><div><h3>投递记录</h3><p>共 <span id="deliveryTotal">0</span> 条 · 支持多维筛选与备份</p></div><div class="toolbar-group"><button class="btn small soft" id="exportDeliveryBtn">导出 Excel</button><button class="btn small" id="syncBtn">↻ 重试同步</button></div></div><div class="form-grid" style="margin-top:15px"><div class="field"><label>公司筛选</label><input class="input" id="deliveryCompanyFilter" placeholder="输入公司"></div><div class="field"><label>城市筛选</label><input class="input" id="deliveryCityFilter" placeholder="输入城市"></div><div class="field"><label>投递日期起</label><input class="input" id="deliveryDateFrom" type="date"></div><div class="field"><label>投递日期止</label><input class="input" id="deliveryDateTo" type="date"></div></div><div class="filter-row" id="deliveryFilters" style="margin-top:15px"><button class="filter active" data-status="all">全部</button><button class="filter" data-status="saved">待准备</button><button class="filter" data-status="applied">已投递</button><button class="filter" data-status="screening">筛选中</button><button class="filter" data-status="interview">面试</button><button class="filter" data-status="closed">已结束</button></div><div id="deliveryList" class="list" style="margin-top:14px"></div><div id="deliveryPagination"></div></div></div>
           <div class="section-block"><details class="card collapse static" open><summary><div><h3>离线同步队列</h3><p style="margin-top:3px;color:var(--muted);font-size:11px">展示失败原因，支持单条重试</p></div><span id="queueCount" class="tag amber">0 条</span></summary><div class="collapse-content" id="queueList"></div></details></div>
         </section>
 
@@ -426,7 +436,7 @@
         <!-- Module 8: local privacy, backup, client identity, and extension placeholders. -->
         <section class="page-section" id="page-privacy">
           <div class="hero-row"><div><div class="eyebrow">Local privacy</div><h2>数据归你，清理也由你决定。</h2><p>本页只管理当前设备上的缓存和本地待同步状态。服务端记录需要在对应页面逐条删除。</p></div><span class="tag green">本地匿名空间</span></div>
-          <div class="grid grid-2"><div class="card card-pad"><div class="section-head"><div><h3>草稿管理</h3><p>当前设备与服务端草稿列表</p></div><div class="toolbar-group"><button class="btn small" id="refreshDraftsBtn">刷新</button><button class="btn small danger" id="deleteSelectedDraftsBtn">删除选中</button></div></div><label style="display:flex;align-items:center;gap:8px;margin-top:15px;color:var(--muted);font-size:11px"><input type="checkbox" id="selectAllDrafts"> 全选草稿</label><div id="draftList" class="list" style="margin-top:10px"></div></div><div class="card card-pad"><div class="section-head"><div><h3>本机数据</h3><p>清理操作不会向服务端批量删除</p></div><span class="metric-icon">◐</span></div><div class="empty" style="margin-top:15px;text-align:left"><strong>当前匿名 client_id</strong><div id="clientIdValue" class="dark-note" style="margin-top:5px;word-break:break-all"></div><div style="font-size:12px;line-height:1.8;margin-top:8px">简历 checkpoint · 职业规划状态 · 测评答案 · 咨询会话 · 投递待同步队列</div></div><div class="toolbar-group" style="margin-top:15px"><button class="btn danger" id="clearLocalBtn">清理本机缓存</button><button class="btn" id="resetClientBtn">重置 client_id</button></div><div class="toolbar-group" style="margin-top:10px"><button class="btn soft" id="exportAllLocalBtn">导出全部本地数据</button><button class="btn" id="deleteSelectedEvidenceBtn">删除选中经历</button></div><p class="field-help" style="margin-top:12px">已保存的草稿、经历证据和投递记录不会被清理缓存操作删除。</p></div></div>
+          <div class="grid grid-2"><div class="card card-pad"><div class="section-head"><div><h3>草稿管理</h3><p>当前设备与服务端草稿列表</p></div><div class="toolbar-group"><button class="btn small" id="refreshDraftsBtn">刷新</button><button class="btn small danger" id="deleteSelectedDraftsBtn">删除选中</button></div></div><label style="display:flex;align-items:center;gap:8px;margin-top:15px;color:var(--muted);font-size:11px"><input type="checkbox" id="selectAllDrafts"> 全选草稿</label><div id="draftList" class="list" style="margin-top:10px"></div><div id="draftPagination"></div></div><div class="card card-pad"><div class="section-head"><div><h3>本机数据</h3><p>清理操作不会向服务端批量删除</p></div><span class="metric-icon">◐</span></div><div class="empty" style="margin-top:15px;text-align:left"><strong>当前匿名 client_id</strong><div id="clientIdValue" class="dark-note" style="margin-top:5px;word-break:break-all"></div><div style="font-size:12px;line-height:1.8;margin-top:8px">简历 checkpoint · 职业规划状态 · 测评答案 · 咨询会话 · 投递待同步队列</div></div><div class="toolbar-group" style="margin-top:15px"><button class="btn danger" id="clearLocalBtn">清理本机缓存</button><button class="btn" id="resetClientBtn">重置 client_id</button></div><div class="toolbar-group" style="margin-top:10px"><button class="btn soft" id="exportAllLocalBtn">导出全部本地数据</button><button class="btn" id="deleteSelectedEvidenceBtn">删除选中经历</button></div><p class="field-help" style="margin-top:12px">已保存的草稿、经历证据和投递记录不会被清理缓存操作删除。</p></div></div>
           <div class="section-block"><details class="card collapse static"><summary><div><h3>后续扩展入口</h3><p style="margin-top:3px;color:var(--muted);font-size:11px">当前仅静态占位，不新增接口</p></div><span class="tag">规划中</span></summary><div class="collapse-content"><div class="grid grid-2"><div class="list-item"><h4>MySQL / PostgreSQL 迁移配置</h4><p>未来可替换本地 SQLite 数据层。</p></div><div class="list-item"><h4>招聘数据源与 ATS 对接</h4><p>仅支持获得授权的官方或企业接口。</p></div><div class="list-item"><h4>登录、多端同步与团队版</h4><p>当前版本坚持本地匿名 Demo。</p></div><div class="list-item"><h4>HTTPS 部署与套餐配置</h4><p>后续部署时单独配置，不影响本地演示。</p></div></div></div></details></div>
         </section>
       </div>
@@ -445,6 +455,43 @@
       Existing proxy rule is in resume-miniprogram/vite.config.ts. No new backend API is added.
     */
     const API_BASE_URL = "";
+
+    /*
+      Uni-App migration model notes:
+      Job = {
+        roleName: string, family: string, score: number, description: string,
+        skills: string[], salary: string, risk: string, related: string[],
+        aliases?: string[]
+      }
+      Evidence = {
+        id: string|number, title: string, type: string, date: string,
+        endDate: string, status: "verified"|"pending", description: string,
+        tags: string[]
+      }
+      ResumeDraft = {
+        id: string, title: string, updatedAt: string, template: string,
+        resume: { name: string, phone: string, email: string, role: string,
+          city: string, summary: string, project: string, skills: string,
+          version: string, filename: string }
+      }
+      DeliveryRecord = {
+        id: string|number, company: string, roleName: string, city: string,
+        status: "saved"|"applied"|"screening"|"interview"|"offer"|"closed",
+        appliedDate: string, nextActionAt: string, notes: string,
+        draftId: string|null
+      }
+      Assessment = {
+        key: string, title: string, items: string[]; result?: {
+          top_interests: { label: string, score: number }[],
+          work_style_summary: string, strength_evidence: string[],
+          recommended_roles: string[], action_plan: {
+            seven_day: string[], thirty_day: string[], ninety_day: string[]
+          }
+        }
+      }
+      Pure utility functions below deliberately avoid DOM access so they can be
+      moved to Uni-App stores/composables without changing business behavior.
+    */
 
     /*
       Mock fallback logic:
@@ -532,7 +579,17 @@
       jobSuggestionTimer: null,
       jobSuggestionHideTimer: null,
       jobSuggestionRequest: 0,
-      jobIsComposing: false
+      jobIsComposing: false,
+      pageSize: 18,
+      jobPage: 1,
+      evidencePage: 1,
+      deliveryPage: 1,
+      draftPage: 1,
+      toastQueue: [],
+      toastVisible: false,
+      networkOnline: typeof navigator === "undefined" ? true : navigator.onLine !== false,
+      requestSequence: 0,
+      saveStatusTimer: null
     };
     saveLocal("resume-dashboard-client-id", state.clientId);
 
@@ -562,6 +619,83 @@
     function saveLocal(key, value) {
       try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Direct-file mode may block storage. */ }
     }
+    function asArray(value) {
+      return Array.isArray(value) ? value : [];
+    }
+    function safeText(value, fallback = "—") {
+      const text = String(value ?? "").trim();
+      return text || fallback;
+    }
+    function safeNumber(value, fallback = 0) {
+      const number = Number(value);
+      return Number.isFinite(number) ? number : fallback;
+    }
+    function normalizeJob(job = {}) {
+      return {
+        roleName: safeText(job.roleName ?? job.role_name),
+        family: safeText(job.family ?? job.category),
+        score: safeNumber(job.score, 0),
+        description: safeText(job.description),
+        skills: asArray(job.skills ?? job.required_skills).map(item => safeText(item)).filter(Boolean),
+        salary: safeText(job.salary),
+        risk: safeText(job.risk),
+        related: asArray(job.related).map(item => safeText(item)).filter(Boolean),
+        aliases: asArray(job.aliases).map(item => safeText(item)).filter(Boolean)
+      };
+    }
+    function normalizeEvidence(item = {}) {
+      return {
+        id: item.id ?? `evidence-${Date.now()}-${Math.random()}`,
+        title: safeText(item.title),
+        type: safeText(item.type, "自定义"),
+        date: safeText(item.date, ""),
+        endDate: safeText(item.endDate, ""),
+        status: item.status === "verified" ? "verified" : "pending",
+        description: safeText(item.description, "[待确认] 请补充真实内容"),
+        tags: asArray(item.tags).map(tag => safeText(tag)).filter(Boolean)
+      };
+    }
+    function normalizeDelivery(item = {}) {
+      return {
+        id: item.id ?? `delivery-${Date.now()}-${Math.random()}`,
+        company: safeText(item.company, "[待确认]"),
+        roleName: safeText(item.roleName ?? item.role_name, "[待确认]"),
+        city: safeText(item.city, "[待确认]"),
+        status: ["saved", "applied", "screening", "interview", "offer", "closed"].includes(item.status) ? item.status : "saved",
+        appliedDate: safeText(item.appliedDate ?? item.applied_date, ""),
+        nextActionAt: safeText(item.nextActionAt ?? item.next_action_at, ""),
+        notes: safeText(item.notes, ""),
+        draftId: item.draftId ?? item.draft_id ?? null
+      };
+    }
+    function normalizeDraft(item = {}) {
+      return {
+        id: String(item.id ?? `draft-${Date.now()}-${Math.random()}`),
+        title: safeText(item.title, "未命名草稿"),
+        updatedAt: safeText(item.updatedAt ?? item.updated_at, "待更新"),
+        template: safeText(item.template, "简约商务版"),
+        resume: { ...defaultResume, ...(item.resume || {}) }
+      };
+    }
+    function paginate(items, page, pageSize) {
+      const total = items.length;
+      const pages = Math.max(1, Math.ceil(total / pageSize));
+      const currentPage = Math.min(Math.max(1, page), pages);
+      return { items: items.slice((currentPage - 1) * pageSize, currentPage * pageSize), total, pages, currentPage };
+    }
+    // Normalize persisted and remote records once at the rendering boundary.
+    state.jobs = asArray(state.jobs).map(normalizeJob);
+    state.evidence = asArray(state.evidence).map(normalizeEvidence);
+    state.deliveries = asArray(state.deliveries).map(normalizeDelivery);
+    state.drafts = asArray(state.drafts).map(normalizeDraft);
+    state.resume = { ...defaultResume, ...(state.resume || {}) };
+    function isExpiredDate(value) {
+      return validDate(value) && value < todayString();
+    }
+    function countRemaining(value, max) {
+      const length = String(value || "").length;
+      return { length, max, remaining: Math.max(0, max - length), over: length > max };
+    }
     function escapeHtml(value) {
       return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
     }
@@ -581,14 +715,28 @@
       if (!validDate(date)) return Infinity;
       return Math.ceil((new Date(`${date}T00:00:00`) - new Date(`${todayString()}T00:00:00`)) / 86400000);
     }
-    function showToast(message) {
+    function drainToastQueue() {
+      if (state.toastVisible || !state.toastQueue.length) return;
       const element = $("#toast");
-      element.textContent = message;
+      const next = state.toastQueue.shift();
+      state.toastVisible = true;
+      element.textContent = next;
       element.classList.add("show");
       clearTimeout(state.toastTimer);
-      state.toastTimer = setTimeout(() => element.classList.remove("show"), 2800);
+      state.toastTimer = setTimeout(() => {
+        element.classList.remove("show");
+        state.toastVisible = false;
+        drainToastQueue();
+      }, 2800);
+    }
+    function showToast(message) {
+      const text = safeText(message, "");
+      if (!text) return;
+      state.toastQueue.push(text);
+      drainToastQueue();
     }
     function openModal(title, body, confirm, confirmLabel = "确认", escapeHandler = null) {
+      resetModalActions();
       state.modalConfirm = confirm;
       state.modalEscape = escapeHandler;
       $("#modalTitle").textContent = title;
@@ -596,10 +744,53 @@
       $("#modalConfirm").textContent = confirmLabel;
       $("#modalBackdrop").classList.add("open");
     }
+    function resetModalActions() {
+      const confirmButton = $("#modalConfirm");
+      const cancelButton = $("#modalCancel");
+      if (confirmButton) {
+        confirmButton.style.display = "";
+        confirmButton.textContent = "确认";
+      }
+      if (cancelButton) cancelButton.textContent = "取消";
+    }
     function closeModal() {
       state.modalConfirm = null;
       state.modalEscape = null;
+      resetModalActions();
       $("#modalBackdrop").classList.remove("open");
+    }
+    function openSyncConflict(localData, serverData, onServer, onLocal, onCancel) {
+      openModal(
+        "本地与服务器版本冲突",
+        `<p style="margin:0;color:var(--muted)">检测到本地缓存与服务器返回的数据版本不同，请选择本次同步采用的数据来源。</p>
+          <div class="toolbar-group" style="margin-top:15px">
+            <button class="btn primary" id="useServerVersion">使用服务器版本</button>
+            <button class="btn soft" id="useLocalVersion">使用本地版本</button>
+            <button class="btn" id="cancelSyncConflict">取消本次同步</button>
+          </div>
+          <div class="grid grid-2" style="margin-top:15px">
+            <div class="list-item"><strong>本地缓存</strong><p>${escapeHtml(JSON.stringify(localData).slice(0, 220))}</p></div>
+            <div class="list-item"><strong>服务器版本</strong><p>${escapeHtml(JSON.stringify(serverData).slice(0, 220))}</p></div>
+          </div>`,
+        () => false,
+        "确认"
+      );
+      $("#modalConfirm").style.display = "none";
+      $("#modalCancel").textContent = "取消本次同步";
+      $("#useServerVersion").addEventListener("click", () => { closeModal(); onServer?.(); });
+      $("#useLocalVersion").addEventListener("click", () => { closeModal(); onLocal?.(); });
+      $("#cancelSyncConflict").addEventListener("click", () => { closeModal(); onCancel?.(); });
+    }
+    function showBatchReport(title, successCount, failures = []) {
+      const failureRows = failures.length
+        ? `<div class="list" style="margin-top:12px">${failures.map(item => `<div class="list-item"><strong>${escapeHtml(item.label || "未命名条目")}</strong><p>${escapeHtml(item.reason || "处理失败")}</p></div>`).join("")}</div>`
+        : `<p class="field-help" style="margin-top:12px">没有失败条目。</p>`;
+      openModal(
+        `${title}结果`,
+        `<div class="grid grid-2"><div class="metric-card"><strong>成功</strong><span>${successCount}</span></div><div class="metric-card"><strong>失败</strong><span>${failures.length}</span></div></div>${failureRows}`,
+        closeModal,
+        "关闭"
+      );
     }
     function setPage(page, force = false) {
       if (!force && state.page !== page && hasDirtyState()) {
@@ -627,11 +818,23 @@
 
     /* Existing backend adapter: only README-documented endpoints are used. */
     async function api(path, options = {}) {
-      const response = await fetch(`${API_BASE_URL}${path}`, { headers: { "Content-Type": "application/json" }, ...options });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const envelope = await response.json();
-      if (envelope && envelope.code && envelope.code !== "ok") throw new Error(envelope.message || "请求失败");
-      return envelope && Object.prototype.hasOwnProperty.call(envelope, "data") ? envelope.data : envelope;
+      const controller = new AbortController();
+      const requestId = ++state.requestSequence;
+      const timeoutId = setTimeout(() => controller.abort(), 120000);
+      const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+      try {
+        const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers, signal: controller.signal });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const envelope = await response.json();
+        if (envelope && envelope.code && envelope.code !== "ok") throw new Error(envelope.message || "请求失败");
+        return envelope && Object.prototype.hasOwnProperty.call(envelope, "data") ? envelope.data : envelope;
+      } catch (error) {
+        if (error?.name === "AbortError") throw new Error("请求超时（120秒）");
+        throw error;
+      } finally {
+        clearTimeout(timeoutId);
+        if (requestId === state.requestSequence) state.requestSequence = 0;
+      }
     }
     async function apiOrMock(path, options, fallback, label = path) {
       try {
@@ -643,15 +846,43 @@
         state.runtime = "mock";
         updateRuntimeBanner();
         console.info(`[mock fallback] ${label}`, error.message);
+        if (error.message.includes("超时")) showToast(`${label}请求超时，已切换到 Mock 数据`);
         return typeof fallback === "function" ? fallback() : fallback;
       }
     }
     function updateRuntimeBanner() {
       const banner = $("#runtimeBanner");
       if (!banner) return;
-      const online = state.runtime === "online";
+      const online = state.networkOnline && state.runtime === "online";
       banner.className = `status-banner ${online ? "online" : "offline"}`;
-      banner.innerHTML = `<span class="sync-dot ${online ? "" : "offline"}"></span><span>${online ? "已连接后端真实数据" : "本地离线 Mock 演示"}</span>`;
+      banner.innerHTML = `<span class="sync-dot ${online ? "" : "offline"}"></span><span>${online ? "已连接后端真实数据" : state.networkOnline ? "本地离线 Mock 演示" : "网络已离线 · 本地 Mock"}</span>`;
+    }
+    function setNetworkStatus(online) {
+      state.networkOnline = Boolean(online);
+      if (!state.networkOnline) state.runtime = "mock";
+      updateRuntimeBanner();
+      $("#syncText").textContent = state.networkOnline ? "本地数据已同步" : "网络已断开 · 本地可用";
+      showToast(state.networkOnline ? "网络已恢复" : "网络已断开，当前使用本地 Mock");
+    }
+    function renderPagination(containerId, currentPage, total, onChange) {
+      const container = $(`#${containerId}`);
+      if (!container) return;
+      const result = paginate(Array.from({ length: total }, (_, index) => index), currentPage, state.pageSize);
+      if (result.pages <= 1) {
+        container.innerHTML = total ? `<div class="pagination-note" style="text-align:center;margin-top:12px">共 ${total} 条</div>` : "";
+        return;
+      }
+      const buttons = Array.from({ length: result.pages }, (_, index) => `<button class="btn small ${index + 1 === result.currentPage ? "active" : ""}" data-page-number="${index + 1}">${index + 1}</button>`).join("");
+      container.innerHTML = `<div class="pagination"><span class="pagination-note">共 ${total} 条 · 每页 ${state.pageSize} 条</span>${buttons}</div>`;
+      $$("[data-page-number]", container).forEach(button => button.addEventListener("click", () => onChange(Number(button.dataset.pageNumber))));
+    }
+    // Stable semantic name for future Uni-App list components.
+    function renderPaginatedList(containerId, items, page, renderer, onChange) {
+      const result = paginate(asArray(items), page, state.pageSize);
+      const container = $(`#${containerId}`);
+      if (container) container.innerHTML = result.items.map(renderer).join("");
+      renderPagination(containerId, result.currentPage, result.total, onChange);
+      return result;
     }
     async function reconnectBackend() {
       const result = await apiOrMock("/health", {}, null, "backend health check");
@@ -666,19 +897,36 @@
       updateRuntimeBanner();
     }
     async function refreshRemoteData() {
-      const before = JSON.stringify({ drafts: state.drafts, deliveries: state.deliveries });
       const [draftData, assessmentData] = await Promise.all([
         apiOrMock("/api/draft/list?client_id=" + encodeURIComponent(state.clientId), {}, null),
         apiOrMock("/api/career/assessment?client_id=" + encodeURIComponent(state.clientId), {}, null)
       ]);
-      if (draftData?.items?.length) state.drafts = draftData.items;
-      if (assessmentData?.result) state.assessmentResult = assessmentData.result;
-      const after = JSON.stringify({ drafts: state.drafts, deliveries: state.deliveries });
-      if (before !== after) {
-        openModal("本地与后端数据来源不同", "<p style='margin:0;color:var(--muted)'>当前页面同时存在本地 Mock 缓存和后端真实数据。真实数据已优先加载，请确认后再继续编辑。</p>", closeModal, "我已知晓");
+      const serverDrafts = asArray(draftData?.items || draftData).map(normalizeDraft);
+      const serverAssessment = assessmentData?.result || null;
+      const localData = { drafts: state.drafts, assessment: state.assessmentResult };
+      const serverData = { drafts: serverDrafts, assessment: serverAssessment };
+      const changed = JSON.stringify(localData) !== JSON.stringify(serverData) && (serverDrafts.length || serverAssessment);
+      const applyServer = () => {
+        if (serverDrafts.length) state.drafts = serverDrafts;
+        if (serverAssessment) state.assessmentResult = serverAssessment;
+        saveLocal("resume-dashboard-drafts", state.drafts);
+        saveLocal("resume-dashboard-assessment-result", state.assessmentResult);
+        renderDrafts();
+        renderAssessment();
+        renderDashboard();
+        showToast("已使用服务器版本");
+      };
+      if (changed) {
+        openSyncConflict(
+          localData,
+          serverData,
+          applyServer,
+          () => showToast("已保留本地版本"),
+          () => showToast("已取消本次同步")
+        );
+        return;
       }
-      renderDrafts();
-      renderAssessment();
+      applyServer();
     }
 
     /* Module 1: dashboard metrics, deadlines, and global search. */
@@ -703,7 +951,7 @@
         ...state.jobs.filter(item => `${item.roleName}${item.family}`.toLowerCase().includes(value)).map(item => ({ page: "jobs", label: item.roleName, meta: "岗位情报" })),
         ...state.drafts.filter(item => `${item.title}${item.template}`.toLowerCase().includes(value)).map(item => ({ page: "privacy", label: item.title, meta: "简历草稿" })),
         ...state.deliveries.filter(item => `${item.company}${item.roleName}${item.city}`.toLowerCase().includes(value)).map(item => ({ page: "delivery", label: `${item.roleName} · ${item.company}`, meta: "投递记录" })),
-        ...state.evidence.filter(item => `${item.title}${item.description}${item.tags.join("")}`.toLowerCase().includes(value)).map(item => ({ page: "evidence", label: item.title, meta: "经历证据" }))
+        ...state.evidence.filter(item => `${item.title}${item.description}${asArray(item.tags).join("")}`.toLowerCase().includes(value)).map(item => ({ page: "evidence", label: item.title, meta: "经历证据" }))
       ].slice(0, 8);
       panel.innerHTML = results.length ? results.map(item => `<button class="search-result" data-search-page="${item.page}"><strong>${escapeHtml(item.label)}</strong><span>${item.meta}</span></button>`).join("") : `<div class="empty">没有找到匹配的本地记录</div>`;
       panel.classList.remove("hidden");
@@ -820,9 +1068,13 @@
     function renderJobs() {
       if (state.jobLoading) {
         $("#jobCards").innerHTML = `<div class="skeleton-panel"></div><div class="skeleton-panel"></div><div class="skeleton-panel"></div>`;
+        $("#jobPagination").innerHTML = "";
         return;
       }
-      $("#jobCards").innerHTML = state.jobs.map(job => `<article class="card job-card ${state.selectedJobs.includes(job.roleName) ? "selected" : ""}">
+      state.jobs = state.jobs.map(normalizeJob);
+      const page = paginate(state.jobs, state.jobPage, state.pageSize);
+      state.jobPage = page.currentPage;
+      $("#jobCards").innerHTML = page.items.map(job => `<article class="card job-card ${state.selectedJobs.includes(job.roleName) ? "selected" : ""}">
         <div class="job-card-top"><div><h4>${escapeHtml(job.roleName)}</h4><span class="field-help">${escapeHtml(job.family)}</span></div><input type="checkbox" data-job-check="${escapeHtml(job.roleName)}" ${state.selectedJobs.includes(job.roleName) ? "checked" : ""} aria-label="选择${escapeHtml(job.roleName)}"></div>
         <p>${escapeHtml(job.description)}</p><div class="metric-top"><div class="tag-row">${job.skills.map(skill => `<span class="tag">${escapeHtml(skill)}</span>`).join("")}</div><span class="job-score">${job.score}</span></div>
         <div class="delivery-meta"><span>参考薪资 ${escapeHtml(job.salary)}</span><span>·</span><span>${escapeHtml(job.risk)}</span></div>
@@ -837,9 +1089,13 @@
       }));
       renderComparison();
       renderMatchReport();
+      renderPagination("jobPagination", page.currentPage, page.total, nextPage => {
+        state.jobPage = nextPage;
+        renderJobs();
+      });
     }
     function selectedJobs() {
-      return state.jobs.filter(job => state.selectedJobs.includes(job.roleName));
+      return state.jobs.map(normalizeJob).filter(job => state.selectedJobs.includes(job.roleName));
     }
     function renderComparison() {
       const selected = selectedJobs();
@@ -864,12 +1120,14 @@
     function renderMatchReport() {
       const selected = selectedJobs();
       const role = selected[0] || state.jobs[0];
-      const knownSkills = new Set(state.resume.skills.split(/[,，、\s]+/).filter(Boolean).concat(state.evidence.flatMap(item => item.tags)));
+      const knownSkills = new Set(safeText(state.resume.skills, "").split(/[,，、\s]+/).filter(Boolean).concat(state.evidence.flatMap(item => asArray(item.tags))));
       const gaps = role ? role.skills.filter(skill => !knownSkills.has(skill)) : [];
       const score = role ? Math.max(45, Math.min(96, role.score - gaps.length * 8)) : 0;
       $("#matchScoreTag").textContent = role ? `匹配 ${score}%` : "待计算";
       if (!role) { $("#matchReportContent").innerHTML = `<div class="empty">先选择或查询一个岗位。</div>`; return; }
-      $("#matchReportContent").innerHTML = `<div class="grid grid-2"><div><h4>当前匹配优势</h4><div class="tag-row" style="margin-top:10px">${role.skills.filter(skill => knownSkills.has(skill)).map(skill => `<span class="tag green">${escapeHtml(skill)}</span>`).join("") || '<span class="field-help">暂未找到已验证技能</span>'}</div><h4 style="margin-top:20px">缺失技能清单</h4><div class="tag-row" style="margin-top:10px">${gaps.map(skill => `<span class="tag amber">${escapeHtml(skill)}</span>`).join("") || '<span class="tag green">暂无明显缺口</span>'}</div></div><div><h4>7 / 30 / 90 天补齐路径</h4><ul class="action-list"><li>7 天：围绕 ${escapeHtml(gaps[0] || "岗位核心技能")} 完成基础练习并记录结果</li><li>30 天：完成一个可展示的小项目，补齐背景、动作与结果</li><li>90 天：用面试反馈更新简历版本和投递方向</li></ul></div></div>`;
+      const reportText = [`岗位匹配报告：${role.roleName}`, `匹配度：${score}%`, `现有优势：${role.skills.filter(skill => knownSkills.has(skill)).join("、") || "暂无"}`, `缺失技能：${gaps.join("、") || "暂无"}`, "7天：基础练习并记录结果", "30天：完成可展示的小项目", "90天：根据面试反馈更新简历"].join("\n");
+      $("#matchReportContent").innerHTML = `<div class="toolbar-group" style="margin-bottom:12px"><button class="btn small soft" id="copyMatchReportBtn">复制匹配报告</button></div><div class="grid grid-2"><div><h4>当前匹配优势</h4><div class="tag-row" style="margin-top:10px">${role.skills.filter(skill => knownSkills.has(skill)).map(skill => `<span class="tag green">${escapeHtml(skill)}</span>`).join("") || '<span class="field-help">暂未找到已验证技能</span>'}</div><h4 style="margin-top:20px">缺失技能清单</h4><div class="tag-row" style="margin-top:10px">${gaps.map(skill => `<span class="tag amber">${escapeHtml(skill)}</span>`).join("") || '<span class="tag green">暂无明显缺口</span>'}</div></div><div><h4>7 / 30 / 90 天补齐路径</h4><ul class="action-list"><li>7 天：围绕 ${escapeHtml(gaps[0] || "岗位核心技能")} 完成基础练习并记录结果</li><li>30 天：完成一个可展示的小项目，补齐背景、动作与结果</li><li>90 天：用面试反馈更新简历版本和投递方向</li></ul></div></div>`;
+      $("#copyMatchReportBtn").addEventListener("click", () => copyText(reportText, "匹配报告已复制"));
     }
     function renderTiers() {
       const selected = selectedJobs();
@@ -890,7 +1148,8 @@
       hideJobSuggestions();
       state.jobLoading = true; renderJobs();
       const suggestions = await requestJobSuggestions(query);
-      state.jobs = buildJobCandidates(suggestions, query).slice(0, 8);
+      state.jobs = buildJobCandidates(suggestions, query).slice(0, 8).map(normalizeJob);
+      state.jobPage = 1;
       const intelligence = await apiOrMock("/api/job/query", { method: "POST", body: JSON.stringify({ role_name: query }) }, null, "job intelligence");
       if (intelligence) {
         const profileName = intelligence.role_name || query;
@@ -905,6 +1164,7 @@
         else state.jobs.unshift(profile);
       }
       state.lastSearch = query;
+      state.jobs = state.jobs.map(normalizeJob);
       state.jobLoading = false;
       renderJobs(); renderTiers();
       showToast(intelligence ? "已加载真实岗位情报" : "已使用本地岗位建议");
@@ -927,24 +1187,32 @@
     function renderEvidence() {
       if (state.evidenceLoading) {
         $("#evidenceList").innerHTML = `<div class="skeleton-panel"></div><div class="skeleton-panel"></div>`;
+        $("#evidencePagination").innerHTML = "";
         return;
       }
+      state.evidence = state.evidence.map(normalizeEvidence);
       const items = state.evidence.filter(item => state.evidenceFilter === "all" || item.status === state.evidenceFilter);
+      const page = paginate(items, state.evidencePage, state.pageSize);
+      state.evidencePage = page.currentPage;
       const verified = state.evidence.filter(item => item.status === "verified").length;
       $("#evidenceCount").textContent = state.evidence.length;
       $("#verifiedEvidenceCount").textContent = verified;
       $("#evidenceProgress").style.width = `${state.evidence.length ? Math.round(verified / state.evidence.length * 100) : 0}%`;
       const types = [...new Set(state.evidence.map(item => item.type))];
       $("#evidenceTypeTags").innerHTML = types.map(type => `<span class="tag ${type === "项目" ? "green" : type === "课程" ? "blue" : "amber"}">${escapeHtml(type)} ${state.evidence.filter(item => item.type === type).length}</span>`).join("");
-      $("#evidenceList").innerHTML = items.length ? items.map(item => `<article class="list-item">
+      $("#evidenceList").innerHTML = items.length ? page.items.map(item => `<article class="list-item">
         <div class="list-item-head"><label style="display:flex;align-items:flex-start;gap:8px"><input type="checkbox" data-evidence-check="${item.id}" ${state.evidenceSelected.has(String(item.id)) ? "checked" : ""}><span><h4>${escapeHtml(item.title)} ${item.status === "pending" ? '<span class="warning">[待确认]</span>' : ""}</h4><p>${escapeHtml(item.type)} · ${formatDate(item.date)} – ${formatDate(item.endDate)}</p></span></label><div class="toolbar-group">${statusBadge(item.status === "verified" ? "interview" : "saved")}<button class="btn small" data-edit-evidence="${item.id}">编辑</button><button class="btn small danger" data-delete-evidence="${item.id}">删除</button></div></div>
         <p style="margin-top:12px;color:var(--muted);font-size:12px">${escapeHtml(item.description)}</p><div class="tag-row" style="margin-top:11px">${(item.tags || []).map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join("")}</div>
-      </article>`).join("") : `<div class="empty"><strong>还没有这类经历</strong>记录真实内容后，系统会帮你匹配岗位和简历空白区。</div>`;
+      </article>`).join("") : `<div class="empty"><strong>还没有这类经历</strong><p>记录真实内容后，系统会帮你匹配岗位和简历空白区。</p><button class="btn small primary" data-empty-action="add-evidence" style="margin-top:12px">新增第一条经历</button></div>`;
       $("#evidenceSuggestions").innerHTML = state.evidence.slice(0, 3).map(item => `<div class="list-item"><div class="list-item-head"><h4>${escapeHtml(item.title)}</h4><button class="btn small soft" data-use-evidence="${item.id}">写入空白区</button></div><p>可匹配：${(item.tags || []).map(escapeHtml).join(" · ")}</p></div>`).join("");
       $$("[data-evidence-check]").forEach(input => input.addEventListener("change", event => { const id = event.target.dataset.evidenceCheck; if (event.target.checked) state.evidenceSelected.add(id); else state.evidenceSelected.delete(id); }));
       $$("[data-edit-evidence]").forEach(button => button.addEventListener("click", () => openEvidenceEditor(Number(button.dataset.editEvidence))));
       $$("[data-delete-evidence]").forEach(button => button.addEventListener("click", () => deleteEvidence([Number(button.dataset.deleteEvidence)])));
       $$("[data-use-evidence]").forEach(button => button.addEventListener("click", () => safeFillEvidence(Number(button.dataset.useEvidence))));
+      renderPagination("evidencePagination", page.currentPage, page.total, nextPage => {
+        state.evidencePage = nextPage;
+        renderEvidence();
+      });
       saveLocal("resume-dashboard-evidence", state.evidence);
     }
     function evidenceForm(item = {}) {
@@ -977,11 +1245,14 @@
     function deleteEvidence(ids) {
       if (!ids.length) { showToast("请先选择经历"); return; }
       openModal("删除经历记录？", "<p style='margin:0;color:var(--muted)'>删除只影响本地经历证据库，不会修改已经保存的简历草稿。</p>", () => {
+        const existingIds = new Set(state.evidence.map(item => item.id));
+        const failures = ids.filter(id => !existingIds.has(id)).map(id => ({ label: String(id), reason: "记录不存在或已被删除" }));
+        const successCount = ids.filter(id => existingIds.has(id)).length;
         state.evidence = state.evidence.filter(item => !ids.includes(item.id));
         state.evidenceSelected.clear();
         saveLocal("resume-dashboard-evidence", state.evidence);
         renderEvidence(); renderDashboard();
-        showToast("经历记录已删除");
+        showBatchReport("经历删除", successCount, failures);
       }, "删除");
     }
     function safeFillEvidence(id) {
@@ -1010,11 +1281,22 @@
           const incoming = Array.isArray(parsed) ? parsed : parsed.evidence;
           if (!Array.isArray(incoming)) throw new Error("format");
           const existing = new Set(state.evidence.map(item => `${item.title}|${item.date}`));
-          const additions = incoming.filter(item => item.title && !existing.has(`${item.title}|${item.date}`)).map(item => ({ id: Date.now() + Math.random(), ...item }));
+          const failures = [];
+          const additions = [];
+          incoming.forEach((item, index) => {
+            const normalized = normalizeEvidence(item);
+            const key = `${normalized.title}|${normalized.date}`;
+            if (!normalized.title || normalized.title === "—") failures.push({ label: `第 ${index + 1} 条`, reason: "缺少经历名称" });
+            else if (existing.has(key)) failures.push({ label: normalized.title, reason: "与已有经历重复" });
+            else {
+              existing.add(key);
+              additions.push({ ...normalized, id: Date.now() + index });
+            }
+          });
           state.evidence.push(...additions);
           saveLocal("resume-dashboard-evidence", state.evidence);
           renderEvidence(); renderDashboard();
-          showToast(`已导入 ${additions.length} 条经历`);
+          showBatchReport("经历导入", additions.length, failures);
         } catch {
           showToast("备份文件格式不正确");
         }
@@ -1052,8 +1334,35 @@
       $("#previewProject").innerHTML = state.resume.project || '尚未填写项目经历 <span class="warning">[待确认]</span>';
       $("#previewSkills").textContent = state.resume.skills || "请补充技能标签";
       state.resumeDirty = true;
+      setSaveStatus("saving", "有未保存修改");
+      updateTextareaMeta("resumeSummary", "resumeSummaryCount", 800);
+      updateTextareaMeta("resumeProject", "resumeProjectCount", 1600);
       saveLocal("resume-dashboard-resume", state.resume);
       renderResumeReadiness();
+    }
+    function setSaveStatus(kind, label) {
+      const element = $("#saveStatus");
+      if (!element) return;
+      clearTimeout(state.saveStatusTimer);
+      element.className = `save-status ${kind}`;
+      element.textContent = label;
+      if (kind === "saving") {
+        state.saveStatusTimer = setTimeout(() => {
+          if (!state.resumeDirty) setSaveStatus("saved", "已保存");
+        }, 1200);
+      }
+    }
+    function updateTextareaMeta(textareaId, counterId, maxLength) {
+      const textarea = $(`#${textareaId}`);
+      const counter = $(`#${counterId}`);
+      if (!textarea) return;
+      textarea.style.height = "auto";
+      textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 70), 280)}px`;
+      const info = countRemaining(textarea.value, maxLength);
+      if (counter) {
+        counter.textContent = `${info.length} / ${info.max} · 剩余 ${info.remaining}`;
+        counter.classList.toggle("over-limit", info.over);
+      }
     }
     function fillResume() {
       Object.entries(state.resume).forEach(([key, value]) => {
@@ -1063,6 +1372,9 @@
       state.resumeDirty = false;
       updateResumePreview();
       state.resumeDirty = false;
+      setSaveStatus("saved", "已保存");
+      updateTextareaMeta("resumeSummary", "resumeSummaryCount", 800);
+      updateTextareaMeta("resumeProject", "resumeProjectCount", 1600);
     }
     function openPolishGuard() {
       openModal("AI 轻度润色说明", "<p style='margin:0;color:var(--muted)'>AI 只会优化语句结构、动词和表达清晰度，绝不虚构工作、实习、项目事实。请在保存或导出前核对内容。</p>", () => {
@@ -1145,12 +1457,14 @@
     function renderAssessmentResult() {
       const result = state.assessmentResult;
       const score = scoreAssessment(result);
-      $("#assessmentBody").innerHTML = `<div class="result-hero"><div class="eyebrow">Assessment signal</div><div class="result-score">${score}<small> / 100</small></div><p style="margin:5px 0 0">${escapeHtml(result.work_style_summary || "已生成当前职业信号")}</p><div class="tag-row" style="margin-top:15px">${(result.top_interests || []).map(item => `<span class="tag blue">${escapeHtml(item.label)} · ${item.score}</span>`).join("")}</div><div class="tag-row" style="margin-top:10px">${(result.recommended_roles || []).map(item => `<span class="tag green">${escapeHtml(item)}</span>`).join("")}</div></div><div class="toolbar-group" style="margin-top:15px"><button class="btn primary" id="syncAssessmentBtn">同步到三档职业规划</button><button class="btn" id="resetAssessmentBtn">重新测评</button><button class="btn small" id="assessmentHistoryInlineBtn">查看历史</button></div><div style="margin-top:17px"><h3>已说明的真实优势</h3><p style="margin-top:7px">${escapeHtml((result.strength_evidence || []).join(" · ") || "暂未记录足够的优势证据")}</p></div>`;
+      const assessmentText = [`职业测评报告：${score} / 100`, `工作方式：${result.work_style_summary || "—"}`, `兴趣方向：${asArray(result.top_interests).map(item => `${item.label}(${item.score})`).join("、") || "—"}`, `推荐岗位：${asArray(result.recommended_roles).join("、") || "—"}`, `优势证据：${asArray(result.strength_evidence).join("、") || "—"}`].join("\n");
+      $("#assessmentBody").innerHTML = `<div class="result-hero"><div class="eyebrow">Assessment signal</div><div class="result-score">${score}<small> / 100</small></div><p style="margin:5px 0 0">${escapeHtml(result.work_style_summary || "已生成当前职业信号")}</p><div class="tag-row" style="margin-top:15px">${(result.top_interests || []).map(item => `<span class="tag blue">${escapeHtml(item.label)} · ${item.score}</span>`).join("")}</div><div class="tag-row" style="margin-top:10px">${(result.recommended_roles || []).map(item => `<span class="tag green">${escapeHtml(item)}</span>`).join("")}</div></div><div class="toolbar-group" style="margin-top:15px"><button class="btn primary" id="syncAssessmentBtn">同步到三档职业规划</button><button class="btn" id="resetAssessmentBtn">重新测评</button><button class="btn small" id="assessmentHistoryInlineBtn">查看历史</button><button class="btn small soft" id="copyAssessmentBtn">复制测评报告</button></div><div style="margin-top:17px"><h3>已说明的真实优势</h3><p style="margin-top:7px">${escapeHtml((result.strength_evidence || []).join(" · ") || "暂未记录足够的优势证据")}</p></div>`;
       $("#assessmentResult").style.display = "block";
       $("#assessmentResult").innerHTML = `<details class="collapse static" open><summary><div><h3>7 / 30 / 90 天行动计划</h3><p style="margin:3px 0 0;color:var(--muted);font-size:11px">把测评结果转成可执行动作</p></div></summary><div class="collapse-content"><div class="grid grid-3">${[["7 天", result.action_plan?.seven_day], ["30 天", result.action_plan?.thirty_day], ["90 天", result.action_plan?.ninety_day]].map(([title, list]) => `<div class="tier"><span class="tag blue">${title}</span><ul class="action-list">${(list || []).map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>`).join("")}</div></div></details>`;
       $("#syncAssessmentBtn").addEventListener("click", syncAssessmentToPlans);
       $("#resetAssessmentBtn").addEventListener("click", () => { state.assessmentResult = null; state.assessmentAnswers = {}; state.assessmentStep = 0; saveLocal("resume-dashboard-assessment-result", null); saveLocal("resume-dashboard-assessment-answers", {}); renderAssessment(); showToast("已开始新的测评"); });
       $("#assessmentHistoryInlineBtn").addEventListener("click", openAssessmentHistory);
+      $("#copyAssessmentBtn").addEventListener("click", () => copyText(assessmentText, "测评报告已复制"));
     }
     function syncAssessmentToPlans() {
       const names = state.assessmentResult?.recommended_roles || [];
@@ -1192,14 +1506,30 @@
     }
     function renderDeliveries() {
       renderDeliveryDraftOptions();
+      state.deliveries = state.deliveries.map(normalizeDelivery);
       const items = state.deliveries.filter(deliveryMatches);
+      const page = paginate(items, state.deliveryPage, state.pageSize);
+      state.deliveryPage = page.currentPage;
       $("#deliveryTotal").textContent = state.deliveries.length;
-      $("#deliveryList").innerHTML = items.length ? items.map(item => {
+      $("#deliveryList").innerHTML = items.length ? page.items.map(item => {
         const draft = state.drafts.find(entry => entry.id === item.draftId);
         return `<article class="delivery-card list-item"><div class="list-item-head"><div><h4>${escapeHtml(item.roleName)} · ${escapeHtml(item.company)}</h4><div class="delivery-meta"><span>${escapeHtml(item.city)}</span><span>·</span><span>投递：${formatDate(item.appliedDate)}</span><span>·</span><span>下一步：${formatDate(item.nextActionAt)}</span><span>·</span>${statusBadge(item.status)}</div></div><button class="btn small danger" data-delete-delivery="${item.id}">删除</button></div>${item.notes ? `<p style="margin-top:12px;color:var(--muted);font-size:12px">复盘：${escapeHtml(item.notes)}</p>` : '<p style="margin-top:12px;color:var(--faint);font-size:12px">还没有面试复盘</p>'}<div class="toolbar-group" style="margin-top:11px">${draft ? `<button class="btn small soft" data-open-delivery-draft="${escapeHtml(draft.id)}">打开绑定草稿</button><span class="tag blue">${escapeHtml(draft.title)}</span>` : '<span class="field-help">未绑定简历草稿</span>'}</div></article>`;
-      }).join("") : `<div class="empty"><strong>还没有匹配的投递记录</strong>调整筛选条件或添加一条新的行动计划。</div>`;
+      }).join("") : `<div class="empty"><strong>还没有匹配的投递记录</strong><p>调整筛选条件或添加一条新的行动计划。</p><button class="btn small primary" data-empty-action="delivery" style="margin-top:12px">添加第一条投递</button></div>`;
+      page.items.forEach(item => {
+        if (!isExpiredDate(item.nextActionAt)) return;
+        const card = $(`[data-delete-delivery="${item.id}"]`)?.closest(".delivery-card");
+        card?.classList.add("expired-item");
+        const meta = card?.querySelector(".delivery-meta");
+        if (meta && !meta.querySelector(".expired-label")) {
+          meta.insertAdjacentHTML("beforeend", '<span class="tag red expired-label">已过期</span>');
+        }
+      });
       $$("[data-delete-delivery]").forEach(button => button.addEventListener("click", () => confirmDeleteDelivery(Number(button.dataset.deleteDelivery))));
       $$("[data-open-delivery-draft]").forEach(button => button.addEventListener("click", () => openDraft(button.dataset.openDeliveryDraft)));
+      renderPagination("deliveryPagination", page.currentPage, page.total, nextPage => {
+        state.deliveryPage = nextPage;
+        renderDeliveries();
+      });
       const pending = state.pendingQueue.length > 0;
       $("#deliverySyncDot").classList.toggle("offline", pending);
       $("#deliverySyncText").textContent = pending ? `待同步 ${state.pendingQueue.length} 条` : "本地数据已同步";
@@ -1255,16 +1585,41 @@
     /* Module 7: drafts, local privacy, backups, identity reset, and extension settings. */
     function renderDrafts() {
       $("#draftCount").textContent = state.drafts.length;
-      $("#draftList").innerHTML = state.drafts.length ? state.drafts.map(draft => `<article class="list-item"><div class="list-item-head"><label style="display:flex;align-items:flex-start;gap:8px"><input type="checkbox" data-draft-check="${escapeHtml(draft.id)}" ${state.selectedDrafts.has(draft.id) ? "checked" : ""}><span><strong>${escapeHtml(draft.title)}</strong><small style="display:block;color:var(--muted);margin-top:3px">${escapeHtml(draft.template)} · 更新于 ${escapeHtml(draft.updatedAt)}</small></span></label><span class="tag blue">草稿</span></div><div class="toolbar-group" style="margin-top:12px"><button class="btn small soft" data-open-draft="${escapeHtml(draft.id)}">打开</button><button class="btn small" data-copy-draft="${escapeHtml(draft.id)}">复制</button><button class="btn small danger" data-delete-draft="${escapeHtml(draft.id)}">删除</button></div></article>`).join("") : `<div class="empty"><strong>还没有简历草稿</strong>完成一次保存后，草稿会出现在这里。</div>`;
+      state.drafts = state.drafts.map(normalizeDraft);
+      const page = paginate(state.drafts, state.draftPage, state.pageSize);
+      state.draftPage = page.currentPage;
+      $("#draftList").innerHTML = state.drafts.length ? page.items.map(draft => `<article class="list-item"><div class="list-item-head"><label style="display:flex;align-items:flex-start;gap:8px"><input type="checkbox" data-draft-check="${escapeHtml(draft.id)}" ${state.selectedDrafts.has(draft.id) ? "checked" : ""}><span><strong>${escapeHtml(draft.title)}</strong><small style="display:block;color:var(--muted);margin-top:3px">${escapeHtml(draft.template)} · 更新于 ${escapeHtml(draft.updatedAt)}</small></span></label><span class="tag blue">草稿</span></div><div class="toolbar-group" style="margin-top:12px"><button class="btn small soft" data-open-draft="${escapeHtml(draft.id)}">打开</button><button class="btn small" data-copy-draft="${escapeHtml(draft.id)}">复制</button><button class="btn small danger" data-delete-draft="${escapeHtml(draft.id)}">删除</button></div></article>`).join("") : `<div class="empty"><strong>还没有简历草稿</strong><p>完成一次保存后，草稿会出现在这里。</p><button class="btn small primary" data-empty-action="resume" style="margin-top:12px">新建第一份草稿</button></div>`;
       $$("[data-draft-check]").forEach(input => input.addEventListener("change", event => { if (event.target.checked) state.selectedDrafts.add(event.target.dataset.draftCheck); else state.selectedDrafts.delete(event.target.dataset.draftCheck); }));
       $$("[data-open-draft]").forEach(button => button.addEventListener("click", () => openDraft(button.dataset.openDraft)));
+      renderPagination("draftPagination", page.currentPage, page.total, nextPage => {
+        state.draftPage = nextPage;
+        renderDrafts();
+      });
       $$("[data-copy-draft]").forEach(button => button.addEventListener("click", () => { const original = state.drafts.find(item => item.id === button.dataset.copyDraft); if (original) { state.drafts.push({ ...original, id: `${original.id}-copy-${Date.now()}`, title: `${original.title} · 副本`, updatedAt: "刚刚" }); renderDrafts(); showToast("草稿副本已创建"); } }));
       $$("[data-delete-draft]").forEach(button => button.addEventListener("click", () => deleteDrafts([button.dataset.deleteDraft])));
       saveLocal("resume-dashboard-drafts", state.drafts);
     }
     function deleteDrafts(ids) {
       if (!ids.length) { showToast("请先选择草稿"); return; }
-      openModal("删除选中的草稿？", "<p style='margin:0;color:var(--muted)'>删除只影响当前工作台中的草稿记录，无法撤销。</p>", () => { state.drafts = state.drafts.filter(item => !ids.includes(item.id)); state.selectedDrafts.clear(); $("#selectAllDrafts").checked = false; renderDrafts(); showToast("草稿已删除"); }, "删除");
+      const bound = state.deliveries.filter(item => ids.includes(String(item.draftId)));
+      const warning = bound.length
+        ? `<p style='margin:0;color:var(--muted)'>有 ${bound.length} 条投递记录正在关联这些草稿。确认删除后会解除绑定，但不会删除投递记录。</p>`
+        : `<p style='margin:0;color:var(--muted)'>删除只影响当前工作台中的草稿记录，无法撤销。</p>`;
+      openModal("删除选中的草稿？", warning, () => {
+        const existingIds = new Set(state.drafts.map(item => String(item.id)));
+        const failures = ids.filter(id => !existingIds.has(String(id))).map(id => ({ label: String(id), reason: "草稿不存在或已被删除" }));
+        state.deliveries.forEach(item => {
+          if (ids.includes(String(item.draftId))) item.draftId = null;
+        });
+        state.drafts = state.drafts.filter(item => !ids.includes(String(item.id)));
+        state.selectedDrafts.clear();
+        $("#selectAllDrafts").checked = false;
+        saveLocal("resume-dashboard-drafts", state.drafts);
+        saveLocal("resume-dashboard-deliveries", state.deliveries);
+        renderDrafts();
+        renderDeliveries();
+        showBatchReport("草稿删除", ids.length - failures.length, failures);
+      }, "确认删除");
     }
     function renderPrivacy() {
       $("#clientIdValue").textContent = state.clientId;
@@ -1291,11 +1646,25 @@
       return (cleaned || fallback).slice(0, 90);
     }
     function downloadText(filename, content, type = "text/plain;charset=utf-8") {
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(new Blob([content], { type }));
-      link.download = filename;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+      /*
+        webview小程序环境该下载逻辑失效，需要通过postMessage交由小程序层完成文件保存
+      */
+      try {
+        if (!window.URL?.createObjectURL || !document?.createElement) throw new Error("当前浏览器不支持文件下载");
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(new Blob([content], { type }));
+        link.href = url;
+        link.download = filename;
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        return true;
+      } catch (error) {
+        showToast(`文件下载失败：${error.message || "浏览器可能拦截了下载"}`);
+        return false;
+      }
     }
     async function copyText(text, message = "内容已复制") {
       try {
@@ -1306,35 +1675,48 @@
       }
     }
     async function exportFile(kind) {
-      const readiness = resumeReadiness();
-      if (!readiness.ready) {
-        showToast(`请先补充：${readiness.missing.join("、")}`);
-        return;
-      }
-      const extension = kind === "word" ? "docx" : "pdf";
-      const filename = `${sanitizeFilename(state.resume.filename, `${state.resume.name}-${state.resume.role || "简历"}`)}.${extension}`;
-      const result = await apiOrMock(`/api/export/${kind}`, { method: "POST", body: JSON.stringify({ client_id: state.clientId, draft_id: state.drafts[0]?.id || "draft-demo", filename }) }, () => ({ download_url: `/downloads/${filename}`, filename }), `export ${kind}`);
-      const url = result?.download_url || result?.downloadUrl;
-      if (state.runtime !== "online" || location.protocol === "file:") {
-        const content = kind === "word" ? `AI Resume mock Word export\n${state.resume.name} - ${state.resume.role}\n${state.resume.project}` : `%PDF-1.4\n% AI Resume mock PDF\n`;
-        downloadText(filename, content, kind === "word" ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : "application/pdf");
-        showToast(`已生成 Mock ${kind === "word" ? "Word" : "PDF"} 文件`);
-      } else if (url) {
-        window.open(`${API_BASE_URL}${url}`, "_blank");
-      } else {
-        showToast("导出服务暂未返回下载地址");
+      try {
+        const readiness = resumeReadiness();
+        if (!readiness.ready) {
+          showToast(`请先补充：${readiness.missing.join("、")}`);
+          return;
+        }
+        const extension = kind === "word" ? "docx" : "pdf";
+        const filename = `${sanitizeFilename(state.resume.filename, `${state.resume.name}-${state.resume.role || "简历"}`)}.${extension}`;
+        const result = await apiOrMock(`/api/export/${kind}`, { method: "POST", body: JSON.stringify({ client_id: state.clientId, draft_id: state.drafts[0]?.id || "draft-demo", filename }) }, () => ({ download_url: `/downloads/${filename}`, filename }), `export ${kind}`);
+        const url = result?.download_url || result?.downloadUrl;
+        if (state.runtime !== "online" || location.protocol === "file:") {
+          const content = kind === "word" ? `AI Resume mock Word export\n${state.resume.name} - ${state.resume.role}\n${state.resume.project}` : `%PDF-1.4\n% AI Resume mock PDF\n`;
+          if (!downloadText(filename, content, kind === "word" ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : "application/pdf")) throw new Error("浏览器拦截了下载");
+          showToast(`已生成 Mock ${kind === "word" ? "Word" : "PDF"} 文件`);
+        } else if (url) {
+          const popup = window.open(`${API_BASE_URL}${url}`, "_blank");
+          if (!popup) throw new Error("浏览器拦截了下载窗口");
+        } else {
+          throw new Error("导出服务未返回下载地址");
+        }
+      } catch (error) {
+        showToast(`${kind === "word" ? "Word" : "PDF"} 导出失败：${error.message || "请稍后重试"}`);
       }
     }
     async function saveDraft() {
-      const result = await apiOrMock("/api/draft/save", { method: "POST", body: JSON.stringify({ client_id: state.clientId, job_title: state.resume.role, template_id: "business", resume: state.resume }) }, () => ({ id: `draft-${Date.now()}` }), "draft save");
-      const item = { id: result?.id || `draft-${Date.now()}`, title: state.resume.version || `${state.resume.role || "未命名"}版`, updatedAt: "刚刚", template: $("#templateName").textContent, resume: { ...state.resume } };
-      const existingIndex = state.drafts.findIndex(draft => draft.id === item.id);
-      if (existingIndex >= 0) state.drafts[existingIndex] = item;
-      else state.drafts.unshift(item);
-      state.resumeDirty = false;
-      saveLocal("resume-dashboard-drafts", state.drafts);
-      renderDrafts();
-      showToast(state.runtime === "mock" ? "草稿已保存到本地 Mock 空间" : "草稿已保存到后端");
+      setSaveStatus("saving", "保存中");
+      try {
+        const result = await apiOrMock("/api/draft/save", { method: "POST", body: JSON.stringify({ client_id: state.clientId, job_title: state.resume.role, template_id: "business", resume: state.resume }) }, () => ({ id: `draft-${Date.now()}` }), "draft save");
+        const item = normalizeDraft({ id: result?.id || `draft-${Date.now()}`, title: state.resume.version || `${state.resume.role || "未命名"}版`, updatedAt: "刚刚", template: $("#templateName").textContent, resume: { ...state.resume } });
+        const existingIndex = state.drafts.findIndex(draft => draft.id === item.id);
+        if (existingIndex >= 0) state.drafts[existingIndex] = item;
+        else state.drafts.unshift(item);
+        state.draftPage = 1;
+        state.resumeDirty = false;
+        saveLocal("resume-dashboard-drafts", state.drafts);
+        renderDrafts();
+        setSaveStatus("saved", "已保存");
+        showToast(state.runtime === "mock" ? "草稿已保存到本地 Mock 空间" : "草稿已保存到后端");
+      } catch (error) {
+        setSaveStatus("error", "保存失败");
+        showToast(`草稿保存失败：${error.message || "请稍后重试"}`);
+      }
     }
     function showLoadingState() {
       $("#evidenceList").innerHTML = `<div class="skeleton-panel"></div><div class="skeleton-panel"></div>`;
@@ -1386,6 +1768,14 @@
           hideJobSuggestions();
         }
       });
+      window.addEventListener("online", () => setNetworkStatus(true));
+      window.addEventListener("offline", () => setNetworkStatus(false));
+      document.addEventListener("click", event => {
+        const action = event.target.closest("[data-empty-action]")?.dataset.emptyAction;
+        if (action === "add-evidence") openEvidenceEditor();
+        if (action === "delivery") setPage("delivery");
+        if (action === "resume") setPage("resume");
+      });
       $("#jobSuggestions").addEventListener("mouseenter", () => clearTimeout(state.jobSuggestionHideTimer));
       $("#jobSuggestions").addEventListener("mouseleave", () => {
         if (document.activeElement !== $("#jobSearchInput")) state.jobSuggestionHideTimer = setTimeout(hideJobSuggestions, 180);
@@ -1397,11 +1787,13 @@
       $("#importEvidenceBtn").addEventListener("click", () => $("#evidenceFileInput").click());
       $("#evidenceFileInput").addEventListener("change", event => { const file = event.target.files?.[0]; if (file) importEvidence(file); event.target.value = ""; });
       $("#exportEvidenceBtn").addEventListener("click", exportEvidence);
-      $$("#evidenceFilters .filter").forEach(button => button.addEventListener("click", () => { $$("#evidenceFilters .filter").forEach(item => item.classList.remove("active")); button.classList.add("active"); state.evidenceFilter = button.dataset.filter; renderEvidence(); }));
+      $$("#evidenceFilters .filter").forEach(button => button.addEventListener("click", () => { $$("#evidenceFilters .filter").forEach(item => item.classList.remove("active")); button.classList.add("active"); state.evidenceFilter = button.dataset.filter; state.evidencePage = 1; renderEvidence(); }));
       $("#matchEvidenceBtn").addEventListener("click", () => { renderEvidence(); showToast("已按当前目标岗位重新匹配"); });
       $("#deleteSelectedEvidenceBtn").addEventListener("click", () => deleteEvidence([...state.evidenceSelected].map(Number)));
 
       ["resumeName", "resumePhone", "resumeEmail", "resumeRole", "resumeCity", "resumeSummary", "resumeProject", "resumeSkills", "resumeVersion", "resumeFilename"].forEach(id => $(`#${id}`).addEventListener("input", updateResumePreview));
+      updateTextareaMeta("resumeSummary", "resumeSummaryCount", 800);
+      updateTextareaMeta("resumeProject", "resumeProjectCount", 1600);
       $("#templateSelect").addEventListener("change", event => { $("#templateName").textContent = event.target.value; showToast(`已切换模板：${event.target.value}`); });
       $("#polishBtn").addEventListener("click", openPolishGuard);
       $("#blankExperienceBtn").addEventListener("click", generateBlankExperience);
@@ -1417,10 +1809,11 @@
 
       $("#assessmentHistoryBtn").addEventListener("click", openAssessmentHistory);
 
-      ["deliveryCompany", "deliveryRole", "deliveryCity", "deliveryAppliedDate", "deliveryDate", "deliveryNotes"].forEach(id => $(`#${id}`).addEventListener("input", () => { state.deliveryDirty = true; }));
+      ["deliveryCompany", "deliveryRole", "deliveryCity", "deliveryAppliedDate", "deliveryDate", "deliveryNotes"].forEach(id => $(`#${id}`).addEventListener("input", () => { state.deliveryDirty = true; updateTextareaMeta("deliveryNotes", "deliveryNotesCount", 800); }));
+      updateTextareaMeta("deliveryNotes", "deliveryNotesCount", 800);
       $("#deliveryDraftId").addEventListener("change", () => { state.deliveryDirty = true; });
-      $("#deliveryFilters").addEventListener("click", event => { const button = event.target.closest("[data-status]"); if (!button) return; $$("#deliveryFilters .filter").forEach(item => item.classList.remove("active")); button.classList.add("active"); state.deliveryFilter = button.dataset.status; renderDeliveries(); });
-      ["deliveryCompanyFilter", "deliveryCityFilter", "deliveryDateFrom", "deliveryDateTo"].forEach(id => $(`#${id}`).addEventListener("input", event => { state.deliveryFilters = { company: $("#deliveryCompanyFilter").value.trim(), city: $("#deliveryCityFilter").value.trim(), from: $("#deliveryDateFrom").value, to: $("#deliveryDateTo").value }; renderDeliveries(); }));
+      $("#deliveryFilters").addEventListener("click", event => { const button = event.target.closest("[data-status]"); if (!button) return; $$("#deliveryFilters .filter").forEach(item => item.classList.remove("active")); button.classList.add("active"); state.deliveryFilter = button.dataset.status; state.deliveryPage = 1; renderDeliveries(); });
+      ["deliveryCompanyFilter", "deliveryCityFilter", "deliveryDateFrom", "deliveryDateTo"].forEach(id => $(`#${id}`).addEventListener("input", event => { state.deliveryFilters = { company: $("#deliveryCompanyFilter").value.trim(), city: $("#deliveryCityFilter").value.trim(), from: $("#deliveryDateFrom").value, to: $("#deliveryDateTo").value }; state.deliveryPage = 1; renderDeliveries(); }));
       $("#saveDeliveryBtn").addEventListener("click", async () => {
         if (!validateDeliveryForm()) return;
         const item = { id: Date.now(), company: $("#deliveryCompany").value.trim() || "[待确认]", roleName: $("#deliveryRole").value.trim() || "[待确认]", city: $("#deliveryCity").value.trim() || "[待确认]", status: $("#deliveryStatus").value, appliedDate: $("#deliveryAppliedDate").value || todayString(), nextActionAt: $("#deliveryDate").value, notes: $("#deliveryNotes").value.trim(), draftId: $("#deliveryDraftId").value || null };
