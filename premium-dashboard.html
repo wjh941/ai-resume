@@ -1,0 +1,808 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>AI 求职工作台</title>
+  <style>
+    /*
+      Inline Tailwind-style design system.
+      The file is intentionally standalone so it can be opened with a double-click.
+    */
+    :root {
+      --canvas: #f3f6fa;
+      --surface: #ffffff;
+      --surface-muted: #f8fafc;
+      --surface-blue: #edf4fb;
+      --ink: #1f2937;
+      --muted: #718096;
+      --faint: #9aa7b8;
+      --line: #e3e9f0;
+      --blue: #587da7;
+      --blue-strong: #41678f;
+      --blue-soft: #e4eef8;
+      --teal: #5f9690;
+      --teal-soft: #e5f2ef;
+      --amber: #a77a49;
+      --amber-soft: #fbf2e7;
+      --red: #ad6f76;
+      --red-soft: #f8eaed;
+      --shadow-sm: 0 5px 16px rgba(45, 64, 88, .05);
+      --shadow-md: 0 16px 38px rgba(45, 64, 88, .08), 0 2px 8px rgba(45, 64, 88, .04);
+      --radius: 16px;
+      --radius-sm: 10px;
+      --ease: all .24s ease;
+    }
+
+    * { box-sizing: border-box; }
+    html { min-height: 100%; scroll-behavior: smooth; }
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 80% -10%, rgba(183, 208, 232, .35), transparent 32%),
+        var(--canvas);
+      font: 14px/1.55 "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    }
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: .55; }
+    h1, h2, h3, h4, p { margin: 0; }
+    h1 { font-size: 22px; letter-spacing: -.02em; }
+    h2 { font-size: clamp(24px, 3vw, 34px); line-height: 1.15; letter-spacing: -.035em; }
+    h3 { font-size: 16px; letter-spacing: -.015em; }
+    h4 { font-size: 14px; }
+    p { color: var(--muted); }
+    .app-shell { display: flex; min-height: 100vh; }
+    .sidebar {
+      position: fixed;
+      z-index: 20;
+      inset: 0 auto 0 0;
+      display: flex;
+      width: 248px;
+      flex-direction: column;
+      padding: 28px 18px 20px;
+      background: rgba(250, 252, 254, .91);
+      border-right: 1px solid rgba(227, 233, 240, .85);
+      backdrop-filter: blur(18px);
+      transition: transform .24s ease;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; padding: 0 10px 34px; }
+    .brand-mark {
+      display: grid; width: 38px; height: 38px; place-items: center;
+      color: #fff; font-weight: 700; border-radius: 13px;
+      background: linear-gradient(145deg, #7298bd, #4f749a);
+      box-shadow: 0 8px 18px rgba(78, 115, 151, .2);
+    }
+    .brand-copy { display: grid; gap: 2px; }
+    .brand-copy strong { font-size: 14px; }
+    .brand-copy span { color: var(--muted); font-size: 11px; }
+    .nav-label {
+      padding: 0 11px 9px;
+      color: var(--faint);
+      font-size: 10px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .nav { display: grid; gap: 5px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 11px; width: 100%;
+      border: 0; border-radius: 11px; padding: 11px 12px;
+      color: #657489; text-align: left; background: transparent;
+      transition: var(--ease);
+    }
+    .nav-item:hover { color: var(--blue-strong); background: var(--blue-soft); transform: translateX(2px); }
+    .nav-item.active { color: var(--blue-strong); background: #e6eff8; box-shadow: inset 3px 0 var(--blue); }
+    .nav-icon { display: grid; width: 20px; place-items: center; color: #8aa0b6; font-size: 16px; }
+    .nav-item.active .nav-icon { color: var(--blue); }
+    .sidebar-bottom { margin-top: auto; padding: 14px 10px 0; }
+    .sync-chip { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; }
+    .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 0 4px var(--teal-soft); }
+    .sync-dot.offline { background: var(--amber); box-shadow: 0 0 0 4px var(--amber-soft); }
+    .main { width: calc(100% - 248px); margin-left: 248px; }
+    .topbar {
+      position: sticky; z-index: 10; top: 0; display: flex; min-height: 84px;
+      align-items: center; justify-content: space-between; gap: 20px; padding: 18px 42px;
+      background: rgba(243, 246, 250, .82); border-bottom: 1px solid rgba(227, 233, 240, .75);
+      backdrop-filter: blur(17px);
+    }
+    .topbar-title { display: flex; align-items: center; }
+    .topbar-title p { margin-top: 3px; font-size: 12px; }
+    .topbar-actions { display: flex; align-items: center; gap: 14px; }
+    .local-summary { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 12px; }
+    .avatar { display: grid; width: 31px; height: 31px; place-items: center; border-radius: 50%; color: var(--blue-strong); background: #dfeaf5; font-size: 11px; font-weight: 700; }
+    .content { width: min(1440px, 100%); margin: 0 auto; padding: 38px 42px 60px; }
+    .page-section { display: none; animation: appear .32s ease both; }
+    .page-section.active { display: block; }
+    @keyframes appear { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+    .hero-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
+    .hero-row > div:first-child { max-width: 750px; }
+    .hero-row h2 { margin-top: 7px; }
+    .hero-row p { max-width: 680px; margin-top: 11px; }
+    .eyebrow { color: var(--blue-strong); font-size: 10px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; }
+    .card {
+      border: 1px solid var(--line); border-radius: var(--radius); background: rgba(255, 255, 255, .92);
+      box-shadow: var(--shadow-sm); transition: var(--ease);
+    }
+    .card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+    .card.static:hover { transform: none; box-shadow: var(--shadow-sm); }
+    .card-pad { padding: 22px; }
+    .section-block { margin-top: 30px; }
+    .section-head, .editor-toolbar, .metric-top, .job-card-top, .list-item-head {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+    }
+    .section-head p, .editor-toolbar .field-help { margin-top: 4px; }
+    .dashboard-grid { display: grid; grid-template-columns: 2fr repeat(3, 1fr); gap: 14px; }
+    .overview-card { min-height: 220px; padding: 22px; background: linear-gradient(145deg, #fff, #f4f8fb); }
+    .overview-card > p { margin-top: 9px; font-size: 12px; }
+    .metric-card { min-height: 138px; padding: 20px; }
+    .metric-label, .field-help { color: var(--muted); font-size: 11px; }
+    .metric-icon { display: grid; width: 27px; height: 27px; place-items: center; border-radius: 9px; color: var(--blue-strong); background: var(--blue-soft); }
+    .metric-value { margin-top: 18px; color: var(--blue-strong); font-size: 31px; font-weight: 700; line-height: 1; }
+    .metric-note { margin-top: 12px; color: var(--faint); font-size: 11px; }
+    .chart { display: flex; height: 100px; align-items: flex-end; gap: 11px; margin-top: 24px; padding: 0 3px; border-bottom: 1px solid var(--line); }
+    .bar-wrap { display: flex; min-width: 20px; height: 100%; flex: 1; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px; }
+    .bar { width: 100%; max-width: 29px; min-height: 8px; border-radius: 7px 7px 2px 2px; background: linear-gradient(#9ebbd4, #648aad); }
+    .bar-label { color: var(--faint); font-size: 9px; white-space: nowrap; }
+    .insight-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 17px; }
+    .insight-mini { display: grid; gap: 1px; padding: 9px 10px; border-radius: 10px; background: rgba(236, 243, 249, .8); }
+    .insight-mini strong { color: var(--blue-strong); font-size: 17px; }
+    .insight-mini span { color: var(--muted); font-size: 10px; }
+    .grid { display: grid; gap: 14px; }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .job-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+    .job-card { min-height: 202px; padding: 18px; }
+    .job-card.selected { border-color: #90b2d3; background: linear-gradient(145deg, #fff, #f0f6fb); box-shadow: 0 0 0 3px rgba(99, 139, 179, .12); }
+    .job-card h4 { font-size: 15px; }
+    .job-card p { margin-top: 14px; font-size: 12px; }
+    .job-score { color: var(--blue-strong); font-size: 22px; font-weight: 700; }
+    .delivery-meta { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; color: var(--muted); font-size: 11px; }
+    .tag-row { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+    .tag {
+      display: inline-flex; align-items: center; width: fit-content; min-height: 24px; padding: 3px 9px;
+      border: 1px solid #e1e8ef; border-radius: 999px; color: #64758a; background: #f5f8fb;
+      font-size: 11px; line-height: 1.25;
+    }
+    .tag.blue { color: var(--blue-strong); border-color: #d2e1ef; background: var(--blue-soft); }
+    .tag.green { color: #4e817b; border-color: #d0e7e1; background: var(--teal-soft); }
+    .tag.amber { color: #956a3d; border-color: #f0dec8; background: var(--amber-soft); }
+    .tag.red { color: #9f626b; border-color: #efd6da; background: var(--red-soft); }
+    .warning { color: #a8733e; font-weight: 700; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      min-height: 36px; padding: 8px 13px; border: 1px solid var(--line); border-radius: 10px;
+      color: #607087; background: #fff; box-shadow: 0 2px 5px rgba(45, 64, 88, .03);
+      transition: var(--ease); white-space: nowrap;
+    }
+    .btn:hover { color: var(--blue-strong); border-color: #b9cee2; background: #f5f9fd; transform: translateY(-1px); box-shadow: 0 7px 15px rgba(45, 64, 88, .08); }
+    .btn.primary { color: #fff; border-color: var(--blue); background: linear-gradient(145deg, #6f96bc, #557ca4); }
+    .btn.primary:hover { color: #fff; background: linear-gradient(145deg, #7ea4c8, #6189b2); }
+    .btn.soft { border-color: transparent; color: var(--blue-strong); background: var(--blue-soft); }
+    .btn.danger { color: #9d626a; border-color: #f0d6da; background: var(--red-soft); }
+    .btn.icon { width: 36px; min-width: 36px; padding: 0; }
+    .btn.small { min-height: 30px; padding: 5px 10px; font-size: 11px; }
+    .mobile-menu { display: none; }
+    .search-panel { display: flex; gap: 10px; }
+    .input, .select, .textarea {
+      width: 100%; border: 1px solid var(--line); border-radius: 10px; outline: 0;
+      color: var(--ink); background: #fbfcfd; transition: var(--ease);
+    }
+    .input, .select { height: 38px; padding: 0 11px; }
+    .textarea { min-height: 91px; resize: vertical; padding: 10px 11px; }
+    .input:focus, .select:focus, .textarea:focus { border-color: #9dbbd7; box-shadow: 0 0 0 3px rgba(99, 139, 179, .13); background: #fff; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .field { display: grid; gap: 6px; }
+    .field.full { grid-column: 1 / -1; }
+    .field label { color: #56657a; font-size: 11px; font-weight: 600; }
+    .filter-row, .toolbar-group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .filter { border: 0; border-radius: 999px; padding: 6px 10px; color: var(--muted); background: transparent; font-size: 11px; transition: var(--ease); }
+    .filter:hover, .filter.active { color: var(--blue-strong); background: var(--blue-soft); }
+    details.collapse { overflow: hidden; }
+    details.collapse > summary { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 18px 20px; cursor: pointer; list-style: none; }
+    details.collapse > summary::-webkit-details-marker { display: none; }
+    details.collapse > summary:after { content: "⌄"; color: var(--faint); font-size: 18px; transition: transform .24s ease; }
+    details.collapse[open] > summary:after { transform: rotate(180deg); }
+    .collapse-content { padding: 0 20px 20px; }
+    .compare-table { overflow-x: auto; border: 1px solid var(--line); border-radius: 11px; }
+    table { width: 100%; border-collapse: collapse; min-width: 580px; }
+    th, td { padding: 13px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; font-size: 12px; }
+    th { color: #65758a; background: var(--surface-muted); font-size: 11px; }
+    tr:last-child td { border-bottom: 0; }
+    td:first-child { width: 110px; color: var(--muted); }
+    .tier { min-height: 242px; padding: 19px; }
+    .tier.safe { background: linear-gradient(145deg, #fff, #f2f9f7); }
+    .tier.backup { background: linear-gradient(145deg, #fff, #fdf8f2); }
+    .action-list { display: grid; gap: 10px; margin: 17px 0 0; padding-left: 17px; color: #657489; font-size: 12px; }
+    .action-list li::marker { color: #8eacc6; }
+    .evidence-grid, .delivery-grid, .resume-layout { display: grid; grid-template-columns: .9fr 1.1fr; gap: 14px; }
+    .list { display: grid; gap: 10px; }
+    .list-item { padding: 15px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-muted); }
+    .list-item h4 { color: #334155; }
+    .list-item p { margin-top: 4px; font-size: 11px; }
+    .editor-toolbar { align-items: center; margin-bottom: 18px; }
+    .preview-paper { min-height: 420px; margin-top: 18px; padding: 28px; border: 1px solid #e2e5e9; background: #fff; box-shadow: 0 10px 28px rgba(52, 63, 76, .06); }
+    .preview-name { color: #29384b; font-size: 25px; }
+    .preview-role { margin-top: 4px; color: var(--muted); font-size: 11px; }
+    .preview-line { height: 2px; margin: 18px 0; background: #afc4d8; }
+    .preview-section { margin-top: 17px; }
+    .preview-section h4 { color: var(--blue-strong); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+    .preview-section p { margin-top: 5px; color: #596879; font-size: 12px; white-space: pre-line; }
+    .stepper { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .step-button { display: grid; gap: 4px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; color: var(--muted); text-align: left; background: #fff; transition: var(--ease); }
+    .step-button:hover, .step-button.active { color: var(--blue-strong); border-color: #b9cee2; background: var(--blue-soft); transform: translateY(-1px); }
+    .step-button span { font-size: 10px; }
+    .question-list { display: grid; gap: 15px; margin-top: 22px; }
+    .question { padding: 15px; border-radius: 12px; background: var(--surface-muted); }
+    .question p { color: #586a7d; font-size: 12px; }
+    .score-row { display: grid; grid-template-columns: 44px 1fr 44px 31px; align-items: center; gap: 8px; margin-top: 12px; }
+    input[type="range"] { width: 100%; accent-color: var(--blue); }
+    .score-value { display: grid; width: 31px; height: 27px; place-items: center; border-radius: 8px; color: var(--blue-strong); background: var(--blue-soft); font-size: 12px; }
+    .result-hero { padding: 19px; border-radius: 13px; background: linear-gradient(135deg, #eef5fb, #f4f9f8); }
+    .result-score { margin-top: 8px; color: var(--blue-strong); font-size: 42px; font-weight: 700; line-height: 1; }
+    .result-score small { color: var(--muted); font-size: 14px; font-weight: 500; }
+    .delivery-card { background: #fff; }
+    .empty { display: grid; min-height: 116px; place-items: center; padding: 20px; border: 1px dashed #ccd8e3; border-radius: 12px; color: var(--muted); text-align: center; font-size: 12px; }
+    .empty strong { display: block; margin-bottom: 4px; color: #617086; font-size: 13px; }
+    .skeleton { min-height: 202px; border-radius: var(--radius); background: linear-gradient(90deg, #edf2f6 25%, #f7f9fb 50%, #edf2f6 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+    .modal-backdrop { position: fixed; z-index: 50; inset: 0; display: grid; place-items: center; padding: 20px; visibility: hidden; opacity: 0; background: rgba(33, 45, 60, .22); backdrop-filter: blur(8px); transition: var(--ease); }
+    .modal-backdrop.open { visibility: visible; opacity: 1; }
+    .modal { width: min(560px, 100%); max-height: 90vh; overflow: auto; padding: 22px; border: 1px solid rgba(255,255,255,.75); border-radius: 17px; background: rgba(255,255,255,.96); box-shadow: 0 24px 70px rgba(36, 49, 64, .22); transform: translateY(9px) scale(.98); transition: var(--ease); }
+    .modal-backdrop.open .modal { transform: translateY(0) scale(1); }
+    .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+    .toast { position: fixed; z-index: 60; right: 24px; bottom: 24px; max-width: min(360px, calc(100% - 48px)); padding: 12px 15px; border: 1px solid #d8e4ee; border-radius: 11px; color: #50657b; background: rgba(255,255,255,.96); box-shadow: var(--shadow-md); visibility: hidden; opacity: 0; transform: translateY(8px); transition: var(--ease); }
+    .toast.show { visibility: visible; opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 1160px) {
+      .dashboard-grid { grid-template-columns: 1.5fr repeat(3, 1fr); }
+      .content, .topbar { padding-right: 28px; padding-left: 28px; }
+      .sidebar { width: 224px; }
+      .main { width: calc(100% - 224px); margin-left: 224px; }
+    }
+    @media (max-width: 900px) {
+      .sidebar { transform: translateX(-100%); box-shadow: 12px 0 35px rgba(45, 64, 88, .13); }
+      .sidebar.open { transform: translateX(0); }
+      .main { width: 100%; margin-left: 0; }
+      .mobile-menu { display: inline-flex; }
+      .dashboard-grid, .evidence-grid, .delivery-grid, .resume-layout { grid-template-columns: 1fr 1fr; }
+      .overview-card { grid-column: 1 / -1; }
+    }
+    @media (max-width: 640px) {
+      .topbar { align-items: flex-start; padding: 16px 18px; }
+      .topbar-actions .local-summary { display: none; }
+      .content { padding: 26px 18px 45px; }
+      .hero-row { align-items: flex-start; flex-direction: column; }
+      .hero-row .btn { width: 100%; }
+      .dashboard-grid, .grid-2, .grid-3, .evidence-grid, .delivery-grid, .resume-layout { grid-template-columns: 1fr; }
+      .overview-card { grid-column: auto; }
+      .search-panel { flex-direction: column; }
+      .search-panel .btn { width: 100%; }
+      .form-grid { grid-template-columns: 1fr; }
+      .field.full { grid-column: auto; }
+      .stepper { grid-template-columns: repeat(2, 1fr); }
+      .score-row { grid-template-columns: 38px 1fr 38px 31px; }
+      .topbar-title h1 { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-mark">AI</div>
+        <div class="brand-copy"><strong>Resume Atelier</strong><span>AI 求职工作台</span></div>
+      </div>
+      <div class="nav-label">Workspace</div>
+      <nav class="nav" id="nav">
+        <button class="nav-item active" data-page="dashboard"><span class="nav-icon">⌂</span><span>总览</span></button>
+        <button class="nav-item" data-page="jobs"><span class="nav-icon">◌</span><span>岗位情报</span></button>
+        <button class="nav-item" data-page="evidence"><span class="nav-icon">◇</span><span>经历证据库</span></button>
+        <button class="nav-item" data-page="resume"><span class="nav-icon">▤</span><span>简历编辑器</span></button>
+        <button class="nav-item" data-page="assessment"><span class="nav-icon">◒</span><span>职业测评</span></button>
+        <button class="nav-item" data-page="delivery"><span class="nav-icon">→</span><span>投递行动台</span></button>
+      </nav>
+      <div class="nav-label" style="margin-top:26px">Personal</div>
+      <nav class="nav">
+        <button class="nav-item" data-page="privacy"><span class="nav-icon">◈</span><span>本地隐私</span></button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="sync-chip"><span class="sync-dot" id="syncDot"></span><span id="syncText">本地数据已同步</span></div>
+        <div style="margin-top:8px;color:#a0aab7;font-size:10px">离线优先 · 事实可追溯</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-title">
+          <button class="btn icon mobile-menu" id="mobileMenu" aria-label="打开导航">☰</button>
+          <div style="display:inline-block;margin-left:10px">
+            <h1 id="pageTitle">求职工作台</h1>
+            <p id="pageSubtitle">把真实经历，整理成下一步行动。</p>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <div class="local-summary"><span>本地匿名空间</span><span class="avatar">AI</span></div>
+          <button class="btn small soft" id="openPrivacy">数据与隐私</button>
+        </div>
+      </header>
+
+      <div class="content">
+        <!-- Module 1: dashboard home overview -->
+        <section class="page-section active" id="page-dashboard">
+          <div class="hero-row">
+            <div><div class="eyebrow">Today at a glance</div><h2>让求职推进得更稳一点。</h2><p>岗位方向、真实证据、简历版本和投递下一步，都集中在一个安静的工作台里。</p></div>
+            <button class="btn primary" data-page="jobs">开始查询岗位 <span>→</span></button>
+          </div>
+          <div class="dashboard-grid">
+            <div class="card overview-card">
+              <div class="eyebrow">Market brief</div><h3 style="margin-top:8px">本周求职节奏</h3><p>你的资料正在从“准备”向“可交付”靠近。</p>
+              <div class="chart"><div class="bar-wrap"><div class="bar" style="height:31%"></div><div class="bar-label">周一</div></div><div class="bar-wrap"><div class="bar" style="height:48%"></div><div class="bar-label">周二</div></div><div class="bar-wrap"><div class="bar" style="height:42%"></div><div class="bar-label">周三</div></div><div class="bar-wrap"><div class="bar" style="height:68%"></div><div class="bar-label">周四</div></div><div class="bar-wrap"><div class="bar" style="height:56%"></div><div class="bar-label">周五</div></div><div class="bar-wrap"><div class="bar" style="height:82%"></div><div class="bar-label">本周</div></div></div>
+              <div class="insight-strip"><div class="insight-mini"><strong>3</strong><span>待补证据</span></div><div class="insight-mini"><strong>2</strong><span>本周行动</span></div><div class="insight-mini"><strong>86%</strong><span>资料完整度</span></div></div>
+            </div>
+            <div class="card metric-card"><div class="metric-top"><span class="metric-label">简历草稿</span><span class="metric-icon">▤</span></div><div class="metric-value" id="draftCount">3</div><div class="metric-note">最近更新：2 小时前</div></div>
+            <div class="card metric-card"><div class="metric-top"><span class="metric-label">待处理投递</span><span class="metric-icon">→</span></div><div class="metric-value" id="deliveryCount">4</div><div class="metric-note">其中 2 条需要本周跟进</div></div>
+            <div class="card metric-card"><div class="metric-top"><span class="metric-label">职业方向清晰度</span><span class="metric-icon">◒</span></div><div class="metric-value">78<span style="font-size:14px;color:var(--muted)"> / 100</span></div><div class="metric-note">建议补完职业测评</div></div>
+          </div>
+          <div class="section-block"><div class="section-head"><div><h3>下一步建议</h3><p>基于当前资料状态生成的三个轻量动作</p></div></div><div class="grid grid-3">
+            <div class="card card-pad"><span class="tag blue">简历</span><h3 style="margin-top:14px">补齐一个真实项目</h3><p style="margin-top:8px;font-size:12px">把项目背景、你的动作和可验证结果补到证据库。</p><button class="btn small soft" data-page="evidence" style="margin-top:16px">去记录经历 →</button></div>
+            <div class="card card-pad"><span class="tag green">方向</span><h3 style="margin-top:14px">比较两个相邻岗位</h3><p style="margin-top:8px;font-size:12px">用匹配依据和技能缺口决定冲刺与保底方向。</p><button class="btn small soft" data-page="jobs" style="margin-top:16px">打开岗位对比 →</button></div>
+            <div class="card card-pad"><span class="tag amber">行动</span><h3 style="margin-top:14px">写下下一步日期</h3><p style="margin-top:8px;font-size:12px">给每一条投递记录设置清晰的跟进节点。</p><button class="btn small soft" data-page="delivery" style="margin-top:16px">进入行动台 →</button></div>
+          </div></div>
+        </section>
+
+        <!-- Module 2: job intelligence, comparison, and tiered planning -->
+        <section class="page-section" id="page-jobs">
+          <div class="hero-row"><div><div class="eyebrow">Job intelligence</div><h2>找到适合你当前阶段的岗位。</h2><p>先看方向，再看技能缺口。岗位信息用于比较和行动规划，不代表录用承诺。</p></div><span class="tag green">本地知识库优先</span></div>
+          <div class="card card-pad"><div class="search-panel"><input class="input" id="jobSearchInput" placeholder="输入岗位名称，例如：数据、工程师、产品经理"><button class="btn primary" id="jobSearchBtn">查询岗位</button></div><div class="tag-row" id="relatedJobs" style="margin-top:14px"></div></div>
+          <div class="section-block"><div class="section-head"><div><h3>岗位候选</h3><p>选择 2–4 个岗位进行横向比较</p></div><button class="btn small" id="clearJobSelection">清空选择</button></div><div id="jobCards" class="job-grid"></div></div>
+          <div class="section-block"><details class="card collapse static" id="comparisonPanel" open><summary><div><h3>岗位横向比较</h3><p style="margin:3px 0 0;color:var(--muted);font-size:11px">把方向差异转化成下一步判断</p></div><span id="compareCount" class="tag blue">已选 0 个</span></summary><div class="collapse-content" id="comparisonContent"></div></details></div>
+          <div class="section-block"><div class="section-head"><div><h3>三档职业规划</h3><p>把理想、现实与兜底放进同一张行动地图</p></div></div><div id="tierPlans" class="grid grid-3"></div></div>
+        </section>
+
+        <!-- Module 3: evidence library for verified experience -->
+        <section class="page-section" id="page-evidence">
+          <div class="hero-row"><div><div class="eyebrow">Evidence library</div><h2>只用真实经历，写出有证据的简历。</h2><p>课程、项目、实习和校园实践都可以记录。未知内容会明确标注 <span class="warning">[待确认]</span>，不替你编造。</p></div><button class="btn primary" id="addEvidenceBtn">＋ 添加经历</button></div>
+          <div class="evidence-grid"><div class="card card-pad"><div class="section-head"><div><h3>证据概览</h3><p>按目标岗位自动匹配可用内容</p></div></div><div class="metric-value" id="evidenceCount">3</div><div class="metric-note">条真实经历 · 2 条已验证</div><div style="margin-top:22px"><div class="field-help">资料可用度</div><div style="height:8px;margin-top:8px;border-radius:99px;background:#edf2f6;overflow:hidden"><div style="width:72%;height:100%;border-radius:99px;background:linear-gradient(90deg,#99b7ce,#6f9a9a)"></div></div></div><div class="tag-row" style="margin-top:20px"><span class="tag green">项目 1</span><span class="tag blue">课程 1</span><span class="tag amber">待确认 1</span></div></div><div class="card card-pad"><div class="section-head"><div><h3>岗位匹配建议</h3><p>选择经历后可写入简历空白区，不覆盖已有内容</p></div><button class="btn small soft" id="matchEvidenceBtn">重新匹配</button></div><div id="evidenceSuggestions" class="list" style="margin-top:15px"></div></div></div>
+          <div class="section-block"><div class="section-head"><div><h3>我的经历记录</h3><p>点击条目查看详情与验证状态</p></div><div class="filter-row" id="evidenceFilters"><button class="filter active" data-filter="all">全部</button><button class="filter" data-filter="verified">已验证</button><button class="filter" data-filter="pending">待确认</button></div></div><div id="evidenceList" class="list" style="margin-top:14px"></div></div>
+        </section>
+
+        <!-- Module 4: resume editor, AI polish, templates, and exports -->
+        <section class="page-section" id="page-resume">
+          <div class="hero-row"><div><div class="eyebrow">Resume editor</div><h2>把信息整理成可以交付的版本。</h2><p>编辑、保存、预览和导出都在同一个工作区完成。</p></div><div class="toolbar-group"><button class="btn" id="newDraftBtn">新建草稿</button><button class="btn primary" id="saveDraftBtn">保存草稿</button></div></div>
+          <div class="resume-layout"><div class="card card-pad"><div class="editor-toolbar"><div><h3>简历信息</h3><span class="field-help">真实内容优先，空白信息不会被悄悄补成事实。</span></div><button class="btn small soft" id="polishBtn">✦ AI 轻度润色</button></div><div class="form-grid">
+            <div class="field"><label>姓名</label><input class="input" id="resumeName" placeholder="例如：林然"></div>
+            <div class="field"><label>目标岗位</label><input class="input" id="resumeRole" placeholder="例如：数据分析师"></div>
+            <div class="field"><label>所在城市</label><input class="input" id="resumeCity" placeholder="例如：上海"></div>
+            <div class="field"><label>邮箱</label><input class="input" id="resumeEmail" placeholder="name@example.com"></div>
+            <div class="field full"><label>自我评价</label><textarea class="textarea" id="resumeSummary" placeholder="用 2–3 句话说明你的方向、优势和当前阶段"></textarea><span class="field-help">AI 润色只优化表达，不改变你输入的事实。</span></div>
+            <div class="field full"><label>项目经历</label><textarea class="textarea" id="resumeProject" placeholder="项目背景 · 你的动作 · 可验证结果"></textarea></div>
+            <div class="field"><label>技能标签</label><input class="input" id="resumeSkills" placeholder="SQL, Excel, Python"></div>
+            <div class="field"><label>版本名称</label><input class="input" id="resumeVersion" placeholder="数据分析校招版"></div>
+          </div></div>
+          <div class="card static card-pad"><div class="editor-toolbar"><div><h3>模板预览</h3><span class="field-help">当前：<strong id="templateName">简约商务版</strong></span></div><select class="select" id="templateSelect" style="width:auto"><option>简约商务版</option><option>技术开发版</option><option>应届生简洁版</option><option>数据分析精致版</option></select></div><div class="preview-paper" id="resumePreview"><h2 class="preview-name">林然</h2><p class="preview-role">数据分析师 · 上海 · name@example.com</p><div class="preview-line"></div><div class="preview-section"><h4>个人简介</h4><p id="previewSummary">将你的方向、真实优势和可验证成果，用简洁清晰的语言呈现。</p></div><div class="preview-section"><h4>项目经历</h4><p id="previewProject">尚未填写项目经历 <span class="warning">[待确认]</span></p></div><div class="preview-section"><h4>技能</h4><p id="previewSkills">SQL · Excel · Python</p></div><div class="preview-section"><h4>教育背景</h4><p>教育经历将在保存草稿后继续补充。</p></div></div><div class="toolbar-group" style="margin-top:15px"><button class="btn soft" id="exportWordBtn">↓ 导出 Word</button><button class="btn soft" id="exportPdfBtn">↓ 导出 PDF</button><button class="btn" data-page="privacy">草稿管理</button></div></div></div>
+        </section>
+
+        <!-- Module 5: four-step career assessment -->
+        <section class="page-section" id="page-assessment">
+          <div class="hero-row"><div><div class="eyebrow">Career assessment</div><h2>先理解自己，再决定方向。</h2><p>四步测评覆盖兴趣、工作方式、专长证据和现实约束。结果是决策支持，不是诊断。</p></div><span class="tag amber">1–5 分量表</span></div>
+          <div class="stepper" id="assessmentStepper"></div><div class="card card-pad" style="margin-top:16px"><div id="assessmentBody"></div></div><div class="card card-pad" id="assessmentResult" style="display:none;margin-top:16px"></div>
+        </section>
+
+        <!-- Module 6: delivery action console and offline queue -->
+        <section class="page-section" id="page-delivery">
+          <div class="hero-row"><div><div class="eyebrow">Delivery console</div><h2>每一次投递，都有下一步。</h2><p>记录状态、跟进日期和面试复盘。网络不可用时，操作会保存到本地待同步队列。</p></div><div class="sync-chip"><span class="sync-dot offline" id="deliverySyncDot"></span><span id="deliverySyncText">待同步 1 条</span></div></div>
+          <div class="delivery-grid"><div class="card card-pad"><div class="section-head"><div><h3>添加投递计划</h3><p>点击保存才会创建记录</p></div></div><div class="form-grid" style="margin-top:17px"><div class="field"><label>公司</label><input class="input" id="deliveryCompany" placeholder="[待确认]"></div><div class="field"><label>目标岗位</label><input class="input" id="deliveryRole" placeholder="数据分析师"></div><div class="field"><label>城市</label><input class="input" id="deliveryCity" placeholder="上海"></div><div class="field"><label>下一步日期</label><input class="input" id="deliveryDate" type="date"></div><div class="field"><label>状态</label><select class="select" id="deliveryStatus"><option value="saved">待准备</option><option value="applied">已投递</option><option value="screening">筛选中</option><option value="interview">面试</option><option value="offer">Offer</option><option value="closed">已结束</option></select></div><div class="field full"><label>面试复盘 / 备注</label><textarea class="textarea" id="deliveryNotes" placeholder="记录真实问题、反馈和下一步改进"></textarea></div></div><button class="btn primary" id="saveDeliveryBtn" style="margin-top:15px">保存投递计划</button></div><div class="card card-pad"><div class="section-head"><div><h3>投递记录</h3><p>共 <span id="deliveryTotal">4</span> 条 · 仅当前匿名空间可见</p></div><button class="btn small soft" id="syncBtn">↻ 重试同步</button></div><div class="filter-row" id="deliveryFilters" style="margin-top:15px"><button class="filter active" data-status="all">全部</button><button class="filter" data-status="saved">待准备</button><button class="filter" data-status="applied">已投递</button><button class="filter" data-status="screening">筛选中</button><button class="filter" data-status="interview">面试</button><button class="filter" data-status="closed">已结束</button></div><div id="deliveryList" class="list" style="margin-top:14px"></div></div></div>
+        </section>
+
+        <!-- Module 7: local privacy and draft management -->
+        <section class="page-section" id="page-privacy">
+          <div class="hero-row"><div><div class="eyebrow">Local privacy</div><h2>数据归你，清理也由你决定。</h2><p>本页只管理当前设备上的缓存和本地待同步状态。服务端记录需要在对应页面逐条删除。</p></div><span class="tag green">本地匿名空间</span></div>
+          <div class="grid grid-2"><div class="card card-pad"><div class="section-head"><div><h3>草稿管理</h3><p>当前设备与服务端草稿列表</p></div><div class="toolbar-group"><button class="btn small" id="refreshDraftsBtn">刷新</button><button class="btn small danger" id="deleteSelectedDraftsBtn">删除选中</button></div></div><label style="display:flex;align-items:center;gap:8px;margin-top:15px;color:var(--muted);font-size:11px"><input type="checkbox" id="selectAllDrafts"> 全选草稿</label><div id="draftList" class="list" style="margin-top:10px"></div></div><div class="card card-pad"><div class="section-head"><div><h3>本机数据</h3><p>清理操作不会向服务端批量删除</p></div><span class="metric-icon">◈</span></div><div class="empty" style="margin-top:15px;text-align:left"><strong>可清理范围</strong><div style="font-size:12px;line-height:1.8">简历 checkpoint · 职业规划状态 · 测评答案 · 咨询会话 · 投递待同步队列</div></div><button class="btn danger" id="clearLocalBtn" style="margin-top:15px">清理本机缓存</button><p class="field-help" style="margin-top:12px">已保存的草稿、经历证据和投递记录不会被此操作删除。</p></div></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal" role="dialog" aria-modal="true"><div class="modal-head"><h3 id="modalTitle">确认操作</h3><button class="btn icon" id="modalClose" aria-label="关闭">×</button></div><div id="modalBody"></div><div class="modal-actions"><button class="btn" id="modalCancel">取消</button><button class="btn primary" id="modalConfirm">确认</button></div></div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    /*
+      API config entry:
+      - direct double-click: API_BASE_URL stays empty, relative requests fail safely.
+      - Vite dev server: /api and /downloads are proxied to http://127.0.0.1:8000.
+      Existing proxy rule is in resume-miniprogram/vite.config.ts; this file adds no backend API.
+    */
+    const API_BASE_URL = "";
+
+    /*
+      Mock fallback logic:
+      Every supported request is attempted first. If the file is opened directly,
+      the backend is unavailable, or a response is not OK, apiOrMock returns local data.
+    */
+    const mock = {
+      jobs: [
+        { roleName: "数据分析师", family: "数据与分析", score: 86, description: "用业务数据发现问题、验证假设，并把结论转化为可执行建议。", skills: ["SQL", "Excel", "业务理解"], salary: "8k–18k", risk: "需要持续理解业务，不只是写报表。" },
+        { roleName: "数据工程师", family: "数据与分析", score: 82, description: "建设稳定的数据链路、指标体系和可复用的数据服务。", skills: ["Python", "SQL", "ETL"], salary: "10k–22k", risk: "工程基础与排障能力要求更高。" },
+        { roleName: "AI Agent 工程师", family: "人工智能", score: 78, description: "设计智能体工作流、工具调用和评测闭环，连接模型与真实业务。", skills: ["Python", "Prompt", "评测"], salary: "12k–26k", risk: "岗位较新，职责边界和团队成熟度差异大。" },
+        { roleName: "产品分析师", family: "产品与运营", score: 74, description: "围绕用户行为和产品目标建立分析框架，推动产品决策。", skills: ["SQL", "指标体系", "沟通"], salary: "9k–19k", risk: "需要在数据与协作之间保持平衡。" },
+        { roleName: "数据库运维", family: "技术基础设施", score: 69, description: "维护数据存储、备份、性能和可用性，保障核心系统稳定。", skills: ["数据库", "Linux", "排障"], salary: "9k–20k", risk: "稳定性责任重，值班安排需要提前确认。" }
+      ],
+      evidence: [
+        { id: 1, title: "校园零售数据分析项目", type: "项目", date: "2025.09 – 2025.12", status: "verified", description: "使用 SQL 和 Excel 清洗 3 个月销售记录，完成复购率和客单价分析。", tags: ["SQL", "Excel", "数据分析"] },
+        { id: 2, title: "Python 数据处理课程作业", type: "课程", date: "2025.06", status: "pending", description: "完成 CSV 清洗、缺失值处理和基础可视化。", tags: ["Python", "数据清洗"] },
+        { id: 3, title: "校园学生活动运营", type: "校园实践", date: "2024.09 – 2025.06", status: "verified", description: "负责活动数据整理、报名转化和复盘材料。", tags: ["沟通", "运营"] }
+      ],
+      deliveries: [
+        { id: 1, company: "星河科技", roleName: "数据分析师", city: "上海", status: "interview", nextActionAt: "2026-08-15", notes: "准备业务指标拆解案例", draftId: "draft-1" },
+        { id: 2, company: "北辰消费", roleName: "产品分析师", city: "杭州", status: "applied", nextActionAt: "2026-08-18", notes: "等待一面反馈", draftId: "draft-2" },
+        { id: 3, company: "[待确认]", roleName: "数据工程师", city: "上海", status: "saved", nextActionAt: "2026-08-20", notes: "", draftId: null },
+        { id: 4, company: "远山科技", roleName: "AI Agent 工程师", city: "北京", status: "screening", nextActionAt: "2026-08-16", notes: "补充 Agent 评测项目", draftId: "draft-3" }
+      ],
+      drafts: [
+        { id: "draft-1", title: "数据分析校招版", updatedAt: "今天 09:24", template: "简约商务版" },
+        { id: "draft-2", title: "产品分析实习版", updatedAt: "昨天 18:10", template: "数据分析精致版" },
+        { id: "draft-3", title: "AI Agent 方向版", updatedAt: "8 月 10 日", template: "技术开发版" }
+      ],
+      assessment: [
+        { key: "interest", title: "你更愿意投入哪类任务？", items: ["从杂乱信息中找出规律", "和人沟通并推动协作", "搭建工具并优化流程"] },
+        { key: "work_style", title: "哪种工作方式更接近你？", items: ["先拆解，再按节奏稳定完成", "快速试错，边做边调整", "和团队讨论后形成共识"] },
+        { key: "strength_evidence", title: "你能举出真实例子的能力？", items: ["数据整理与分析", "表达、沟通与组织", "技术实现与问题排查"] },
+        { key: "constraints", title: "当前最重要的现实约束？", items: ["希望尽快获得实习或第一份工作", "更看重稳定和长期成长", "城市、薪资或家庭因素需要平衡"] }
+      ]
+    };
+
+    const state = {
+      page: "dashboard",
+      jobs: [...mock.jobs],
+      selectedJobs: [],
+      jobLoading: false,
+      evidenceFilter: "all",
+      evidence: loadLocal("resume-dashboard-evidence", mock.evidence),
+      deliveries: loadLocal("resume-dashboard-deliveries", mock.deliveries),
+      deliveryFilter: "all",
+      pendingQueue: Number(loadLocal("resume-dashboard-pending", 1)),
+      drafts: loadLocal("resume-dashboard-drafts", mock.drafts),
+      selectedDrafts: new Set(),
+      assessmentStep: 0,
+      assessmentAnswers: {},
+      assessmentResult: null,
+      assessmentQuestions: [...mock.assessment],
+      resume: loadLocal("resume-dashboard-resume", { name: "林然", role: "数据分析师", city: "上海", email: "name@example.com", summary: "", project: "", skills: "SQL, Excel, Python", version: "数据分析校招版" }),
+      modalConfirm: null,
+      toastTimer: null
+    };
+
+    const $ = (selector, root = document) => root.querySelector(selector);
+    const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+    const statusText = { saved: "待准备", applied: "已投递", screening: "筛选中", interview: "面试", offer: "Offer", closed: "已结束" };
+    const pageMeta = {
+      dashboard: ["求职工作台", "把真实经历，整理成下一步行动。"],
+      jobs: ["岗位情报", "先看方向，再看技能缺口。"],
+      evidence: ["经历证据库", "只用真实经历，写出有证据的简历。"],
+      resume: ["简历编辑器", "把信息整理成可以交付的版本。"],
+      assessment: ["职业测评", "先理解自己，再决定方向。"],
+      delivery: ["投递行动台", "每一次投递，都有下一步。"],
+      privacy: ["本地隐私", "数据归你，清理也由你决定。"]
+    };
+
+    function loadLocal(key, fallback) {
+      try {
+        const value = localStorage.getItem(key);
+        return value ? JSON.parse(value) : fallback;
+      } catch {
+        return fallback;
+      }
+    }
+    function saveLocal(key, value) {
+      try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* direct-file storage can be unavailable */ }
+    }
+
+    /* API layer: use existing backend endpoints only, with no new server contract. */
+    async function api(path, options = {}) {
+      const response = await fetch(`${API_BASE_URL}${path}`, { headers: { "Content-Type": "application/json" }, ...options });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const envelope = await response.json();
+      if (envelope && envelope.code && envelope.code !== "ok") throw new Error(envelope.message || "请求失败");
+      return envelope && Object.prototype.hasOwnProperty.call(envelope, "data") ? envelope.data : envelope;
+    }
+    async function apiOrMock(path, options, fallback) {
+      try { return await api(path, options); }
+      catch (error) {
+        console.info(`[mock fallback] ${path}`, error.message);
+        return typeof fallback === "function" ? fallback() : fallback;
+      }
+    }
+
+    function showToast(message) {
+      const element = $("#toast");
+      element.textContent = message;
+      element.classList.add("show");
+      clearTimeout(state.toastTimer);
+      state.toastTimer = setTimeout(() => element.classList.remove("show"), 2600);
+    }
+    function openModal(title, body, confirm, confirmLabel = "确认") {
+      state.modalConfirm = confirm;
+      $("#modalTitle").textContent = title;
+      $("#modalBody").innerHTML = body;
+      $("#modalConfirm").textContent = confirmLabel;
+      $("#modalBackdrop").classList.add("open");
+    }
+    function closeModal() {
+      state.modalConfirm = null;
+      $("#modalBackdrop").classList.remove("open");
+    }
+    function setPage(page) {
+      state.page = page;
+      $$(".page-section").forEach(section => section.classList.toggle("active", section.id === `page-${page}`));
+      $$(".nav-item").forEach(item => item.classList.toggle("active", item.dataset.page === page));
+      $("#pageTitle").textContent = pageMeta[page][0];
+      $("#pageSubtitle").textContent = pageMeta[page][1];
+      $("#sidebar").classList.remove("open");
+      if (page === "assessment") renderAssessment();
+      if (page === "delivery") renderDeliveries();
+      if (page === "privacy") renderDrafts();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    function statusBadge(status) {
+      const tone = status === "interview" || status === "offer" ? "green" : status === "saved" ? "amber" : status === "closed" ? "red" : "blue";
+      return `<span class="tag ${tone}">${statusText[status] || status}</span>`;
+    }
+
+    /* Module 2: jobs search, related recommendations, comparison, and three-tier plans. */
+    function renderRelatedJobs() {
+      const query = $("#jobSearchInput").value.trim().toLowerCase();
+      const related = state.jobs.filter(job => !query || `${job.roleName}${job.family}${job.skills.join("")}`.toLowerCase().includes(query)).slice(0, 6);
+      $("#relatedJobs").innerHTML = related.map(job => `<button class="tag blue" data-related="${job.roleName}">${job.roleName}</button>`).join("") || `<span class="field-help">输入关键词后查看关联岗位</span>`;
+      $$("[data-related]").forEach(button => button.addEventListener("click", () => { $("#jobSearchInput").value = button.dataset.related; runJobSearch(); }));
+    }
+    function renderJobs() {
+      $("#jobCards").innerHTML = state.jobLoading
+        ? `<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>`
+        : state.jobs.map(job => `<article class="card job-card ${state.selectedJobs.includes(job.roleName) ? "selected" : ""}">
+            <div class="job-card-top"><div><h4>${job.roleName}</h4><span class="field-help">${job.family}</span></div><input class="check" type="checkbox" data-job-check="${job.roleName}" ${state.selectedJobs.includes(job.roleName) ? "checked" : ""} aria-label="选择${job.roleName}"></div>
+            <p>${job.description}</p><div class="metric-top"><div class="tag-row">${job.skills.map(skill => `<span class="tag">${skill}</span>`).join("")}</div><span class="job-score">${job.score}</span></div>
+            <div class="delivery-meta"><span>参考薪资 ${job.salary}</span><span>·</span><span>${job.risk}</span></div>
+          </article>`).join("");
+      $$("[data-job-check]").forEach(input => input.addEventListener("change", event => {
+        const name = event.target.dataset.jobCheck;
+        if (event.target.checked && state.selectedJobs.length < 4) state.selectedJobs.push(name);
+        else if (!event.target.checked) state.selectedJobs = state.selectedJobs.filter(item => item !== name);
+        else event.target.checked = false;
+        renderJobs(); renderComparison(); renderTiers();
+      }));
+      renderRelatedJobs();
+      renderComparison();
+    }
+    function renderComparison() {
+      $("#compareCount").textContent = `已选 ${state.selectedJobs.length} 个`;
+      const selected = state.jobs.filter(job => state.selectedJobs.includes(job.roleName));
+      if (selected.length < 2) {
+        $("#comparisonContent").innerHTML = `<div class="empty"><strong>选择 2–4 个岗位后开始比较</strong>匹配分、技能缺口与风险提示会在这里展开。</div>`;
+        return;
+      }
+      $("#comparisonContent").innerHTML = `<div class="compare-table"><table><thead><tr><th>比较维度</th>${selected.map(job => `<th>${job.roleName}</th>`).join("")}</tr></thead><tbody>
+        <tr><td>匹配分</td>${selected.map(job => `<td><strong style="color:var(--blue-strong);font-size:20px">${job.score}</strong> / 100</td>`).join("")}</tr>
+        <tr><td>核心技能</td>${selected.map(job => `<td><div class="tag-row">${job.skills.map(skill => `<span class="tag blue">${skill}</span>`).join("")}</div></td>`).join("")}</tr>
+        <tr><td>主要提醒</td>${selected.map(job => `<td>${job.risk}</td>`).join("")}</tr>
+        <tr><td>使用建议</td>${selected.map((job, index) => `<td>${index === 0 ? "可作为冲刺方向" : index === 1 ? "适合作为稳妥方向" : "可作为备选方向"}</td>`).join("")}</tr>
+      </tbody></table></div>`;
+    }
+    function renderTiers() {
+      const selected = state.jobs.filter(job => state.selectedJobs.includes(job.roleName));
+      const jobs = selected.length ? selected : state.jobs.slice(0, 3);
+      $("#tierPlans").innerHTML = jobs.slice(0, 3).map((job, index) => `<article class="card tier ${index === 1 ? "safe" : index === 2 ? "backup" : ""}">
+        <span class="tag ${index === 1 ? "green" : index === 2 ? "amber" : "blue"}">${index === 0 ? "Sprint · 冲刺" : index === 1 ? "Safe · 稳妥" : "Backup · 保底"}</span>
+        <h4 style="margin-top:14px">${job.roleName}</h4><p style="margin-top:8px">${job.description}</p>
+        <ul class="action-list"><li>7 天：整理 ${job.skills[0]} 真实案例并更新简历</li><li>30 天：完成一个可展示的岗位相关项目</li><li>90 天：按面试反馈调整投递方向与版本</li></ul>
+        <button class="btn small soft" style="margin-top:17px" data-page="resume">用此方向编辑简历 →</button>
+      </article>`).join("");
+      $$("[data-page]", $("#tierPlans")).forEach(button => button.addEventListener("click", () => setPage(button.dataset.page)));
+    }
+    async function runJobSearch() {
+      const query = $("#jobSearchInput").value.trim();
+      if (!query) { showToast("请输入岗位名称"); return; }
+      state.jobLoading = true; renderJobs();
+      const result = await apiOrMock(`/api/job/suggestions?q=${encodeURIComponent(query)}`, {}, () => mock.jobs.filter(job => `${job.roleName}${job.family}${job.skills.join("")}`.includes(query)).map(job => ({ role_name: job.roleName, category: job.family })));
+      const names = result?.items?.map(item => item.role_name) || result?.map(item => item.role_name) || [];
+      const related = mock.jobs.filter(job => names.includes(job.roleName) || job.roleName.includes(query) || job.family.includes(query));
+      if (related.length) state.jobs = related.concat(mock.jobs.filter(job => !related.includes(job))).slice(0, 5);
+      const intelligence = await apiOrMock("/api/job/query", { method: "POST", body: JSON.stringify({ role_name: query }) }, null);
+      if (intelligence) {
+        state.jobs = state.jobs.map(job => job.roleName === query ? { ...job, description: intelligence.responsibilities?.[0] || job.description, skills: intelligence.required_skills || job.skills } : job);
+      }
+      state.jobLoading = false; renderJobs(); renderTiers();
+      showToast(intelligence ? "已加载真实岗位情报" : "已使用本地岗位建议");
+    }
+
+    /* Module 3: evidence library with real-content warning labels. */
+    function renderEvidence() {
+      const items = state.evidence.filter(item => state.evidenceFilter === "all" || item.status === state.evidenceFilter);
+      $("#evidenceCount").textContent = state.evidence.length;
+      $("#evidenceList").innerHTML = items.length ? items.map(item => `<article class="list-item">
+        <div class="list-item-head"><div><h4>${item.title} ${item.status === "pending" ? '<span class="warning">[待确认]</span>' : ""}</h4><p>${item.type} · ${item.date}</p></div>${statusBadge(item.status === "verified" ? "interview" : "saved")}</div>
+        <p style="margin-top:12px;color:#596879;font-size:12px">${item.description}</p><div class="tag-row" style="margin-top:11px">${item.tags.map(tag => `<span class="tag">${tag}</span>`).join("")}</div>
+      </article>`).join("") : `<div class="empty"><strong>还没有这类经历</strong>记录真实内容后，系统会帮你匹配岗位和简历空白区。</div>`;
+      $("#evidenceSuggestions").innerHTML = state.evidence.slice(0, 2).map(item => `<div class="list-item"><div class="list-item-head"><h4>${item.title}</h4><button class="btn small soft" data-use-evidence="${item.id}">写入空白区</button></div><p>可匹配：${item.tags.join(" · ")}</p></div>`).join("");
+      $$("[data-use-evidence]").forEach(button => button.addEventListener("click", () => {
+        const item = state.evidence.find(entry => entry.id === Number(button.dataset.useEvidence));
+        if (item) { $("#resumeProject").value = item.description; updateResumePreview(); showToast("已写入简历项目空白区，请确认内容"); }
+      }));
+    }
+
+    /* Module 4: resume editor, local draft state, AI polish, and downloads. */
+    function updateResumePreview() {
+      const fields = ["resumeName", "resumeRole", "resumeCity", "resumeEmail", "resumeSummary", "resumeProject", "resumeSkills", "resumeVersion"];
+      fields.forEach(id => {
+        const value = $(`#${id}`).value;
+        const key = id.replace("resume", "").replace(/^./, char => char.toLowerCase());
+        if (key in state.resume) state.resume[key] = value;
+      });
+      $(".preview-name").textContent = state.resume.name || "你的姓名";
+      $(".preview-role").textContent = `${state.resume.role || "目标岗位"} · ${state.resume.city || "所在城市"} · ${state.resume.email || "邮箱"}`;
+      $("#previewSummary").textContent = state.resume.summary || "将你的方向、真实优势和可验证成果，用简洁清晰的语言呈现。";
+      $("#previewProject").innerHTML = state.resume.project || '尚未填写项目经历 <span class="warning">[待确认]</span>';
+      $("#previewSkills").textContent = state.resume.skills || "请补充技能标签";
+      saveLocal("resume-dashboard-resume", state.resume);
+    }
+    function fillResume() {
+      Object.entries(state.resume).forEach(([key, value]) => {
+        const input = $(`#resume${key.charAt(0).toUpperCase()}${key.slice(1)}`);
+        if (input) input.value = value;
+      });
+      updateResumePreview();
+    }
+
+    /* Module 5: four-step assessment with 1–5 score sliders and 7/30/90 action plan. */
+    function renderAssessment() {
+      const steps = state.assessmentQuestions;
+      $("#assessmentStepper").innerHTML = steps.map((step, index) => `<button class="step-button ${index === state.assessmentStep ? "active" : ""}" data-assessment-step="${index}"><strong>${index + 1}. ${step.title.split("？")[0]}</strong><span>${index < state.assessmentStep ? "已完成" : index === state.assessmentStep ? "正在填写" : "点击进入"}</span></button>`).join("");
+      $$("[data-assessment-step]").forEach(button => button.addEventListener("click", () => { state.assessmentStep = Number(button.dataset.assessmentStep); renderAssessment(); }));
+      if (state.assessmentResult) { renderAssessmentResult(); return; }
+      const current = steps[state.assessmentStep];
+      $("#assessmentResult").style.display = "none";
+      $("#assessmentBody").innerHTML = `<div class="section-head"><div><h3>${current.title}</h3><p>每道题用 1–5 分回答，未作答不会被视为你的优势。</p></div><span class="tag blue">${state.assessmentStep + 1} / ${steps.length}</span></div>
+        <div class="question-list">${current.items.map((item, index) => { const key = `${current.key}_${index}`; const value = state.assessmentAnswers[key] || 3; return `<div class="question"><p>${item}</p><div class="score-row"><span class="field-help">不符合</span><input type="range" min="1" max="5" value="${value}" data-score="${key}"><span class="field-help">符合</span><strong class="score-value" data-score-value="${key}">${value}</strong></div></div>`; }).join("")}</div>
+        <div class="toolbar-group" style="justify-content:flex-end;margin-top:20px"><button class="btn" id="assessmentPrev" ${state.assessmentStep === 0 ? "disabled" : ""}>上一步</button><button class="btn primary" id="assessmentNext">${state.assessmentStep === steps.length - 1 ? "生成测评建议" : "下一步 →"}</button></div>`;
+      $$("[data-score]").forEach(input => input.addEventListener("input", event => { state.assessmentAnswers[event.target.dataset.score] = Number(event.target.value); $(`[data-score-value="${event.target.dataset.score}"]`).textContent = event.target.value; }));
+      $("#assessmentPrev").addEventListener("click", () => { state.assessmentStep = Math.max(0, state.assessmentStep - 1); renderAssessment(); });
+      $("#assessmentNext").addEventListener("click", submitAssessment);
+    }
+    async function submitAssessment() {
+      const result = await apiOrMock("/api/career/assessment/submit", { method: "POST", body: JSON.stringify({ client_id: "dashboard-demo", answers: state.assessmentAnswers }) }, () => ({ result: {
+        top_interests: [{ label: "分析与探索", score: 4.5 }, { label: "结构化执行", score: 4.1 }],
+        work_style_summary: "你更适合有明确问题、可以持续积累和复盘的工作方式。",
+        strength_evidence: ["能从真实项目中提炼方法和结果"],
+        action_plan: { seven_day: ["整理 2 条真实项目证据"], thirty_day: ["完成岗位相关小项目并复盘"], ninety_day: ["用面试反馈更新方向与简历版本"] }
+      } }));
+      state.assessmentResult = result?.result || result;
+      renderAssessment();
+    }
+    function renderAssessmentResult() {
+      const result = state.assessmentResult;
+      const interests = result.top_interests || [];
+      const score = Math.round(interests.reduce((sum, item) => sum + Number(item.score || 0), 0) / Math.max(1, interests.length) * 20);
+      $("#assessmentBody").innerHTML = `<div class="result-hero"><div class="eyebrow">Assessment signal</div><div class="result-score">${score}<small> / 100</small></div><p style="margin:5px 0 0">${result.work_style_summary || "已生成当前职业信号"}</p><div class="tag-row" style="margin-top:15px">${interests.map(item => `<span class="tag blue">${item.label} · ${item.score}</span>`).join("")}</div></div><div style="margin-top:17px"><h3>已说明的真实优势</h3><p style="margin-top:7px">${(result.strength_evidence || []).join(" · ") || "暂未记录足够的优势证据"}</p></div>`;
+      $("#assessmentResult").style.display = "block";
+      $("#assessmentResult").innerHTML = `<details class="collapse static" open><summary><div><h3>7 / 30 / 90 天行动计划</h3><p style="margin:3px 0 0;color:var(--muted);font-size:11px">把测评结果转成可执行动作</p></div></summary><div class="collapse-content"><div class="grid grid-3">${[["7 天", result.action_plan?.seven_day], ["30 天", result.action_plan?.thirty_day], ["90 天", result.action_plan?.ninety_day]].map(([title, list]) => `<div class="tier"><span class="tag blue">${title}</span><ul class="action-list">${(list || []).map(item => `<li>${item}</li>`).join("")}</ul></div>`).join("")}</div><button class="btn primary" style="margin-top:17px" data-page="jobs">结合岗位规划下一步 →</button></div></details>`;
+      $$("[data-page]", $("#assessmentResult")).forEach(button => button.addEventListener("click", () => setPage(button.dataset.page)));
+    }
+
+    /* Module 6: delivery console, status filters, interview notes, and offline queue. */
+    function renderDeliveries() {
+      const items = state.deliveries.filter(item => state.deliveryFilter === "all" || item.status === state.deliveryFilter);
+      $("#deliveryTotal").textContent = state.deliveries.length;
+      $("#deliveryList").innerHTML = items.length ? items.map(item => `<article class="delivery-card list-item"><div class="list-item-head"><div><h4>${item.roleName} · ${item.company}</h4><div class="delivery-meta"><span>${item.city}</span><span>·</span><span>下一步：${item.nextActionAt || "待设置"}</span><span>·</span>${statusBadge(item.status)}</div></div><button class="btn small danger" data-delete-delivery="${item.id}">删除</button></div>${item.notes ? `<p style="margin-top:12px;color:#69788a;font-size:12px">复盘：${item.notes}</p>` : '<p style="margin-top:12px;color:#a0aab7;font-size:12px">还没有面试复盘</p>'}</article>`).join("") : `<div class="empty"><strong>还没有这类投递记录</strong>切换筛选或添加一条新的行动计划。</div>`;
+      $$("[data-delete-delivery]").forEach(button => button.addEventListener("click", () => confirmDeleteDelivery(Number(button.dataset.deleteDelivery))));
+      const pending = state.pendingQueue > 0;
+      $("#deliverySyncDot").classList.toggle("offline", pending);
+      $("#deliverySyncText").textContent = pending ? `待同步 ${state.pendingQueue} 条` : "本地数据已同步";
+      $("#syncDot").classList.toggle("offline", pending);
+      $("#syncText").textContent = pending ? `待同步 ${state.pendingQueue} 条` : "本地数据已同步";
+      $("#deliveryCount").textContent = state.deliveries.filter(item => item.status !== "closed").length;
+      saveLocal("resume-dashboard-deliveries", state.deliveries);
+      saveLocal("resume-dashboard-pending", state.pendingQueue);
+    }
+    function confirmDeleteDelivery(id) {
+      openModal("删除投递记录？", "<p style='margin:0;color:var(--muted)'>删除后仅影响当前工作台记录，不会撤回任何外部投递。</p>", () => {
+        state.deliveries = state.deliveries.filter(item => item.id !== id);
+        renderDeliveries();
+        showToast("投递记录已删除");
+      });
+    }
+
+    /* Module 7: local privacy and draft batch management. */
+    function renderDrafts() {
+      $("#draftCount").textContent = state.drafts.length;
+      $("#draftList").innerHTML = state.drafts.length ? state.drafts.map(draft => `<article class="list-item"><div class="list-item-head"><label style="display:flex;align-items:flex-start;gap:8px"><input type="checkbox" data-draft-check="${draft.id}" ${state.selectedDrafts.has(draft.id) ? "checked" : ""}><span><strong>${draft.title}</strong><small style="display:block;color:var(--muted);margin-top:3px">${draft.template} · 更新于 ${draft.updatedAt}</small></span></label><span class="tag blue">草稿</span></div><div class="toolbar-group" style="margin-top:12px"><button class="btn small soft" data-open-draft="${draft.id}">打开</button><button class="btn small" data-copy-draft="${draft.id}">复制</button><button class="btn small danger" data-delete-draft="${draft.id}">删除</button></div></article>`).join("") : `<div class="empty"><strong>还没有简历草稿</strong>完成一次保存后，草稿会出现在这里。</div>`;
+      $$("[data-draft-check]").forEach(input => input.addEventListener("change", event => { if (event.target.checked) state.selectedDrafts.add(event.target.dataset.draftCheck); else state.selectedDrafts.delete(event.target.dataset.draftCheck); }));
+      $$("[data-open-draft]").forEach(button => button.addEventListener("click", () => { setPage("resume"); showToast("已打开草稿编辑器"); }));
+      $$("[data-copy-draft]").forEach(button => button.addEventListener("click", () => {
+        const original = state.drafts.find(item => item.id === button.dataset.copyDraft);
+        if (original) { state.drafts.push({ ...original, id: `${original.id}-copy-${Date.now()}`, title: `${original.title} · 副本`, updatedAt: "刚刚" }); renderDrafts(); showToast("草稿副本已创建"); }
+      }));
+      $$("[data-delete-draft]").forEach(button => button.addEventListener("click", () => deleteDrafts([button.dataset.deleteDraft])));
+      saveLocal("resume-dashboard-drafts", state.drafts);
+    }
+    function deleteDrafts(ids) {
+      if (!ids.length) { showToast("请先选择草稿"); return; }
+      openModal("删除选中的草稿？", "<p style='margin:0;color:var(--muted)'>删除只影响当前工作台中的草稿记录，无法撤销。</p>", () => {
+        state.drafts = state.drafts.filter(item => !ids.includes(item.id));
+        state.selectedDrafts.clear();
+        $("#selectAllDrafts").checked = false;
+        renderDrafts();
+        showToast("草稿已删除");
+      }, "删除");
+    }
+
+    async function exportFile(kind) {
+      const path = `/api/export/${kind}`;
+      const result = await apiOrMock(path, { method: "POST", body: JSON.stringify({ client_id: "dashboard-demo", draft_id: state.drafts[0]?.id || "draft-demo" }) }, () => ({ download_url: `/downloads/demo-resume.${kind === "word" ? "docx" : "pdf"}`, filename: `林然-${state.resume.role || "简历"}.${kind === "word" ? "docx" : "pdf"}` }));
+      const url = result?.download_url || result?.downloadUrl;
+      if (location.protocol === "file:" || !API_BASE_URL) {
+        const content = kind === "word" ? "AI Resume mock Word export\n\n" : "%PDF-1.4\n% AI Resume mock PDF\n";
+        const blob = new Blob([content], { type: kind === "word" ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : "application/pdf" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = result?.filename || `resume.${kind === "word" ? "docx" : "pdf"}`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+        showToast(`已生成 mock ${kind === "word" ? "Word" : "PDF"} 文件`);
+      } else if (url) {
+        window.open(`${API_BASE_URL}${url}`, "_blank");
+      } else {
+        showToast("导出服务暂未返回下载地址");
+      }
+    }
+
+    async function initialize() {
+      const sources = await apiOrMock("/api/knowledgebase/sources", {}, () => ({ items: [] }));
+      const assessment = await apiOrMock("/api/career/assessment?client_id=dashboard-demo", {}, null);
+      if (assessment?.result) state.assessmentResult = assessment.result;
+      renderJobs(); renderTiers(); renderEvidence(); fillResume(); renderAssessment(); renderDeliveries(); renderDrafts();
+      if (sources?.items?.length) showToast("工作台已连接本地知识库");
+    }
+
+    /* Global interaction wiring. */
+    $("#nav").addEventListener("click", event => { const item = event.target.closest("[data-page]"); if (item) setPage(item.dataset.page); });
+    $$("[data-page]").forEach(button => { if (!button.closest("#nav")) button.addEventListener("click", () => setPage(button.dataset.page)); });
+    $("#mobileMenu").addEventListener("click", () => $("#sidebar").classList.toggle("open"));
+    $("#openPrivacy").addEventListener("click", () => setPage("privacy"));
+    $("#jobSearchBtn").addEventListener("click", runJobSearch);
+    $("#jobSearchInput").addEventListener("input", renderRelatedJobs);
+    $("#clearJobSelection").addEventListener("click", () => { state.selectedJobs = []; renderJobs(); renderTiers(); });
+    $("#addEvidenceBtn").addEventListener("click", () => openModal("添加真实经历", `<div class="form-grid"><div class="field full"><label>经历名称</label><input class="input" id="modalEvidenceTitle" placeholder="例如：校园数据分析项目"></div><div class="field"><label>类型</label><select class="select" id="modalEvidenceType"><option>项目</option><option>课程</option><option>实习</option><option>校园实践</option></select></div><div class="field"><label>时间</label><input class="input" id="modalEvidenceDate" placeholder="2025.09 – 2025.12"></div><div class="field full"><label>描述</label><textarea class="textarea" id="modalEvidenceDesc" placeholder="只写真实做过的事情和结果"></textarea></div></div>`, () => {
+      state.evidence.unshift({ id: Date.now(), title: $("#modalEvidenceTitle").value || "未命名经历", type: $("#modalEvidenceType").value, date: $("#modalEvidenceDate").value || "[待确认]", status: "pending", description: $("#modalEvidenceDesc").value || "[待确认] 请补充真实内容", tags: ["待补充"] });
+      saveLocal("resume-dashboard-evidence", state.evidence); renderEvidence(); showToast("经历已记录，带 [待确认] 标记");
+    }));
+    $$("#evidenceFilters .filter").forEach(button => button.addEventListener("click", () => { $$("#evidenceFilters .filter").forEach(item => item.classList.remove("active")); button.classList.add("active"); state.evidenceFilter = button.dataset.filter; renderEvidence(); }));
+    $("#matchEvidenceBtn").addEventListener("click", () => { renderEvidence(); showToast("已按当前目标岗位重新匹配"); });
+    ["resumeName", "resumeRole", "resumeCity", "resumeEmail", "resumeSummary", "resumeProject", "resumeSkills", "resumeVersion"].forEach(id => $(`#${id}`).addEventListener("input", updateResumePreview));
+    $("#templateSelect").addEventListener("change", event => { $("#templateName").textContent = event.target.value; showToast(`已切换模板：${event.target.value}`); });
+    $("#polishBtn").addEventListener("click", () => { const input = $("#resumeSummary"); input.value = input.value.trim() ? `${input.value.trim()} 擅长从真实项目中拆解问题、验证结论并持续复盘。` : "具备数据整理、问题拆解与结构化表达能力，正在通过真实项目持续积累业务分析经验。"; updateResumePreview(); showToast("已完成轻度润色，请确认事实准确"); });
+    $("#newDraftBtn").addEventListener("click", () => openModal("新建简历草稿？", "<p style='margin:0;color:var(--muted)'>当前编辑内容会被保留在本地，确认后清空编辑区。</p>", () => { state.resume = { name: "", role: "", city: "", email: "", summary: "", project: "", skills: "", version: "" }; fillResume(); showToast("已创建空白草稿"); }));
+    $("#saveDraftBtn").addEventListener("click", async () => { updateResumePreview(); const result = await apiOrMock("/api/draft/save", { method: "POST", body: JSON.stringify({ client_id: "dashboard-demo", job_title: state.resume.role, template_id: "business", resume: state.resume }) }, () => ({ id: `draft-${Date.now()}` })); if (result?.id) { state.drafts.unshift({ id: result.id, title: state.resume.version || `${state.resume.role || "未命名"}版`, updatedAt: "刚刚", template: $("#templateName").textContent }); } renderDrafts(); showToast(result?.id?.startsWith("draft-") ? "已保存到本地 mock 草稿" : "草稿已保存"); });
+    $("#exportWordBtn").addEventListener("click", () => exportFile("word"));
+    $("#exportPdfBtn").addEventListener("click", () => exportFile("pdf"));
+    $("#deliveryFilters").addEventListener("click", event => { const button = event.target.closest("[data-status]"); if (!button) return; $$("#deliveryFilters .filter").forEach(item => item.classList.remove("active")); button.classList.add("active"); state.deliveryFilter = button.dataset.status; renderDeliveries(); });
+    $("#saveDeliveryBtn").addEventListener("click", async () => { const item = { id: Date.now(), company: $("#deliveryCompany").value || "[待确认]", roleName: $("#deliveryRole").value || "[待确认]", city: $("#deliveryCity").value || "[待确认]", status: $("#deliveryStatus").value, nextActionAt: $("#deliveryDate").value, notes: $("#deliveryNotes").value, draftId: null }; const result = await apiOrMock("/api/applications", { method: "POST", body: JSON.stringify({ client_id: "dashboard-demo", company: item.company, role_name: item.roleName, city: item.city, source: "dashboard", status: item.status, next_action_at: item.nextActionAt || null, interview_notes: item.notes, notes: "" }) }, () => null); state.deliveries.unshift(item); if (!result) state.pendingQueue += 1; renderDeliveries(); showToast(result ? "投递计划已保存" : "网络不可用，已加入待同步队列"); });
+    $("#syncBtn").addEventListener("click", async () => { await new Promise(resolve => setTimeout(resolve, 650)); state.pendingQueue = 0; renderDeliveries(); showToast("待同步队列已处理"); });
+    $("#refreshDraftsBtn").addEventListener("click", () => { renderDrafts(); showToast("草稿列表已刷新"); });
+    $("#selectAllDrafts").addEventListener("change", event => { state.drafts.forEach(draft => event.target.checked ? state.selectedDrafts.add(draft.id) : state.selectedDrafts.delete(draft.id)); renderDrafts(); $("#selectAllDrafts").checked = event.target.checked; });
+    $("#deleteSelectedDraftsBtn").addEventListener("click", () => deleteDrafts([...state.selectedDrafts]));
+    $("#clearLocalBtn").addEventListener("click", () => openModal("清理本机缓存？", "<p style='margin:0;color:var(--muted)'>将清理当前设备上的简历 checkpoint、职业规划、测评答案、咨询会话和待同步队列。服务端草稿与投递记录不会删除。</p>", () => { state.pendingQueue = 0; state.assessmentResult = null; state.assessmentAnswers = {}; renderDeliveries(); renderAssessment(); showToast("本机缓存已清理"); }));
+    $("#modalClose").addEventListener("click", closeModal);
+    $("#modalCancel").addEventListener("click", closeModal);
+    $("#modalBackdrop").addEventListener("click", event => { if (event.target.id === "modalBackdrop") closeModal(); });
+    $("#modalConfirm").addEventListener("click", () => { const callback = state.modalConfirm; closeModal(); if (callback) callback(); });
+    initialize();
+  </script>
+</body>
+</html>
