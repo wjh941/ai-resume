@@ -163,6 +163,20 @@
     .btn.small { min-height: 30px; padding: 5px 10px; font-size: 11px; }
     .mobile-menu { display: none; }
     .search-panel { display: flex; gap: 10px; }
+    .job-search-wrap { position: relative; min-width: 0; flex: 1; }
+    .job-suggestions {
+      position: absolute; z-index: 120; top: calc(100% + 8px); right: 0; left: 0;
+      max-height: 310px; overflow-y: auto; padding: 7px; border: 1px solid var(--line);
+      border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-md);
+    }
+    .job-suggestion {
+      display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 12px;
+      border: 0; border-radius: 9px; padding: 10px 11px; color: var(--ink); text-align: left;
+      background: transparent; transition: var(--ease);
+    }
+    .job-suggestion:hover, .job-suggestion:focus-visible { color: var(--blue-strong); outline: 0; background: var(--blue-soft); }
+    .job-suggestion small { color: var(--muted); font-size: 11px; white-space: nowrap; }
+    .job-suggestion-empty { padding: 12px 11px; color: var(--faint); font-size: 12px; }
     .input, .select, .textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; outline: 0; color: var(--ink); background: var(--surface-muted); transition: var(--ease); }
     .input, .select { height: 38px; padding: 0 11px; }
     .textarea { min-height: 91px; resize: vertical; padding: 10px 11px; }
@@ -269,6 +283,7 @@
       .dashboard-grid, .grid-2, .grid-3, .evidence-grid, .delivery-grid, .resume-layout { grid-template-columns: 1fr; }
       .overview-card { grid-column: auto; }
       .search-panel { flex-direction: column; }
+      .job-search-wrap { width: 100%; }
       .search-panel .btn { width: 100%; }
       .form-grid { grid-template-columns: 1fr; }
       .field.full { grid-column: auto; }
@@ -354,7 +369,7 @@
         <!-- Module 2: job intelligence, related jobs, comparison, and planning -->
         <section class="page-section" id="page-jobs">
           <div class="hero-row"><div><div class="eyebrow">Job intelligence</div><h2>找到适合你当前阶段的岗位。</h2><p>先看方向，再看技能缺口。岗位信息用于比较和行动规划，不代表录用承诺。</p></div><span id="jobSourceTag" class="tag green">本地知识库优先</span></div>
-          <div class="card card-pad"><div class="search-panel"><input class="input" id="jobSearchInput" placeholder="输入岗位名称，例如：数据、工程师、产品经理"><button class="btn primary" id="jobSearchBtn">查询岗位</button></div><div class="tag-row" id="relatedJobs" style="margin-top:14px"></div></div>
+          <div class="card card-pad"><div class="search-panel"><div class="job-search-wrap"><input class="input" id="jobSearchInput" autocomplete="off" aria-autocomplete="list" aria-controls="jobSuggestions" aria-expanded="false" placeholder="输入岗位名称，例如：数据、工程师、产品经理"><div class="job-suggestions hidden" id="jobSuggestions" role="listbox"></div></div><button class="btn primary" id="jobSearchBtn">查询岗位</button></div><p class="field-help" id="jobSearchHint" style="margin-top:12px">输入关键词查看实时关联岗位；按回车或点击“查询岗位”加载下方候选。</p></div>
           <div class="section-block"><div class="section-head"><div><h3>岗位候选</h3><p>选择 2–4 个岗位进行横向比较</p></div><div class="toolbar-group"><button class="btn small" id="clearJobSelection">清空选择</button><button class="btn small soft" id="openSearchSettingsBtn">市场检索设置</button></div></div><div id="jobCards" class="job-grid"></div></div>
           <div class="section-block"><details class="card collapse static" id="comparisonPanel" open><summary><div><h3>岗位横向比较</h3><p style="margin:3px 0 0;color:var(--muted);font-size:11px">把方向差异转化成下一步判断</p></div><span id="compareCount" class="tag blue">已选 0 个</span></summary><div class="collapse-content"><div id="comparisonContent"></div></div></details></div>
           <div class="section-block"><details class="card collapse static" id="matchReportPanel" open><summary><div><h3>专业匹配报告</h3><p style="margin:3px 0 0;color:var(--muted);font-size:11px">根据当前技能、经历和岗位方向展示缺口</p></div><span id="matchScoreTag" class="tag blue">待计算</span></summary><div class="collapse-content" id="matchReportContent"></div></details></div>
@@ -443,7 +458,9 @@
         { roleName: "AI Agent 工程师", family: "人工智能", score: 78, description: "设计智能体工作流、工具调用和评测闭环，连接模型与真实业务。", skills: ["Python", "Prompt", "评测"], salary: "12k–26k", risk: "岗位较新，职责边界和团队成熟度差异大。", related: ["数据工程师", "产品分析师"] },
         { roleName: "产品分析师", family: "产品与运营", score: 74, description: "围绕用户行为和产品目标建立分析框架，推动产品决策。", skills: ["SQL", "指标体系", "沟通"], salary: "9k–19k", risk: "需要在数据与协作之间保持平衡。", related: ["数据分析师", "运营分析师"] },
         { roleName: "数据库运维", family: "技术基础设施", score: 69, description: "维护数据存储、备份、性能和可用性，保障核心系统稳定。", skills: ["数据库", "Linux", "排障"], salary: "9k–20k", risk: "稳定性责任重，值班安排需要提前确认。", related: ["数据工程师", "系统运维工程师"] },
-        { roleName: "运营分析师", family: "产品与运营", score: 72, description: "通过用户、活动和转化数据支持运营策略和增长复盘。", skills: ["Excel", "指标体系", "沟通"], salary: "7k–16k", risk: "节奏受业务活动影响，需要快速响应。", related: ["产品分析师", "数据分析师"] }
+        { roleName: "运营分析师", family: "产品与运营", score: 72, description: "通过用户、活动和转化数据支持运营策略和增长复盘。", skills: ["Excel", "指标体系", "沟通"], salary: "7k–16k", risk: "节奏受业务活动影响，需要快速响应。", related: ["产品分析师", "数据分析师"] },
+        { roleName: "跨境电商运营", family: "电商与运营", score: 73, description: "负责跨境平台商品、活动、广告与销售数据协同，持续优化转化效率。", skills: ["平台运营", "数据分析", "英语"], salary: "7k–17k", risk: "平台规则、时区协作与供应链节奏需要持续跟进。", related: ["运营分析师", "产品分析师"], aliases: ["跨境", "跨境电商", "外贸"] },
+        { roleName: "计算机视觉工程师", family: "人工智能", score: 76, description: "训练、评估并部署视觉识别模型，解决图像、视频和检测类业务问题。", skills: ["Python", "深度学习", "OpenCV"], salary: "12k–28k", risk: "需要兼顾模型效果、数据质量与工程落地。", related: ["AI Agent 工程师", "数据工程师"], aliases: ["计算机", "视觉", "CV"] }
       ],
       evidence: [
         { id: 1, title: "校园零售数据分析项目", type: "项目", date: "2025-09-01", endDate: "2025-12-20", status: "verified", description: "使用 SQL 和 Excel 清洗 3 个月销售记录，完成复购率和客单价分析。", tags: ["SQL", "Excel", "数据分析"] },
@@ -511,7 +528,11 @@
       webSearchEnabled: loadLocal("resume-dashboard-web-search", false),
       tavilyKey: loadLocal("resume-dashboard-tavily-key", ""),
       webSearchProvider: loadLocal("resume-dashboard-search-provider", "disabled"),
-      lastSearch: ""
+      lastSearch: "",
+      jobSuggestionTimer: null,
+      jobSuggestionHideTimer: null,
+      jobSuggestionRequest: 0,
+      jobIsComposing: false
     };
     saveLocal("resume-dashboard-client-id", state.clientId);
 
@@ -689,12 +710,112 @@
       $$("[data-search-page]", panel).forEach(button => button.addEventListener("click", () => { panel.classList.add("hidden"); setPage(button.dataset.searchPage); }));
     }
 
-    /* Module 2: job intelligence, related roles, comparison, match report, and plans. */
-    function renderRelatedJobs() {
-      const query = $("#jobSearchInput").value.trim().toLowerCase();
-      const related = state.jobs.filter(job => !query || `${job.roleName}${job.family}${job.skills.join("")}`.toLowerCase().includes(query)).slice(0, 8);
-      $("#relatedJobs").innerHTML = related.map(job => `<button class="tag blue" data-related="${escapeHtml(job.roleName)}">${escapeHtml(job.roleName)}</button>`).join("") || `<span class="field-help">输入关键词后查看关联岗位</span>`;
-      $$("[data-related]").forEach(button => button.addEventListener("click", () => { $("#jobSearchInput").value = button.dataset.related; runJobSearch(); }));
+    /* Module 2: job intelligence, type-ahead suggestions, comparison, match report, and plans. */
+    function normalizedSearch(value) {
+      return String(value || "").trim().toLowerCase();
+    }
+    function jobMatchesQuery(job, query) {
+      const value = normalizedSearch(query);
+      if (!value) return false;
+      const searchable = [
+        job.roleName,
+        job.family,
+        ...(job.skills || []),
+        ...(job.related || []),
+        ...(job.aliases || [])
+      ].join(" ").toLowerCase();
+      return searchable.includes(value);
+    }
+    function localJobSuggestions(query) {
+      return mock.jobs
+        .filter(job => jobMatchesQuery(job, query))
+        .map(job => ({ role_name: job.roleName, category: job.family }));
+    }
+    function suggestionItems(result) {
+      const items = Array.isArray(result) ? result : result?.items;
+      if (!Array.isArray(items)) return [];
+      const names = new Set();
+      return items.filter(item => {
+        const name = String(item?.role_name || "").trim();
+        if (!name || names.has(name)) return false;
+        names.add(name);
+        return true;
+      }).map(item => ({ role_name: String(item.role_name).trim(), category: String(item.category || "岗位知识库") }));
+    }
+    function mergeSuggestions(remote, local) {
+      return suggestionItems([...(remote || []), ...(local || [])]).slice(0, 8);
+    }
+    async function requestJobSuggestions(query) {
+      const local = localJobSuggestions(query);
+      const result = await apiOrMock(
+        `/api/job/suggestions?q=${encodeURIComponent(query)}`,
+        {},
+        () => local,
+        "job type-ahead"
+      );
+      return mergeSuggestions(suggestionItems(result), local);
+    }
+    function setJobSuggestionsVisible(visible) {
+      const panel = $("#jobSuggestions");
+      const input = $("#jobSearchInput");
+      panel.classList.toggle("hidden", !visible);
+      input.setAttribute("aria-expanded", String(visible));
+    }
+    function hideJobSuggestions() {
+      clearTimeout(state.jobSuggestionHideTimer);
+      state.jobSuggestionRequest++;
+      setJobSuggestionsVisible(false);
+    }
+    function renderJobSuggestions(items, query, loading = false) {
+      const panel = $("#jobSuggestions");
+      if (!query) { hideJobSuggestions(); return; }
+      if (loading) {
+        panel.innerHTML = `<div class="job-suggestion-empty">正在匹配关联岗位…</div>`;
+      } else if (!items.length) {
+        panel.innerHTML = `<div class="job-suggestion-empty">暂无匹配关联岗位</div>`;
+      } else {
+        panel.innerHTML = items.map(item => `<button class="job-suggestion" type="button" role="option" data-job-suggestion="${escapeHtml(item.role_name)}"><strong>${escapeHtml(item.role_name)}</strong><small>${escapeHtml(item.category)}</small></button>`).join("");
+        $$("[data-job-suggestion]", panel).forEach(button => button.addEventListener("click", () => {
+          $("#jobSearchInput").value = button.dataset.jobSuggestion;
+          hideJobSuggestions();
+          runJobSearch(button.dataset.jobSuggestion);
+        }));
+      }
+      setJobSuggestionsVisible(true);
+    }
+    function scheduleJobSuggestions() {
+      clearTimeout(state.jobSuggestionTimer);
+      clearTimeout(state.jobSuggestionHideTimer);
+      if (state.jobIsComposing) return;
+      const query = $("#jobSearchInput").value.trim();
+      if (!query) { hideJobSuggestions(); return; }
+      state.jobSuggestionTimer = setTimeout(() => loadJobSuggestions(query), 300);
+    }
+    async function loadJobSuggestions(query) {
+      const currentQuery = $("#jobSearchInput").value.trim();
+      if (!query || query !== currentQuery || state.jobIsComposing) return;
+      const requestId = ++state.jobSuggestionRequest;
+      renderJobSuggestions([], query, true);
+      const items = await requestJobSuggestions(query);
+      if (requestId !== state.jobSuggestionRequest || query !== $("#jobSearchInput").value.trim()) return;
+      renderJobSuggestions(items, query);
+    }
+    function jobCardFromSuggestion(item) {
+      const existing = mock.jobs.find(job => job.roleName === item.role_name);
+      return existing || {
+        roleName: item.role_name,
+        family: item.category || "岗位知识库",
+        score: 70,
+        description: "已从岗位知识库匹配到该方向，查询后可查看更具体的职责与技能要求。",
+        skills: ["岗位技能待查询"],
+        salary: "以地区、企业和实际岗位为准",
+        risk: "建议确认岗位职责、培养方式和团队情况。",
+        related: []
+      };
+    }
+    function buildJobCandidates(items, query) {
+      const candidates = mergeSuggestions(items, localJobSuggestions(query)).map(jobCardFromSuggestion);
+      return candidates.length ? candidates : mock.jobs.filter(job => jobMatchesQuery(job, query));
     }
     function renderJobs() {
       if (state.jobLoading) {
@@ -714,7 +835,6 @@
         else event.target.checked = false;
         renderJobs(); renderComparison(); renderMatchReport(); renderTiers();
       }));
-      renderRelatedJobs();
       renderComparison();
       renderMatchReport();
     }
@@ -763,16 +883,27 @@
       $$("[data-page]", $("#tierPlans")).forEach(button => button.addEventListener("click", () => { if (button.dataset.prefillRole) state.resume.role = button.dataset.prefillRole; setPage(button.dataset.page, true); fillResume(); }));
       $$("[data-prefill-delivery]", $("#tierPlans")).forEach(button => button.addEventListener("click", () => openDeliveryPrefill(button.dataset.prefillDelivery)));
     }
-    async function runJobSearch() {
-      const query = $("#jobSearchInput").value.trim();
+    async function runJobSearch(value = $("#jobSearchInput").value.trim()) {
+      const query = String(value || "").trim();
       if (!query || query.length > 60) { showToast(query ? "岗位名称不能超过 60 个字符" : "请输入岗位名称"); return; }
+      $("#jobSearchInput").value = query;
+      hideJobSuggestions();
       state.jobLoading = true; renderJobs();
-      const result = await apiOrMock(`/api/job/suggestions?q=${encodeURIComponent(query)}`, {}, () => mock.jobs.filter(job => `${job.roleName}${job.family}${job.skills.join("")}`.includes(query)).map(job => ({ role_name: job.roleName, category: job.family })), "job suggestions");
-      const names = result?.items?.map(item => item.role_name) || result?.map(item => item.role_name) || [];
-      const related = mock.jobs.filter(job => names.includes(job.roleName) || job.roleName.includes(query) || job.family.includes(query) || job.related?.some(item => item.includes(query)));
-      if (related.length) state.jobs = related.concat(mock.jobs.filter(job => !related.includes(job))).slice(0, 6);
+      const suggestions = await requestJobSuggestions(query);
+      state.jobs = buildJobCandidates(suggestions, query).slice(0, 8);
       const intelligence = await apiOrMock("/api/job/query", { method: "POST", body: JSON.stringify({ role_name: query }) }, null, "job intelligence");
-      if (intelligence) state.jobs = state.jobs.map(job => job.roleName === query ? { ...job, description: intelligence.responsibilities?.[0] || job.description, skills: intelligence.required_skills || job.skills } : job);
+      if (intelligence) {
+        const profileName = intelligence.role_name || query;
+        const matchingIndex = state.jobs.findIndex(job => job.roleName === profileName || job.roleName === query);
+        const profile = {
+          ...jobCardFromSuggestion({ role_name: profileName, category: state.jobs[matchingIndex]?.family || "岗位知识库" }),
+          roleName: profileName,
+          description: intelligence.responsibilities?.[0] || state.jobs[matchingIndex]?.description,
+          skills: intelligence.required_skills?.length ? intelligence.required_skills : state.jobs[matchingIndex]?.skills
+        };
+        if (matchingIndex >= 0) state.jobs[matchingIndex] = profile;
+        else state.jobs.unshift(profile);
+      }
       state.lastSearch = query;
       state.jobLoading = false;
       renderJobs(); renderTiers();
@@ -1230,8 +1361,35 @@
       $("#reconnectBtn").addEventListener("click", reconnectBackend);
       $("#globalSearchInput").addEventListener("input", event => renderGlobalSearch(event.target.value));
       $("#globalSearchInput").addEventListener("focus", event => renderGlobalSearch(event.target.value));
-      $("#jobSearchBtn").addEventListener("click", runJobSearch);
-      $("#jobSearchInput").addEventListener("input", renderRelatedJobs);
+      $("#jobSearchBtn").addEventListener("click", () => runJobSearch());
+      $("#jobSearchInput").addEventListener("input", scheduleJobSuggestions);
+      $("#jobSearchInput").addEventListener("focus", () => {
+        if ($("#jobSearchInput").value.trim()) scheduleJobSuggestions();
+      });
+      $("#jobSearchInput").addEventListener("blur", () => {
+        clearTimeout(state.jobSuggestionHideTimer);
+        state.jobSuggestionHideTimer = setTimeout(hideJobSuggestions, 180);
+      });
+      $("#jobSearchInput").addEventListener("compositionstart", () => {
+        state.jobIsComposing = true;
+        clearTimeout(state.jobSuggestionTimer);
+      });
+      $("#jobSearchInput").addEventListener("compositionend", () => {
+        state.jobIsComposing = false;
+        scheduleJobSuggestions();
+      });
+      $("#jobSearchInput").addEventListener("keydown", event => {
+        if (event.key === "Enter" && !state.jobIsComposing) {
+          event.preventDefault();
+          runJobSearch();
+        } else if (event.key === "Escape") {
+          hideJobSuggestions();
+        }
+      });
+      $("#jobSuggestions").addEventListener("mouseenter", () => clearTimeout(state.jobSuggestionHideTimer));
+      $("#jobSuggestions").addEventListener("mouseleave", () => {
+        if (document.activeElement !== $("#jobSearchInput")) state.jobSuggestionHideTimer = setTimeout(hideJobSuggestions, 180);
+      });
       $("#clearJobSelection").addEventListener("click", () => { state.selectedJobs = []; renderJobs(); renderMatchReport(); renderTiers(); });
       $("#openSearchSettingsBtn").addEventListener("click", openSearchSettings);
 
