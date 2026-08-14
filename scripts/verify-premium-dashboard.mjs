@@ -11,6 +11,7 @@ assert.equal(scripts.length, 1, 'dashboard must keep one inline script');
 const storage = new Map();
 const sandbox = {
   console,
+  atob: value => Buffer.from(value, 'base64').toString('utf8'),
   crypto: { randomUUID: () => 'test-id' },
   localStorage: {
     failKey: '',
@@ -29,6 +30,11 @@ sandbox.globalThis = sandbox;
 const exportApi = `
 globalThis.__dashboardTestApi = {
   safeJsonParse,
+  authSession: typeof authSession === 'object' ? authSession : undefined,
+  parseJwtPayload: typeof parseJwtPayload === 'function' ? parseJwtPayload : undefined,
+  scopedLocalKey: typeof scopedLocalKey === 'function' ? scopedLocalKey : undefined,
+  dashboardResumePayload: typeof dashboardResumePayload === 'function' ? dashboardResumePayload : undefined,
+  dashboardResumeFromApi: typeof dashboardResumeFromApi === 'function' ? dashboardResumeFromApi : undefined,
   saveLocal,
   saveLocalBatch,
   maskSensitiveText,
@@ -54,6 +60,25 @@ vm.runInNewContext(source, sandbox, { filename: 'premium-dashboard.inline.js' })
 const api = sandbox.__dashboardTestApi;
 assert.equal(api.safeJsonParse('{"ok":true}', null).ok, true);
 assert.equal(api.safeJsonParse('{', 'fallback'), 'fallback');
+assert.equal(typeof api.parseJwtPayload, 'function', 'JWT payload parser must exist');
+assert.equal(typeof api.scopedLocalKey, 'function', 'user cache-key resolver must exist');
+assert.equal(typeof api.authSession, 'object', 'auth session manager must exist');
+assert.equal(typeof api.dashboardResumePayload, 'function', 'dashboard draft payload adapter must exist');
+assert.equal(typeof api.dashboardResumeFromApi, 'function', 'dashboard draft response adapter must exist');
+const dashboardResume = { name: 'Alice Chen', phone: '13800000000', email: 'alice@example.com', city: 'Shanghai', role: 'Data Analyst', skills: 'SQL, Python', summary: 'Evidence-led analyst', project: 'Retail metrics project', version: 'Campus', filename: 'alice-resume' };
+const backendResume = api.dashboardResumePayload(dashboardResume);
+assert.equal(backendResume.basic.name, 'Alice Chen');
+assert.equal(backendResume.job.target_role, 'Data Analyst');
+assert.deepEqual(Array.from(backendResume.skills.skills), ['SQL', 'Python']);
+assert.equal(api.dashboardResumeFromApi(backendResume).project, 'Retail metrics project');
+const testJwt = `header.${Buffer.from(JSON.stringify({ sub: 'user-42', token_version: 1, exp: 9999999999 })).toString('base64url')}.signature`;
+api.authSession.set(testJwt);
+assert.equal(api.authSession.userId(), 'user-42');
+assert.equal(api.scopedLocalKey('resume-dashboard-evidence'), 'resume-dashboard:user-42:evidence');
+api.saveLocal('resume-dashboard-evidence', [{ id: 42 }]);
+assert.equal(sandbox.localStorage.getItem('resume-dashboard:user-42:evidence'), JSON.stringify([{ id: 42 }]));
+api.authSession.clear();
+assert.equal(api.scopedLocalKey('resume-dashboard-evidence'), null);
 assert.equal(api.saveLocalBatch([['batch-one', { ok: true }], ['batch-two', { ok: true }]]), true);
 sandbox.localStorage.failKey = 'batch-fail';
 assert.equal(api.saveLocalBatch([['batch-restore', { changed: true }], ['batch-fail', { changed: true }]]), false);
@@ -116,5 +141,9 @@ assert.match(html, /openEvidenceOrganizerToolbarBtn/);
 assert.match(html, /items\.length && isExpiredDate\(date\)/);
 assert.match(html, /图片附件未保存，请释放本地空间后重试/);
 assert.match(html, /function saveLocalBatch\b/);
+assert.match(html, /id="loginBtn"/);
+assert.match(html, /Authorization\s*=\s*`Bearer \$\{authSession\.token\}`/);
+assert.match(html, /resume-dashboard:\$\{userId\}:\$\{String\(key\)/);
+assert.doesNotMatch(html, /location\.protocol\s*===\s*["']file:/, 'file:// Mock export branch must be removed');
 
 console.log('premium dashboard contract checks passed');

@@ -364,7 +364,7 @@
       </nav>
       <div class="sidebar-bottom">
         <div class="sync-chip"><span class="sync-dot" id="syncDot"></span><span id="syncText">本地数据已同步</span></div>
-        <div style="margin-top:8px;color:var(--faint);font-size:10px">离线优先 · 事实可追溯</div>
+        <div style="margin-top:8px;color:var(--faint);font-size:10px">云端同步 · 事实可追溯</div>
         <!-- Shortcut hints: Ctrl+K search, Ctrl+S save draft, Ctrl+E export PDF, Ctrl+N new delivery, Ctrl+B sidebar. -->
         <div style="margin-top:10px;color:var(--faint);font-size:10px" title="Ctrl+K 搜索 · Ctrl+S 保存草稿 · Ctrl+E 导出 PDF · Ctrl+N 新增投递 · Ctrl+B 侧边栏">快捷键：Ctrl+K / S / E / N / B</div>
       </div>
@@ -381,8 +381,10 @@
         </div>
         <div class="topbar-actions">
           <div class="global-search" style="position:relative"><input class="input" id="globalSearchInput" title="Ctrl+K 聚焦全局搜索" placeholder="搜索岗位、草稿、经历、投递"><div id="globalSearchResults" class="list hidden" style="position:absolute;z-index:25;top:44px;left:0;right:0;padding:8px;border:1px solid var(--line);border-radius:12px;background:var(--surface);box-shadow:var(--shadow-md)"></div></div>
-          <div id="runtimeBanner" class="status-banner offline"><span class="sync-dot offline"></span><span>本地离线 Mock 演示</span></div>
-          <div class="local-summary"><span id="clientSummary">本地匿名空间</span><span class="avatar">AI</span></div>
+          <div id="runtimeBanner" class="status-banner offline"><span class="sync-dot offline"></span><span>未登录，业务功能已锁定</span></div>
+          <div class="local-summary" id="authStatus"><span id="userSummary">未登录</span><span class="avatar" id="userAvatar">?</span></div>
+          <button class="btn small primary" id="loginBtn" data-public-action="login">登录</button>
+          <button class="btn small soft hidden" id="logoutBtn" data-public-action="logout">退出</button>
           <button class="btn small soft" id="reconnectBtn">重连后端</button>
           <button class="btn small" id="themeToggle">深色</button>
           <button class="btn small soft" id="openPrivacy">数据与隐私</button>
@@ -402,7 +404,7 @@
               <div class="chart"><div class="bar-wrap"><div class="bar" style="height:31%"></div><div class="bar-label">周一</div></div><div class="bar-wrap"><div class="bar" style="height:48%"></div><div class="bar-label">周二</div></div><div class="bar-wrap"><div class="bar" style="height:42%"></div><div class="bar-label">周三</div></div><div class="bar-wrap"><div class="bar" style="height:68%"></div><div class="bar-label">周四</div></div><div class="bar-wrap"><div class="bar" style="height:56%"></div><div class="bar-label">周五</div></div><div class="bar-wrap"><div class="bar" style="height:82%"></div><div class="bar-label">本周</div></div></div>
               <div class="insight-strip"><div class="insight-mini"><strong id="pendingEvidenceMetric">0</strong><span>待补证据</span></div><div class="insight-mini"><strong id="pendingDeliveryMetric">0</strong><span>本周行动</span></div><div class="insight-mini"><strong id="readinessMetric">86%</strong><span>资料完整度</span></div></div>
             </div>
-            <div class="card metric-card"><div class="metric-top"><span class="metric-label">简历草稿</span><span class="metric-icon">▤</span></div><div class="metric-value" id="draftCount">0</div><div class="metric-note">保存在当前匿名空间</div></div>
+            <div class="card metric-card"><div class="metric-top"><span class="metric-label">简历草稿</span><span class="metric-icon">▤</span></div><div class="metric-value" id="draftCount">0</div><div class="metric-note">绑定当前登录账号</div></div>
             <div class="card metric-card"><div class="metric-top"><span class="metric-label">待处理投递</span><span class="metric-icon">→</span></div><div class="metric-value" id="deliveryCount">0</div><div class="metric-note">不包含已结束记录</div></div>
             <div class="card metric-card"><div class="metric-top"><span class="metric-label">职业方向清晰度</span><span class="metric-icon">◒</span></div><div class="metric-value" id="assessmentMetric">78<span style="font-size:14px;color:var(--muted)"> / 100</span></div><div class="metric-note">完成测评后可更新</div></div>
           </div>
@@ -426,7 +428,7 @@
         </section>
 
         <section class="page-section" id="page-favorites">
-          <div class="hero-row"><div><div class="eyebrow">Saved roles</div><h2>把真正想投的岗位留下来。</h2><p>收藏数据保存在当前浏览器中，刷新或双击重新打开页面后仍可继续比较。</p></div><span class="tag blue" id="favoriteCountTag">0 个收藏</span></div>
+          <div class="hero-row"><div><div class="eyebrow">Saved roles</div><h2>把真正想投的岗位留下来。</h2><p>收藏数据按当前登录账号隔离保存，刷新后可继续比较。</p></div><span class="tag blue" id="favoriteCountTag">0 个收藏</span></div>
           <div class="card card-pad"><div class="section-head"><div><h3>我的收藏岗位</h3><p>支持单独比较，并快速生成三档职业规划。</p></div><div class="toolbar-group"><button class="btn small" id="compareFavoritesBtn">比较收藏</button><button class="btn small soft" id="favoritePlansBtn">生成三档规划</button></div></div><div id="favoriteJobCards" class="job-grid" style="margin-top:15px"></div></div>
           <div class="section-block"><div class="card card-pad" id="favoritePlanContent"><div class="empty">收藏岗位后，这里会出现专属职业规划。</div></div></div>
         </section>
@@ -480,9 +482,9 @@
 
         <!-- Module 8: local privacy, backup, client identity, and extension placeholders. -->
         <section class="page-section" id="page-privacy">
-          <div class="hero-row"><div><div class="eyebrow">Local privacy</div><h2>数据归你，清理也由你决定。</h2><p>本页只管理当前设备上的缓存和本地待同步状态。服务端记录需要在对应页面逐条删除。</p></div><span class="tag green">本地匿名空间</span></div>
-          <div class="grid grid-2"><div class="card card-pad"><div class="section-head"><div><h3>草稿管理</h3><p>当前设备与服务端草稿列表</p></div><div class="toolbar-group"><button class="btn small" id="refreshDraftsBtn">刷新</button><button class="btn small danger" id="deleteSelectedDraftsBtn">删除选中</button></div></div><label style="display:flex;align-items:center;gap:8px;margin-top:15px;color:var(--muted);font-size:11px"><input type="checkbox" id="selectAllDrafts"> 全选草稿</label><div id="draftList" class="list" style="margin-top:10px"></div><div id="draftPagination"></div></div><div class="card card-pad"><div class="section-head"><div><h3>本机数据</h3><p>清理操作不会向服务端批量删除</p></div><span class="metric-icon">◐</span></div><div class="empty" style="margin-top:15px;text-align:left"><strong>当前匿名 client_id</strong><div id="clientIdValue" class="dark-note" style="margin-top:5px;word-break:break-all"></div><div style="font-size:12px;line-height:1.8;margin-top:8px">简历 checkpoint · 职业规划状态 · 测评答案 · 咨询会话 · 投递待同步队列</div></div><div class="toolbar-group" style="margin-top:15px"><button class="btn danger" id="clearLocalBtn">清理本机缓存</button><button class="btn" id="resetClientBtn">重置 client_id</button></div><div class="toolbar-group" style="margin-top:10px"><button class="btn soft" id="exportAllLocalBtn">导出全部本地数据</button><button class="btn" id="deleteSelectedEvidenceBtn">删除选中经历</button></div><p class="field-help" style="margin-top:12px">已保存的草稿、经历证据和投递记录不会被清理缓存操作删除。</p></div></div>
-          <div class="section-block"><details class="card collapse static"><summary><div><h3>后续扩展入口</h3><p style="margin-top:3px;color:var(--muted);font-size:11px">当前仅静态占位，不新增接口</p></div><span class="tag">规划中</span></summary><div class="collapse-content"><div class="grid grid-2"><div class="list-item"><h4>MySQL / PostgreSQL 迁移配置</h4><p>未来可替换本地 SQLite 数据层。</p></div><div class="list-item"><h4>招聘数据源与 ATS 对接</h4><p>仅支持获得授权的官方或企业接口。</p></div><div class="list-item"><h4>登录、多端同步与团队版</h4><p>当前版本坚持本地匿名 Demo。</p></div><div class="list-item"><h4>HTTPS 部署与套餐配置</h4><p>后续部署时单独配置，不影响本地演示。</p></div></div></div></details></div>
+          <div class="hero-row"><div><div class="eyebrow">Local privacy</div><h2>数据归你，清理也由你决定。</h2><p>本页只管理当前账号的缓存和本地待同步状态。服务端记录需要在对应页面逐条删除。</p></div><span class="tag green">账号隔离缓存</span></div>
+          <div class="grid grid-2"><div class="card card-pad"><div class="section-head"><div><h3>草稿管理</h3><p>当前账号的本地缓存与云端草稿列表</p></div><div class="toolbar-group"><button class="btn small" id="refreshDraftsBtn">刷新</button><button class="btn small danger" id="deleteSelectedDraftsBtn">删除选中</button></div></div><label style="display:flex;align-items:center;gap:8px;margin-top:15px;color:var(--muted);font-size:11px"><input type="checkbox" id="selectAllDrafts"> 全选草稿</label><div id="draftList" class="list" style="margin-top:10px"></div><div id="draftPagination"></div></div><div class="card card-pad"><div class="section-head"><div><h3>账号缓存</h3><p>数据仅保存在当前登录账号的命名空间</p></div><span class="metric-icon">◐</span></div><div class="empty" style="margin-top:15px;text-align:left"><strong>当前缓存归属</strong><div id="clientIdValue" class="dark-note" style="margin-top:5px;word-break:break-all">登录后显示 JWT 用户标识</div><div style="font-size:12px;line-height:1.8;margin-top:8px">简历 checkpoint · 职业规划状态 · 测评答案 · 咨询会话 · 投递待同步队列</div></div><div class="toolbar-group" style="margin-top:15px"><button class="btn danger" id="clearLocalBtn">清理当前账号缓存</button></div><div class="toolbar-group" style="margin-top:10px"><button class="btn soft" id="exportAllLocalBtn">导出全部本地数据</button><button class="btn" id="deleteSelectedEvidenceBtn">删除选中经历</button></div><p class="field-help" style="margin-top:12px">旧版未绑定账号的 client_id 缓存不会自动归属到任何账号，避免共用设备的数据泄露。</p></div></div>
+          <div class="section-block"><details class="card collapse static"><summary><div><h3>后续扩展入口</h3><p style="margin-top:3px;color:var(--muted);font-size:11px">当前仅静态占位，不新增接口</p></div><span class="tag">规划中</span></summary><div class="collapse-content"><div class="grid grid-2"><div class="list-item"><h4>MySQL / PostgreSQL 迁移配置</h4><p>未来可替换本期 SQLite 过渡数据层。</p></div><div class="list-item"><h4>招聘数据源与 ATS 对接</h4><p>仅支持获得授权的官方或企业接口。</p></div><div class="list-item"><h4>登录、多端同步与团队版</h4><p>当前已具备 JWT 登录与账号数据隔离底座。</p></div><div class="list-item"><h4>HTTPS 部署与套餐配置</h4><p>上线时配置前端域名与后端 HTTPS 域名。</p></div></div></div></details></div>
         </section>
       </div>
     </main>
@@ -494,12 +496,56 @@
   <div class="toast" id="toast"></div>
   <script>
     /*
-      API config entry:
-      - Direct double-click: API_BASE_URL is empty; relative requests fail safely.
-      - Vite dev server: /api and /downloads are proxied to http://127.0.0.1:8000.
-      Existing proxy rule is in resume-miniprogram/vite.config.ts. No new backend API is added.
+      本期过渡代码 - API 配置入口：
+      - 本地 Vite 开发：留空后使用 /api、/downloads 代理到 127.0.0.1:8000。
+      - 线上 HTTPS 部署：在页面加载前设置 window.__RESUME_API_BASE_URL__，例如
+        https://api.example.com；小程序 WebView 迁移时在宿主环境注入同名变量。
+      - 断网时只使用内存 Mock 保障界面预览，正式业务操作仍需要登录态。
     */
-    const API_BASE_URL = "";
+    const API_BASE_URL = typeof window !== "undefined" && window.__RESUME_API_BASE_URL__ ? String(window.__RESUME_API_BASE_URL__).replace(/\/$/, "") : "";
+    const AUTH_TOKEN_STORAGE_KEY = "resume-dashboard-auth-token";
+    const WEB_UI_CACHE_KEYS = new Set(["resume-dashboard-theme"]);
+    const API_SERVICE_FAILURE = Object.freeze({ apiServiceFailure: true });
+
+    /*
+      本期过渡代码 - JWT 与网页缓存工具：
+      业务缓存统一为 resume-dashboard:{JWT.sub}:{业务键名}，未登录不会读写业务缓存。
+      JWT 的 sub 是唯一可信用户身份；页面从不向业务接口传 user_id/client_id。
+      Uni-App WebView 迁移点：将 localStorage 替换为平台安全存储，并沿用这些纯函数。
+    */
+    function parseJwtPayload(token) {
+      try {
+        const encoded = String(token || "").split(".")[1];
+        if (!encoded || typeof atob !== "function") return null;
+        const normalized = encoded.replace(/-/g, "+").replace(/_/g, "/");
+        return JSON.parse(atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=")));
+      } catch {
+        return null;
+      }
+    }
+    function isApiServiceFailure(value) { return value === API_SERVICE_FAILURE; }
+    const authSession = {
+      token: (() => { try { return localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) || ""; } catch { return ""; } })(),
+      user: null,
+      payload() { return parseJwtPayload(this.token); },
+      userId() { return String(this.payload()?.sub || ""); },
+      hasToken() {
+        const payload = this.payload();
+        return Boolean(this.token && payload?.sub && Number(payload.exp || 0) * 1000 > Date.now());
+      },
+      set(token) {
+        const payload = parseJwtPayload(token);
+        if (!payload?.sub || Number(payload.exp || 0) * 1000 <= Date.now()) return false;
+        this.token = String(token);
+        try { localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, this.token); } catch {}
+        return true;
+      },
+      clear() {
+        this.token = "";
+        this.user = null;
+        try { localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY); } catch {}
+      }
+    };
 
     /*
       Uni-App migration model notes:
@@ -538,11 +584,7 @@
       moved to Uni-App stores/composables without changing business behavior.
     */
 
-    /*
-      Mock fallback logic:
-      apiOrMock always attempts the existing backend endpoint first. Direct-file mode,
-      backend errors, or unavailable endpoints fall back to local mock data and remain interactive.
-    */
+    /* 断网仅使用内存 Mock 兜底；线上请求优先走受 JWT 保护的后端。 */
     const mock = {
       jobs: [
         { roleName: "数据分析师", family: "数据与分析", score: 86, description: "用业务数据发现问题、验证假设，并把结论转化为可执行建议。", skills: ["SQL", "Excel", "业务理解"], salary: "8k–18k", risk: "需要持续理解业务，不只是写报表。", related: ["产品分析师", "数据工程师"] },
@@ -618,7 +660,6 @@
       toastTimer: null,
       runtime: "mock",
       theme: loadLocal("resume-dashboard-theme", "light"),
-      clientId: loadLocal("resume-dashboard-client-id", `demo-${crypto.randomUUID?.() || Date.now()}`),
       webSearchEnabled: loadLocal("resume-dashboard-web-search", false),
       tavilyKey: loadLocal("resume-dashboard-tavily-key", ""),
       webSearchProvider: loadLocal("resume-dashboard-search-provider", "disabled"),
@@ -666,7 +707,6 @@
       lastBackupAt: 0
     };
     state.extension = { ...extensionDefaults, ...loadLocal("resume-dashboard-extension", {}) };
-    saveLocal("resume-dashboard-client-id", state.clientId);
 
     const $ = (selector, root = document) => root.querySelector(selector);
     const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -684,22 +724,49 @@
     };
     const localKeys = ["resume-dashboard-evidence", "resume-dashboard-deliveries", "resume-dashboard-queue", "resume-dashboard-drafts", "resume-dashboard-assessment-answers", "resume-dashboard-assessment-result", "resume-dashboard-assessment-history", "resume-dashboard-resume"];
 
+    function isBusinessCacheKey(key) {
+      return String(key).startsWith("resume-dashboard-") && !WEB_UI_CACHE_KEYS.has(String(key)) && String(key) !== AUTH_TOKEN_STORAGE_KEY;
+    }
+    function scopedLocalKey(key) {
+      if (!isBusinessCacheKey(key)) return String(key);
+      if (!authSession.hasToken()) return null;
+      const userId = authSession.userId();
+      if (!userId) return null;
+      return `resume-dashboard:${userId}:${String(key).replace(/^resume-dashboard-/, "")}`;
+    }
     function loadLocal(key, fallback) {
       try {
-        const value = localStorage.getItem(key);
+        const storageKey = scopedLocalKey(key);
+        if (!storageKey) return fallback;
+        const value = localStorage.getItem(storageKey);
         return value ? JSON.parse(value) : fallback;
       } catch {
         return fallback;
       }
     }
     function saveLocal(key, value) {
-      try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch { return false; }
+      try {
+        const storageKey = scopedLocalKey(key);
+        if (!storageKey) return false;
+        localStorage.setItem(storageKey, JSON.stringify(value));
+        return true;
+      } catch { return false; }
+    }
+    function removeLocal(key) {
+      try {
+        const storageKey = scopedLocalKey(key);
+        if (!storageKey) return false;
+        localStorage.removeItem(storageKey);
+        return true;
+      } catch { return false; }
     }
     function saveLocalBatch(entries) {
       const previous = [];
       try {
-        entries.forEach(([key]) => previous.push([key, localStorage.getItem(key)]));
-        entries.forEach(([key, value]) => localStorage.setItem(key, JSON.stringify(value)));
+        const resolved = entries.map(([key, value]) => [scopedLocalKey(key), value]).filter(([key]) => key);
+        if (resolved.length !== entries.length) return false;
+        resolved.forEach(([key]) => previous.push([key, localStorage.getItem(key)]));
+        resolved.forEach(([key, value]) => localStorage.setItem(key, JSON.stringify(value)));
         return true;
       } catch {
         previous.forEach(([key, value]) => { try { value === null ? localStorage.removeItem(key) : localStorage.setItem(key, value); } catch {} });
@@ -794,7 +861,7 @@
     }
     function localBusinessSnapshot() {
       const extension = { ...state.extension, snapshots: [], backups: [] };
-      return { exportedAt: new Date().toISOString(), clientId: state.clientId, evidence: state.evidence, deliveries: state.deliveries, drafts: state.drafts, assessmentHistory: state.assessmentHistory, assessmentResult: state.assessmentResult, resume: state.resume, extension };
+      return { exportedAt: new Date().toISOString(), cacheOwner: authSession.userId(), evidence: state.evidence, deliveries: state.deliveries, drafts: state.drafts, assessmentHistory: state.assessmentHistory, assessmentResult: state.assessmentResult, resume: state.resume, extension };
     }
     function createSnapshot(label = "手动快照") {
       const snapshot = { id: `snapshot-${Date.now()}`, label, createdAt: new Date().toISOString(), data: localBusinessSnapshot() };
@@ -978,13 +1045,39 @@
         draftId: item.draftId ?? item.draft_id ?? null
       };
     }
+    /* 网页编辑器与 FastAPI ResumePayload 的纯数据适配，方便后续迁移 Uni-App store。 */
+    function dashboardResumePayload(resume = {}) {
+      const skills = String(resume.skills || "").split(/[,，、\s]+/).map(item => item.trim()).filter(Boolean);
+      const project = String(resume.project || "").trim();
+      return {
+        version: 1,
+        basic: { name: String(resume.name || ""), phone: String(resume.phone || ""), email: String(resume.email || ""), city: String(resume.city || "") },
+        job: { target_role: String(resume.role || ""), employment_type: "", expected_salary: "" },
+        education: [],
+        employment: [],
+        projects: project ? [{ name: project.slice(0, 80), role: String(resume.role || ""), start_date: "", end_date: "", description: project }] : [],
+        skills: { skills, certificates: [] },
+        self_evaluation: String(resume.summary || ""),
+        section_visibility: { basic: true, job: true, education: true, employment: true, projects: true, skills: true, self_evaluation: true }
+      };
+    }
+    function dashboardResumeFromApi(resume = {}) {
+      if (!resume?.basic || !resume?.job) return { ...defaultResume, ...(resume || {}) };
+      const firstProject = asArray(resume.projects)[0] || {};
+      return {
+        ...defaultResume,
+        name: safeText(resume.basic.name, ""), phone: safeText(resume.basic.phone, ""), email: safeText(resume.basic.email, ""), city: safeText(resume.basic.city, ""),
+        role: safeText(resume.job.target_role, ""), summary: safeText(resume.self_evaluation, ""),
+        project: safeText(firstProject.description || firstProject.name, ""), skills: asArray(resume.skills?.skills).join(", ")
+      };
+    }
     function normalizeDraft(item = {}) {
       return {
         id: String(item.id ?? `draft-${Date.now()}-${Math.random()}`),
-        title: safeText(item.title, "未命名草稿"),
+        title: safeText(item.title ?? item.job_title, "未命名草稿"),
         updatedAt: safeText(item.updatedAt ?? item.updated_at, "待更新"),
-        template: safeText(item.template, "简约商务版"),
-        resume: { ...defaultResume, ...(item.resume || {}) }
+        template: safeText(item.template ?? item.template_id, "简约商务版"),
+        resume: dashboardResumeFromApi(item.resume)
       };
     }
     function paginate(items, page, pageSize) {
@@ -1074,6 +1167,132 @@
       resetModalActions();
       $("#modalBackdrop").classList.remove("open");
     }
+    /* 本期过渡代码 - 网页登录交互；短信与微信真实接入点均由后端环境变量控制。 */
+    function requireLogin(message = "请先登录后再管理你的求职数据") {
+      if (authSession.hasToken()) return true;
+      openLoginModal(message);
+      return false;
+    }
+    function updateAuthStatus() {
+      const loggedIn = authSession.hasToken();
+      const userId = authSession.userId();
+      const phone = authSession.user?.phone || "";
+      $("#userSummary").textContent = loggedIn ? (phone || `用户 ${userId.slice(-6)}`) : "未登录";
+      $("#userAvatar").textContent = loggedIn ? (phone || userId || "U").slice(-2).toUpperCase() : "?";
+      $("#loginBtn").classList.toggle("hidden", loggedIn);
+      $("#logoutBtn").classList.toggle("hidden", !loggedIn);
+      updateRuntimeBanner();
+    }
+    function loadUserScopedState() {
+      state.evidence = loadLocal("resume-dashboard-evidence", mock.evidence);
+      state.deliveries = loadLocal("resume-dashboard-deliveries", mock.deliveries);
+      state.pendingQueue = loadLocal("resume-dashboard-queue", []);
+      state.drafts = loadLocal("resume-dashboard-drafts", mock.drafts);
+      state.assessmentAnswers = loadLocal("resume-dashboard-assessment-answers", {});
+      state.assessmentResult = loadLocal("resume-dashboard-assessment-result", null);
+      state.assessmentHistory = loadLocal("resume-dashboard-assessment-history", mock.assessmentHistory);
+      state.resume = loadLocal("resume-dashboard-resume", defaultResume);
+      state.extension = normalizeExtension(loadLocal("resume-dashboard-extension", {}));
+      state.favoriteJobs = state.extension.favoriteJobs;
+      state.jobAdvancedFilters = state.extension.jobFilters;
+    }
+    function resetLoggedOutState() {
+      state.jobs = [...mock.jobs]; state.selectedJobs = []; state.favoriteJobs = [];
+      state.evidence = [...mock.evidence]; state.evidenceSelected = new Set();
+      state.deliveries = [...mock.deliveries]; state.pendingQueue = [];
+      state.drafts = [...mock.drafts]; state.selectedDrafts = new Set();
+      state.assessmentAnswers = {}; state.assessmentResult = null; state.assessmentHistory = [...mock.assessmentHistory];
+      state.resume = { ...defaultResume }; state.resumeDirty = false; state.evidenceDirty = false; state.deliveryDirty = false;
+      state.extension = normalizeExtension({}); state.jobAdvancedFilters = state.extension.jobFilters;
+    }
+    function renderLoggedOutState() {
+      resetLoggedOutState();
+      fillResume(); renderDashboard(); renderJobs(); renderFavorites(); renderTiers(); renderEvidence(); bindEvidenceAttachments();
+      renderAssessment(); renderDeliveries(); renderDrafts(); renderCompletionFeatures(); renderPrivacy();
+    }
+    function renderAfterLogin() {
+      loadUserScopedState();
+      fillResume(); renderDashboard(); renderJobs(); renderFavorites(); renderTiers(); renderEvidence(); bindEvidenceAttachments();
+      renderAssessment(); renderDeliveries(); renderDrafts(); renderCompletionFeatures(); renderPrivacy();
+    }
+    async function hydrateAuthSession(showPrompt = false) {
+      if (!authSession.hasToken()) { authSession.clear(); updateAuthStatus(); return false; }
+      try {
+        authSession.user = await api("/api/auth/me");
+        updateAuthStatus();
+        return true;
+      } catch (error) {
+        authSession.clear();
+        resetLoggedOutState();
+        updateAuthStatus();
+        if (showPrompt) openLoginModal("登录状态已失效，请重新登录");
+        return false;
+      }
+    }
+    async function logout() {
+      try { await api("/api/auth/logout", { method: "POST", allowAnonymous: true }); } catch {}
+      authSession.clear();
+      renderLoggedOutState();
+      updateAuthStatus();
+      showToast("已退出登录，本地业务缓存仍按账号隔离保留");
+      openLoginModal("已退出登录，请登录后继续操作");
+    }
+    function openLoginModal(message = "登录后可保存并同步你的求职数据") {
+      openModal("登录求职工作台", `<p class="field-help" style="margin:0 0 14px">${escapeHtml(message)}</p><div class="toolbar-group" id="authTabs"><button class="btn small primary" type="button" data-auth-tab="phone">手机号验证码</button><button class="btn small" type="button" data-auth-tab="wechat">微信扫码</button></div><div id="authPhonePanel" style="margin-top:14px"><div class="field"><label>手机号</label><input class="input" id="authPhone" inputmode="tel" maxlength="20" placeholder="请输入手机号"></div><div class="field" style="margin-top:12px"><label>验证码</label><div class="toolbar-group"><input class="input" id="authCode" inputmode="numeric" maxlength="6" placeholder="演示模式验证码为 123456"><button class="btn small soft" type="button" id="sendLoginCodeBtn">发送验证码</button></div></div><p class="field-help" style="margin-top:10px">本期为登录底座：未配置短信服务时仅由后端 AUTH_DEMO_MODE 提供演示验证码。阿里云、腾讯云和自定义 HTTP 网关接入点已在后端保留。</p><button class="btn primary" type="button" id="phoneLoginBtn" style="margin-top:14px">登录并进入工作台</button></div><div id="authWechatPanel" class="hidden" style="margin-top:14px"><div class="empty"><strong>微信扫码登录待配置</strong><p>需补充微信开放平台 AppID、AppSecret 与 HTTPS 回调域名后启用真实授权。</p></div></div>`, () => false, "");
+      $("#modalConfirm").style.display = "none";
+      $("#modalCancel").textContent = "暂不登录";
+      const setTab = tab => {
+        $("#authPhonePanel").classList.toggle("hidden", tab !== "phone");
+        $("#authWechatPanel").classList.toggle("hidden", tab !== "wechat");
+        $$("[data-auth-tab]").forEach(button => button.classList.toggle("primary", button.dataset.authTab === tab));
+      };
+      $$("[data-auth-tab]").forEach(button => button.onclick = () => setTab(button.dataset.authTab));
+      $("#sendLoginCodeBtn").onclick = async () => {
+        const phone = $("#authPhone").value.trim();
+        if (!/^1\d{10}$/.test(phone)) { showToast("请输入有效的 11 位手机号"); return; }
+        try {
+          const result = await api("/api/auth/send-code", { method: "POST", allowAnonymous: true, body: JSON.stringify({ phone }) });
+          showToast(result?.demo_code ? `演示验证码：${result.demo_code}` : "验证码已发送");
+        } catch (error) { showToast(error.message || "验证码发送失败"); }
+      };
+      $("#phoneLoginBtn").onclick = async () => {
+        const phone = $("#authPhone").value.trim();
+        const code = $("#authCode").value.trim();
+        if (!/^1\d{10}$/.test(phone) || !/^\d{6}$/.test(code)) { showToast("请输入手机号和 6 位验证码"); return; }
+        try {
+          const result = await api("/api/auth/login-phone", { method: "POST", allowAnonymous: true, body: JSON.stringify({ phone, code }) });
+          if (!authSession.set(result?.access_token || result?.token)) throw new Error("登录凭证无效");
+          authSession.user = result?.user || null;
+          await hydrateAuthSession();
+          renderAfterLogin();
+          closeModal();
+          showToast("登录成功，已切换到你的专属数据空间");
+          refreshRemoteData();
+        } catch (error) { showToast(error.message || "登录失败"); }
+      };
+    }
+    function installAuthGuards() {
+      document.addEventListener("click", event => {
+        if (authSession.hasToken()) return;
+        const control = event.target.closest("button, input, textarea, select, [contenteditable='true']");
+        if (!control || control.closest("#modalBackdrop") || control.matches("#loginBtn, #logoutBtn, #themeToggle, #mobileMenu, [data-public-action]")) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        requireLogin();
+      }, true);
+      document.addEventListener("focusin", event => {
+        if (authSession.hasToken() || event.target.closest("#modalBackdrop")) return;
+        if (!event.target.matches("input, textarea, select, [contenteditable='true']")) return;
+        event.target.blur?.();
+        requireLogin();
+      }, true);
+      document.addEventListener("keydown", event => {
+        if (!authSession.hasToken() && event.ctrlKey && ["s", "e", "n"].includes(event.key.toLowerCase())) {
+          event.preventDefault();
+          requireLogin();
+        }
+      }, true);
+    }
     function openSyncConflict(localData, serverData, onServer, onLocal, onCancel) {
       openModal(
         "本地与服务器版本冲突",
@@ -1136,20 +1355,53 @@
       return `<span class="tag ${tone}">${statusText[status] || status}</span>`;
     }
 
-    /* Existing backend adapter: only README-documented endpoints are used. */
+    /* 本期过渡代码 - 所有云端业务请求自动携带 JWT；后端只信任 Token 的 sub。 */
     async function api(path, options = {}) {
+      const allowAnonymous = Boolean(options.allowAnonymous);
+      if (!allowAnonymous && !authSession.hasToken()) {
+        const error = new Error("请先登录后再访问云端数据");
+        error.code = "AUTH_REQUIRED";
+        openLoginModal(error.message);
+        throw error;
+      }
       const controller = new AbortController();
       const requestId = ++state.requestSequence;
       const timeoutId = setTimeout(() => controller.abort(), 120000);
       const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+      if (authSession.hasToken()) headers.Authorization = `Bearer ${authSession.token}`;
       try {
-        const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers, signal: controller.signal });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const envelope = await response.json();
-        if (envelope && envelope.code && envelope.code !== "ok") throw new Error(envelope.message || "请求失败");
+        const { allowAnonymous: _ignored, ...requestOptions } = options;
+        const response = await fetch(`${API_BASE_URL}${path}`, { ...requestOptions, headers, signal: controller.signal });
+        const envelope = await response.json().catch(() => null);
+        if (response.status === 401 || response.status === 403) {
+          authSession.clear();
+          renderLoggedOutState();
+          updateAuthStatus();
+          const error = new Error("登录状态已失效，请重新登录");
+          error.code = "AUTH_INVALID";
+          openLoginModal(error.message);
+          throw error;
+        }
+        if (!response.ok) {
+          const error = new Error(envelope?.message || envelope?.detail || `请求失败（HTTP ${response.status}）`);
+          error.code = envelope?.code || "API_ERROR";
+          error.isServiceError = true;
+          throw error;
+        }
+        if (envelope && envelope.code && envelope.code !== "ok") {
+          const error = new Error(envelope.message || "请求失败");
+          error.code = envelope.code;
+          error.isServiceError = true;
+          throw error;
+        }
         return envelope && Object.prototype.hasOwnProperty.call(envelope, "data") ? envelope.data : envelope;
       } catch (error) {
-        if (error?.name === "AbortError") throw new Error("请求超时（120秒）");
+        if (error?.name === "AbortError") {
+          const timeoutError = new Error("请求超时（120秒）");
+          timeoutError.isNetworkError = true;
+          throw timeoutError;
+        }
+        if (!error?.isServiceError && !error?.code?.startsWith("AUTH_")) error.isNetworkError = true;
         throw error;
       } finally {
         clearTimeout(timeoutId);
@@ -1163,16 +1415,28 @@
         updateRuntimeBanner();
         return result;
       } catch (error) {
-        state.runtime = "mock";
+        if (error?.code === "AUTH_REQUIRED" || error?.code === "AUTH_INVALID") return API_SERVICE_FAILURE;
+        if (error?.isNetworkError) {
+          state.runtime = "mock";
+          updateRuntimeBanner();
+          console.info(`[mock fallback] ${label}`, error.message);
+          if (error.message.includes("超时")) showToast(`${label}请求超时，已切换到 Mock 数据`);
+          return typeof fallback === "function" ? fallback() : fallback;
+        }
+        state.runtime = "online";
         updateRuntimeBanner();
-        console.info(`[mock fallback] ${label}`, error.message);
-        if (error.message.includes("超时")) showToast(`${label}请求超时，已切换到 Mock 数据`);
-        return typeof fallback === "function" ? fallback() : fallback;
+        showToast(`${label}失败：${error.message || "服务暂不可用"}`);
+        return API_SERVICE_FAILURE;
       }
     }
     function updateRuntimeBanner() {
       const banner = $("#runtimeBanner");
       if (!banner) return;
+      if (!authSession.hasToken()) {
+        banner.className = "status-banner offline";
+        banner.innerHTML = '<span class="sync-dot offline"></span><span>未登录，业务功能已锁定</span>';
+        return;
+      }
       const online = state.networkOnline && state.runtime === "online";
       banner.className = `status-banner ${online ? "online" : "offline"}`;
       banner.innerHTML = `<span class="sync-dot ${online ? "" : "offline"}"></span><span>${online ? "已连接后端真实数据" : state.networkOnline ? "本地离线 Mock 演示" : "网络已离线 · 本地 Mock"}</span>`;
@@ -1205,8 +1469,8 @@
       return result;
     }
     async function reconnectBackend() {
-      const result = await apiOrMock("/health", {}, null, "backend health check");
-      if (result) {
+      const result = await apiOrMock("/health", { allowAnonymous: true }, null, "backend health check");
+      if (result && !isApiServiceFailure(result)) {
         state.runtime = "online";
         showToast("后端连接已恢复，后续请求优先使用真实数据");
         await refreshRemoteData();
@@ -1217,10 +1481,13 @@
       updateRuntimeBanner();
     }
     async function refreshRemoteData() {
+      if (!authSession.hasToken()) return;
       const [draftData, assessmentData] = await Promise.all([
-        apiOrMock("/api/draft/list?client_id=" + encodeURIComponent(state.clientId), {}, null),
-        apiOrMock("/api/career/assessment?client_id=" + encodeURIComponent(state.clientId), {}, null)
+        apiOrMock("/api/draft/list", {}, null),
+        apiOrMock("/api/career/assessment", {}, null)
       ]);
+      if (!authSession.hasToken()) return;
+      if (isApiServiceFailure(draftData) || isApiServiceFailure(assessmentData)) return;
       const serverDrafts = asArray(draftData?.items || draftData).map(normalizeDraft);
       const serverAssessment = assessmentData?.result || null;
       const localData = { drafts: state.drafts, assessment: state.assessmentResult };
@@ -1321,6 +1588,7 @@
         () => local,
         "job type-ahead"
       );
+      if (isApiServiceFailure(result)) return API_SERVICE_FAILURE;
       return mergeSuggestions(suggestionItems(result), local);
     }
     function setJobSuggestionsVisible(visible) {
@@ -1402,6 +1670,7 @@
       });
     }
     function toggleFavoriteJob(roleName) {
+      if (!requireLogin()) return;
       const job = state.jobs.find(item => item.roleName === roleName) || mock.jobs.find(item => item.roleName === roleName);
       if (!job) return;
       const index = state.favoriteJobs.findIndex(item => item.roleName === roleName);
@@ -1537,6 +1806,7 @@
       target.innerHTML = `<div class="grid grid-3"><div class="tier backup"><span class="tag amber">上游基础</span><h4 style="margin-top:12px">${escapeHtml(upstream.join(" / ") || "通用基础能力")}</h4><p style="margin-top:8px">先补齐 ${escapeHtml(role.skills.slice(0, 2).join("、") || "岗位基础技能")}，建立可验证的项目证据。</p></div><div class="tier safe"><span class="tag green">当前目标</span><h4 style="margin-top:12px">${escapeHtml(role.roleName)}</h4><p style="margin-top:8px">以 7 / 30 / 90 天计划持续积累真实成果和面试反馈。</p></div><div class="tier"><span class="tag blue">进阶方向</span><div class="tag-row" style="margin-top:12px">${downstream.map(item => `<span class="tag blue">${escapeHtml(item)}</span>`).join("")}</div><p style="margin-top:8px">按业务影响力、复杂度和协作范围逐步升级。</p></div></div>`;
     }
     async function runJobSearch(value = $("#jobSearchInput").value.trim()) {
+      if (!requireLogin()) return;
       const query = String(value || "").trim();
       if (!query || query.length > 60) { showToast(query ? "岗位名称不能超过 60 个字符" : "请输入岗位名称"); return; }
       $("#jobSearchInput").value = query;
@@ -1546,9 +1816,13 @@
       hideJobSuggestions();
       state.jobLoading = true; renderJobs();
       const suggestions = await requestJobSuggestions(query);
+      if (isApiServiceFailure(suggestions)) { state.jobLoading = false; renderJobs(); return; }
+      if (!authSession.hasToken()) { state.jobLoading = false; renderJobs(); return; }
       state.jobs = buildJobCandidates(suggestions, query).slice(0, 8).map(normalizeJob);
       state.jobPage = 1;
       const intelligence = await apiOrMock("/api/job/query", { method: "POST", body: JSON.stringify({ role_name: query }) }, null, "job intelligence");
+      if (isApiServiceFailure(intelligence)) { state.jobLoading = false; renderJobs(); return; }
+      if (!authSession.hasToken()) { state.jobLoading = false; renderJobs(); return; }
       if (intelligence) {
         const profileName = intelligence.role_name || query;
         const matchingIndex = state.jobs.findIndex(job => job.roleName === profileName || job.roleName === query);
@@ -1684,7 +1958,7 @@
       }, "写入");
     }
     function exportEvidence() {
-      const text = JSON.stringify({ exportedAt: new Date().toISOString(), clientId: state.clientId, evidence: state.evidence }, null, 2);
+      const text = JSON.stringify({ exportedAt: new Date().toISOString(), cacheOwner: authSession.userId(), evidence: state.evidence }, null, 2);
       downloadText("经历证据备份.json", text, "application/json");
     }
     function importEvidence(file) {
@@ -1927,9 +2201,10 @@
       $("#assessmentNext").addEventListener("click", submitAssessment);
     }
     async function submitAssessment() {
+      if (!requireLogin()) return;
       state.assessmentLoading = true;
       const normalized = Object.fromEntries(Object.entries(state.assessmentAnswers).map(([key, answer]) => [key, answer?.skipped ? null : answer?.value || answer]));
-      const result = await apiOrMock("/api/career/assessment/submit", { method: "POST", body: JSON.stringify({ client_id: state.clientId, answers: normalized }) }, () => ({ result: {
+      const result = await apiOrMock("/api/career/assessment/submit", { method: "POST", body: JSON.stringify({ answers: normalized }) }, () => ({ result: {
         top_interests: [{ label: "分析与探索", score: 4.5 }, { label: "结构化执行", score: 4.1 }],
         work_style_summary: "你更适合有明确问题、可以持续积累和复盘的工作方式。",
         strength_evidence: ["能从真实项目中提炼方法和结果"],
@@ -1937,6 +2212,8 @@
         action_plan: { seven_day: ["整理 2 条真实项目证据"], thirty_day: ["完成岗位相关小项目并复盘"], ninety_day: ["用面试反馈更新方向与简历版本"] }
       } }), "assessment submit");
       state.assessmentLoading = false;
+      if (isApiServiceFailure(result)) { renderAssessment(); return; }
+      if (!authSession.hasToken()) { renderAssessment(); return; }
       state.assessmentResult = result?.result || result;
       state.assessmentHistory.unshift({ id: Date.now(), createdAt: new Date().toLocaleString("zh-CN"), score: scoreAssessment(state.assessmentResult), result: state.assessmentResult });
       state.assessmentHistory = state.assessmentHistory.slice(0, 10);
@@ -2050,9 +2327,12 @@
       openModal("删除投递记录？", "<p style='margin:0;color:var(--muted)'>删除后仅影响当前工作台记录，不会撤回任何外部投递。</p>", () => { state.deliveries = state.deliveries.filter(item => item.id !== id); state.deliveryDirty = false; renderDeliveries(); showToast("投递记录已删除"); });
     }
     async function retryQueueItem(id) {
+      if (!requireLogin()) return;
       const entry = state.pendingQueue.find(item => item.id === id);
       if (!entry) return;
       const result = await apiOrMock("/api/applications", { method: "POST", body: JSON.stringify(entry.payload) }, null, "single delivery retry");
+      if (isApiServiceFailure(result)) return;
+      if (!authSession.hasToken()) return;
       if (result) {
         state.pendingQueue = state.pendingQueue.filter(item => item.id !== id);
         renderDeliveries();
@@ -2064,6 +2344,7 @@
       }
     }
     async function syncQueue() {
+      if (!requireLogin()) return;
       for (const item of [...state.pendingQueue]) await retryQueueItem(item.id);
       if (!state.pendingQueue.length) showToast("待同步队列已处理");
     }
@@ -2122,7 +2403,7 @@
       }, "确认删除");
     }
     function renderPrivacy() {
-      $("#clientIdValue").textContent = state.clientId;
+      $("#clientIdValue").textContent = authSession.hasToken() ? `resume-dashboard:${authSession.userId()}:*` : "登录后显示 JWT 用户标识";
       renderPrivacyExtensionPanel();
     }
     function renderPrivacyExtensionPanel() {
@@ -2131,7 +2412,7 @@
       const panel = document.createElement("div");
       panel.id = "privacyExtensionPanel";
       panel.className = "section-block extension-grid";
-      panel.innerHTML = `<div class="card card-pad"><div class="section-head"><div><h3>数据安全状态</h3><p>本地存储空间、隐私显示与版本快照。</p></div><span class="tag blue" id="storagePercentTag">检测中</span></div><div class="storage-meter" style="margin-top:14px"><span id="storageMeterBar" style="width:0%"></span></div><div class="toolbar-group" style="margin-top:14px"><button class="btn small" id="toggleMaskBtn">切换敏感信息脱敏</button><button class="btn small soft" id="openBackupHistoryBtn">备份/快照记录</button></div><p class="field-help" style="margin-top:10px">脱敏仅影响预览、复制报告和网页文本，不会覆盖原始存储数据。</p></div><div class="card card-pad"><div class="section-head"><div><h3>本地数据迁移</h3><p>全量备份包含证据、草稿、投递、测评、收藏岗位与扩展设置。</p></div></div><div class="toolbar-group" style="margin-top:14px"><button class="btn primary" id="exportAllBusinessBtn">导出全量备份</button><button class="btn" id="importAllBusinessBtn">导入全量备份</button></div><input type="file" class="hidden" id="allBusinessFileInput" accept=".json"><div class="extension-note" style="margin-top:14px">重置 client_id 前必须先导出全量备份，重置只改变匿名隔离标识，不删除本地资料。</div></div><div class="card card-pad full"><div class="section-head"><div><h3>快捷键配置</h3><p>可修改常用操作，快捷键保存在当前浏览器。</p></div><button class="btn small soft" id="saveShortcutConfigBtn">保存快捷键</button></div><div class="extension-grid" id="shortcutConfigForm" style="margin-top:12px"></div></div><div class="card card-pad full"><div class="section-head"><div><h3>部署与扩展预留</h3><p>静态说明，不新增接口。</p></div><span class="tag">规划中</span></div><div class="grid grid-3" style="margin-top:14px"><div class="list-item"><strong>MySQL / PostgreSQL</strong><p>未来可按现有 SQLite 表结构迁移。</p></div><div class="list-item"><strong>企业 ATS 对接</strong><p>仅接入获得授权的官方接口。</p></div><div class="list-item"><strong>多端同步与团队版</strong><p>需要后续身份、权限和 HTTPS 部署。</p></div></div></div>`;
+      panel.innerHTML = `<div class="card card-pad"><div class="section-head"><div><h3>数据安全状态</h3><p>本地存储空间、隐私显示与版本快照。</p></div><span class="tag blue" id="storagePercentTag">检测中</span></div><div class="storage-meter" style="margin-top:14px"><span id="storageMeterBar" style="width:0%"></span></div><div class="toolbar-group" style="margin-top:14px"><button class="btn small" id="toggleMaskBtn">切换敏感信息脱敏</button><button class="btn small soft" id="openBackupHistoryBtn">备份/快照记录</button></div><p class="field-help" style="margin-top:10px">脱敏仅影响预览、复制报告和网页文本，不会覆盖原始存储数据。</p></div><div class="card card-pad"><div class="section-head"><div><h3>本地数据迁移</h3><p>全量备份包含证据、草稿、投递、测评、收藏岗位与扩展设置。</p></div></div><div class="toolbar-group" style="margin-top:14px"><button class="btn primary" id="exportAllBusinessBtn">导出全量备份</button><button class="btn" id="importAllBusinessBtn">导入全量备份</button></div><input type="file" class="hidden" id="allBusinessFileInput" accept=".json"><div class="extension-note" style="margin-top:14px">导入与导出只作用于当前已登录账号的缓存命名空间；旧版匿名 client_id 数据不会自动归属。</div></div><div class="card card-pad full"><div class="section-head"><div><h3>快捷键配置</h3><p>可修改常用操作，快捷键保存在当前浏览器。</p></div><button class="btn small soft" id="saveShortcutConfigBtn">保存快捷键</button></div><div class="extension-grid" id="shortcutConfigForm" style="margin-top:12px"></div></div><div class="card card-pad full"><div class="section-head"><div><h3>部署与扩展预留</h3><p>静态说明，不新增接口。</p></div><span class="tag">规划中</span></div><div class="grid grid-3" style="margin-top:14px"><div class="list-item"><strong>MySQL / PostgreSQL</strong><p>未来可按现有 SQLite 表结构迁移。</p></div><div class="list-item"><strong>企业 ATS 对接</strong><p>仅接入获得授权的官方接口。</p></div><div class="list-item"><strong>多端同步与团队版</strong><p>需要后续身份、权限和 HTTPS 部署。</p></div></div></div>`;
       page.appendChild(panel);
       renderPrivacyExtensionControls();
     }
@@ -2158,10 +2439,10 @@
       $$('[data-restore-snapshot]').forEach(button => button.addEventListener("click", () => { closeModal(); openModal("确认恢复备份？", "<p style='margin:0;color:var(--muted)'>恢复将替换当前本地证据、投递、草稿和测评状态。</p>", () => { if (!createSnapshot("恢复前保护")) return false; if (!restoreSnapshot(button.dataset.restoreSnapshot)) return false; showToast("备份已恢复"); }, "恢复"); }));
     }
     function resetClientId() {
-      openModal("重置匿名 client_id？", "<p style='margin:0;color:var(--muted)'>重置前必须先导出全量本地备份。导出成功后，后端服务会把后续草稿和测评请求视为新的匿名空间，本地历史数据仍会保留。</p>", () => { if (!exportAllBusinessData()) return false; state.clientId = `demo-${crypto.randomUUID?.() || Date.now()}`; saveLocal("resume-dashboard-client-id", state.clientId); renderPrivacy(); showToast("匿名 client_id 已重置"); }, "导出并重置");
+      openModal("旧版 client_id 已停用", "<p style='margin:0;color:var(--muted)'>本期改为 JWT 用户隔离。本页面不会再读取或发送 client_id；旧版本地数据会保留且不会自动绑定到新账号。</p>", closeModal, "关闭");
     }
     function exportAllLocal() {
-      downloadText("ai-resume-local-backup.json", JSON.stringify({ exportedAt: new Date().toISOString(), clientId: state.clientId, evidence: state.evidence, deliveries: state.deliveries, drafts: state.drafts, assessmentHistory: state.assessmentHistory, resume: state.extension.maskSensitive ? maskResume() : state.resume }, null, 2), "application/json");
+      downloadText("ai-resume-local-backup.json", JSON.stringify({ exportedAt: new Date().toISOString(), cacheOwner: authSession.userId(), evidence: state.evidence, deliveries: state.deliveries, drafts: state.drafts, assessmentHistory: state.assessmentHistory, resume: state.extension.maskSensitive ? maskResume() : state.resume }, null, 2), "application/json");
     }
     function deliveryStats() {
       const total = state.deliveries.length;
@@ -2230,6 +2511,20 @@
         return false;
       }
     }
+    async function downloadCloudFile(path, filename) {
+      const response = await fetch(`${API_BASE_URL}${path}`, { headers: { Authorization: `Bearer ${authSession.token}` } });
+      if (response.status === 401 || response.status === 403) {
+        authSession.clear(); updateAuthStatus(); openLoginModal("登录状态已失效，请重新登录");
+        throw new Error("下载权限已失效");
+      }
+      if (!response.ok) throw new Error(`文件下载失败（HTTP ${response.status}）`);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url; link.download = filename; link.style.display = "none";
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
     async function copyText(text, message = "内容已复制") {
       try {
         await navigator.clipboard.writeText(text);
@@ -2240,6 +2535,7 @@
     }
     async function exportFile(kind) {
       try {
+        if (!requireLogin()) return;
         const readiness = resumeReadiness();
         if (!readiness.ready) {
           showToast(`请先补充：${readiness.missing.join("、")}`);
@@ -2247,16 +2543,18 @@
         }
         const extension = kind === "word" ? "docx" : "pdf";
         const filename = `${sanitizeFilename(state.resume.filename, `${state.resume.name}-${state.resume.role || "简历"}`)}.${extension}`;
-        const result = await apiOrMock(`/api/export/${kind}`, { method: "POST", body: JSON.stringify({ client_id: state.clientId, draft_id: state.drafts[0]?.id || "draft-demo", filename }) }, () => ({ download_url: `/downloads/${filename}`, filename }), `export ${kind}`);
+        const result = await apiOrMock(`/api/export/${kind}`, { method: "POST", body: JSON.stringify({ draft_id: state.drafts[0]?.id || "draft-demo", filename }) }, () => ({ download_url: `/downloads/${filename}`, filename }), `export ${kind}`);
+        if (isApiServiceFailure(result)) return;
+        if (!authSession.hasToken()) return;
         const url = result?.download_url || result?.downloadUrl;
-        if (state.runtime !== "online" || location.protocol === "file:") {
+        if (state.runtime !== "online") {
           const resume = state.extension.maskSensitive ? maskResume() : state.resume;
           const content = kind === "word" ? `AI Resume mock Word export\n${resume.name} - ${resume.role}\n${resume.project}` : `%PDF-1.4\n% AI Resume mock PDF\n`;
           if (!downloadText(filename, content, kind === "word" ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : "application/pdf")) throw new Error("浏览器拦截了下载");
           showToast(`已生成 Mock ${kind === "word" ? "Word" : "PDF"} 文件`);
         } else if (url) {
-          const popup = window.open(`${API_BASE_URL}${url}`, "_blank");
-          if (!popup) throw new Error("浏览器拦截了下载窗口");
+          await downloadCloudFile(url, result?.filename || filename);
+          showToast(`${kind === "word" ? "Word" : "PDF"} 云端文件已开始下载`);
         } else {
           throw new Error("导出服务未返回下载地址");
         }
@@ -2265,9 +2563,12 @@
       }
     }
     async function saveDraft() {
+      if (!requireLogin()) return;
       setSaveStatus("saving", "保存中");
       try {
-        const result = await apiOrMock("/api/draft/save", { method: "POST", body: JSON.stringify({ client_id: state.clientId, job_title: state.resume.role, template_id: "business", resume: state.resume }) }, () => ({ id: `draft-${Date.now()}` }), "draft save");
+        const result = await apiOrMock("/api/draft/save", { method: "POST", body: JSON.stringify({ job_title: state.resume.role, template_id: "business", resume: dashboardResumePayload(state.resume) }) }, () => ({ id: `draft-${Date.now()}` }), "draft save");
+        if (isApiServiceFailure(result)) { setSaveStatus("error", "云端保存失败"); return; }
+        if (!authSession.hasToken()) { setSaveStatus("error", "登录已失效"); return; }
         const item = normalizeDraft({ id: result?.id || `draft-${Date.now()}`, title: state.resume.version || `${state.resume.role || "未命名"}版`, updatedAt: "刚刚", template: $("#templateName").textContent, resume: { ...state.resume } });
         const previousDrafts = state.drafts.map(draft => ({ ...draft, resume: { ...(draft.resume || {}) } }));
         const existingIndex = state.drafts.findIndex(draft => draft.id === item.id);
@@ -2309,6 +2610,9 @@
       saveLocal("resume-dashboard-theme", state.theme);
     }
     function bindEvents() {
+      installAuthGuards();
+      $("#loginBtn").addEventListener("click", () => openLoginModal());
+      $("#logoutBtn").addEventListener("click", logout);
       $("#nav").addEventListener("click", event => {
         const item = event.target.closest("[data-page]");
         if (item) setPage(item.dataset.page);
@@ -2404,8 +2708,11 @@
       $("#saveDeliveryBtn").addEventListener("click", async () => {
         if (!validateDeliveryForm()) return;
         const item = { id: Date.now(), company: $("#deliveryCompany").value.trim() || "[待确认]", roleName: $("#deliveryRole").value.trim() || "[待确认]", city: $("#deliveryCity").value.trim() || "[待确认]", status: $("#deliveryStatus").value, appliedDate: $("#deliveryAppliedDate").value || todayString(), nextActionAt: $("#deliveryDate").value, notes: $("#deliveryNotes").value.trim(), draftId: $("#deliveryDraftId").value || null };
-        const payload = { client_id: state.clientId, company: item.company, role_name: item.roleName, city: item.city, source: "dashboard", status: item.status, next_action_at: item.nextActionAt || null, interview_notes: item.notes, notes: "" };
+        if (!requireLogin()) return;
+        const payload = { company: item.company, role_name: item.roleName, city: item.city, source: "dashboard", status: item.status, next_action_at: item.nextActionAt || null, interview_notes: item.notes, notes: "" };
         const result = await apiOrMock("/api/applications", { method: "POST", body: JSON.stringify(payload) }, null, "application save");
+        if (isApiServiceFailure(result)) return;
+        if (!authSession.hasToken()) return;
         state.deliveries.unshift(item);
         if (!result) state.pendingQueue.push({ id: item.id, company: item.company, roleName: item.roleName, payload, reason: "后端不可用，等待同步", createdAt: new Date().toLocaleString("zh-CN") });
         state.deliveryDirty = false;
@@ -2421,8 +2728,7 @@
       $("#refreshDraftsBtn").addEventListener("click", () => { renderDrafts(); showToast("草稿列表已刷新"); });
       $("#selectAllDrafts").addEventListener("change", event => { state.drafts.forEach(draft => event.target.checked ? state.selectedDrafts.add(draft.id) : state.selectedDrafts.delete(draft.id)); renderDrafts(); $("#selectAllDrafts").checked = event.target.checked; });
       $("#deleteSelectedDraftsBtn").addEventListener("click", () => deleteDrafts([...state.selectedDrafts]));
-      $("#clearLocalBtn").addEventListener("click", () => openModal("清理本机缓存？", "<p style='margin:0;color:var(--muted)'>将清理当前设备上的简历 checkpoint、职业规划状态、测评答案和投递待同步队列。服务端草稿、经历和投递记录不会删除。</p>", () => { state.pendingQueue = []; state.assessmentResult = null; state.assessmentAnswers = {}; localKeys.filter(key => key.includes("assessment") || key.includes("queue")).forEach(key => localStorage.removeItem(key)); renderDeliveries(); renderAssessment(); showToast("本机缓存已清理"); }));
-      $("#resetClientBtn").addEventListener("click", resetClientId);
+      $("#clearLocalBtn").addEventListener("click", () => openModal("清理当前账号缓存？", "<p style='margin:0;color:var(--muted)'>将清理当前账号的简历 checkpoint、职业规划状态、测评答案和投递待同步队列。服务端草稿、经历和投递记录不会删除。</p>", () => { state.pendingQueue = []; state.assessmentResult = null; state.assessmentAnswers = {}; localKeys.filter(key => key.includes("assessment") || key.includes("queue")).forEach(removeLocal); renderDeliveries(); renderAssessment(); showToast("当前账号缓存已清理"); }));
       $("#exportAllLocalBtn").addEventListener("click", exportAllLocal);
       $("#openBackupHistoryBtn")?.addEventListener("click", openBackupHistory);
 
@@ -2446,7 +2752,7 @@
       });
     }
 
-    const DASHBOARD_VERSION = "1.5.0";
+    const DASHBOARD_VERSION = "1.6.0";
 
     function attachSortable(container, selector, attribute, onOrder) {
       if (!container) return;
@@ -2610,12 +2916,12 @@
       };
     }
     function openChangelog() {
-      openModal(`更新日志 v${DASHBOARD_VERSION}`, `<div class="list"><div class="list-item"><strong>本次迭代</strong><p>补齐本地备份与脱敏、可排序收藏和草稿、模板模块显隐、经历标签与附件、投递月历/题库/图表、测评对比和离线迁移入口。</p></div><div class="list-item"><strong>兼容模式</strong><p>保持浏览器双击 Mock 和 Vite 代理，不新增后端接口。</p></div></div>`, closeModal, "关闭");
+      openModal(`更新日志 v${DASHBOARD_VERSION}`, `<div class="list"><div class="list-item"><strong>本次迭代</strong><p>新增 JWT 登录、账号隔离缓存、Token 自动失效处理和云端文件下载；后端同步完成多用户 SQLite 过渡与真实 AI 配置底座。</p></div><div class="list-item"><strong>兼容模式</strong><p>本地 Vite 代理与线上 HTTPS 域名均可接入；断网时只保留内存 Mock 预览。</p></div></div>`, closeModal, "关闭");
     }
     function renderReleaseFooter() {
       let footer = $("#releaseFooter");
       if (!footer) { footer = document.createElement("footer"); footer.id = "releaseFooter"; footer.className = "release-footer"; $(".content").appendChild(footer); }
-      footer.innerHTML = `<span>离线优先 · 数据保存在当前浏览器</span><button class="btn small" id="openChangelogBtn">v${DASHBOARD_VERSION}</button>`;
+      footer.innerHTML = `<span>账号隔离缓存 · 云端数据受 JWT 保护</span><button class="btn small" id="openChangelogBtn">v${DASHBOARD_VERSION}</button>`;
       $("#openChangelogBtn").onclick = openChangelog;
     }
     function renderCompletionFeatures() {
@@ -2746,10 +3052,12 @@
 
     async function initialize() {
       applyTheme();
-      renderPrivacy();
       showLoadingState();
-      updateRuntimeBanner();
       bindEvents();
+      const restoredLogin = await hydrateAuthSession(false);
+      if (restoredLogin) loadUserScopedState();
+      updateAuthStatus();
+      renderPrivacy();
       renderDashboard();
       renderJobs();
       renderFavorites();
@@ -2762,16 +3070,20 @@
       renderAssessment();
       renderDeliveries();
       renderDrafts();
-      maybeCreateAutoSnapshot();
-      const sources = await apiOrMock("/api/knowledgebase/sources", {}, () => ({ items: [] }), "knowledgebase sources");
-      const assessment = await apiOrMock(`/api/career/assessment?client_id=${encodeURIComponent(state.clientId)}`, {}, null, "assessment load");
-      if (assessment?.result && !state.assessmentResult) {
-        state.assessmentResult = assessment.result;
-        saveLocal("resume-dashboard-assessment-result", state.assessmentResult);
-      }
-      if (sources?.items?.length) {
-        state.runtime = "online";
-        $("#jobSourceTag").textContent = "后端知识库已连接";
+      if (restoredLogin) {
+        maybeCreateAutoSnapshot();
+        const sources = await apiOrMock("/api/knowledgebase/sources", {}, () => ({ items: [] }), "knowledgebase sources");
+        const assessment = await apiOrMock("/api/career/assessment", {}, null, "assessment load");
+        if (!isApiServiceFailure(sources) && !isApiServiceFailure(assessment)) {
+          if (assessment?.result && !state.assessmentResult) {
+            state.assessmentResult = assessment.result;
+            saveLocal("resume-dashboard-assessment-result", state.assessmentResult);
+          }
+          if (sources?.items?.length) {
+            state.runtime = "online";
+            $("#jobSourceTag").textContent = "后端知识库已连接";
+          }
+        }
       }
       renderAssessment();
       renderDashboard();

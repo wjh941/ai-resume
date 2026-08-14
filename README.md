@@ -69,7 +69,15 @@ npm run dev:h5
 VITE_RESUME_API_URL=https://api.example.com
 ```
 
-### 3. 构建微信小程序
+`premium-dashboard.html` 也通过相同代理运行在 `/premium-dashboard.html`。线上静态部署时，可在页面加载前设置 `window.__RESUME_API_BASE_URL__` 为 HTTPS API 域名。
+
+### 3. 演示登录
+
+所有业务接口和工作台编辑操作均需登录。初次本地启动时，`.env.example` 的 `AUTH_DEMO_MODE=true` 会启用演示验证码：任意合法中国大陆手机号配合 `123456` 即可登录。生产环境必须关闭该开关并配置真实短信服务；微信入口目前仅为开放平台授权占位。
+
+登录成功后，后端签发带有 `sub`、`token_version`、`exp` 的 JWT。后端只使用 JWT 内的用户 ID 查询数据，前端不会提交 `user_id` 或旧版 `client_id`。浏览器临时业务缓存的键名为 `resume-dashboard:{user_id}:{业务键名}`，不同账号不会互相读取。
+
+### 4. 构建微信小程序
 
 ```powershell
 cd resume-miniprogram
@@ -86,13 +94,13 @@ resume-miniprogram/dist/build/mp-weixin
 
 ## AI 与联网配置
 
-后端使用 `resume-backend/.env` 读取配置。默认 `AI_PROVIDER=mock`，无需 API Key 即可演示。
+后端使用 `resume-backend/.env` 读取配置。生产 AI 不再使用写死的业务 Mock，必须配置一个 OpenAI 兼容或 Ark 模型；未配置时接口会返回明确错误，前端仅在断网时提供内存 Mock 预览。
 
 ```dotenv
-AI_PROVIDER=mock
-AI_API_KEY=
+AI_PROVIDER=openai_compatible
+AI_API_KEY=your-provider-key
 AI_BASE_URL=https://ark.cn-beijing.volces.com/api/v1
-AI_MODEL=
+AI_MODEL=your-model-name
 
 # 可选：授权公开网页搜索，默认关闭
 WEB_SEARCH_PROVIDER=disabled
@@ -123,8 +131,8 @@ npm run build:mp-weixin
 
 ## 数据与隐私
 
-- 草稿、岗位缓存、职业画像默认存储在本地 SQLite 数据库。
-- 经历证据按本机匿名 `client_id` 隔离保存，仅作为当前设备上的简历辅助资料。
+- SQLite 是本期多用户过渡数据库。`users`、草稿、经历、投递、测评和下载文件均使用 JWT `sub` 的 `user_id` 隔离；升级 SQL 位于 `resume-backend/migrations/20260814_jwt_user_isolation.sql`。
+- 浏览器只持久保存 JWT 与按登录账号分区的临时业务缓存；旧版匿名 `client_id` 缓存不会自动归属给任何账号。
 - 职业规划评分用于比较求职方向，不代表录用概率、薪资承诺或岗位保证。
 - 简历补全只生成待确认草稿，不会把未知经历写成真实事实。
 
