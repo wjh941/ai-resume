@@ -13,11 +13,20 @@ class DraftNotFoundError(Exception):
     pass
 
 
+class DraftLimitReachedError(Exception):
+    pass
+
+
 class DraftRepository:
     def __init__(self, database_path: Path):
         self.database_path = database_path
 
-    def save(self, user_id: str, draft: DraftSaveRequest) -> dict:
+    def save(
+        self,
+        user_id: str,
+        draft: DraftSaveRequest,
+        max_drafts: int | None = None,
+    ) -> dict:
         draft_id = draft.id or str(uuid4())
         now = datetime.now(timezone.utc).isoformat()
         payload = json.dumps(
@@ -42,6 +51,14 @@ class DraftRepository:
                 if cursor.rowcount == 0:
                     raise DraftNotFoundError
             else:
+                if max_drafts is not None:
+                    # 额度检查和新增必须位于同一个写事务，避免两个并发请求越过免费版上限。
+                    connection.execute("BEGIN IMMEDIATE")
+                    count = connection.execute(
+                        "SELECT COUNT(*) FROM user_draft WHERE user_id = ?", (user_id,)
+                    ).fetchone()[0]
+                    if count >= max_drafts:
+                        raise DraftLimitReachedError
                 connection.execute(
                     """
                     INSERT INTO user_draft
@@ -68,7 +85,7 @@ class DraftRepository:
             ).fetchall()
         return [self._to_draft(row) for row in rows]
 
-    def copy(self, user_id: str, draft_id: str) -> dict:
+    def copy(self, user_id: str, draft_id: str, max_drafts: int | None = None) -> dict:
         source = self.get(user_id, draft_id)
         return self.save(
             user_id,
@@ -77,7 +94,8 @@ class DraftRepository:
                 template_id=source["template_id"],
                 resume=source["resume"],
                 job_intelligence=source["job_intelligence"],
-            )
+            ),
+            max_drafts=max_drafts,
         )
 
     def delete(self, user_id: str, draft_id: str) -> None:

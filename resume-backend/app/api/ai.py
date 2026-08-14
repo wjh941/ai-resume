@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 
 from app.schemas.common import success
 from app.schemas.job import JobQueryRequest, ResumeRewriteRequest
 from app.services.rewrite_guard import validate_rewrite_facts
+from app.services.membership import VipPermissionError, VipStatus, get_current_vip
 
 
 router = APIRouter()
@@ -39,7 +40,13 @@ async def query_job(payload: JobQueryRequest, request: Request):
 
 
 @router.post("/api/resume/ai-rewrite")
-async def rewrite_resume(payload: ResumeRewriteRequest, request: Request):
+async def rewrite_resume(
+    payload: ResumeRewriteRequest,
+    request: Request,
+    vip: VipStatus = Depends(get_current_vip),
+):
+    if payload.mode == "deep" and vip.vip_level == "free":
+        raise VipPermissionError("深度 AI 润色需要基础会员或高级会员")
     rewritten = await request.app.state.ai_client.rewrite_resume(
         payload.resume,
         payload.job,

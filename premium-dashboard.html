@@ -273,7 +273,7 @@
     .shortcut-row { display: grid; grid-template-columns: 130px 1fr; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
     .shortcut-row:last-child { border-bottom: 0; }
     .storage-meter { height: 8px; overflow: hidden; border-radius: 99px; background: var(--line); }
-    .storage-meter > span { display: block; height: 100%; background: var(--blue); transition: width .2s ease; }
+    .storage-meter > span { display: block; height: 100%; background: var(--blue); }
     .template-sections, .release-footer { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
     .template-sections label { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; }
     .delivery-chart { display: flex; min-height: 112px; align-items: end; gap: 8px; margin-top: 14px; padding-bottom: 19px; border-bottom: 1px solid var(--line); }
@@ -360,6 +360,8 @@
       </nav>
       <div class="nav-label" style="margin-top:26px">Personal</div>
       <nav class="nav">
+        <button class="nav-item" data-page="membership"><span class="nav-icon">◇</span><span>会员订阅</span></button>
+        <button class="nav-item" data-page="orders"><span class="nav-icon">▤</span><span>订单记录</span></button>
         <button class="nav-item" data-page="privacy"><span class="nav-icon">◐</span><span>本地隐私</span></button>
       </nav>
       <div class="sidebar-bottom">
@@ -382,6 +384,7 @@
         <div class="topbar-actions">
           <div class="global-search" style="position:relative"><input class="input" id="globalSearchInput" title="Ctrl+K 聚焦全局搜索" placeholder="搜索岗位、草稿、经历、投递"><div id="globalSearchResults" class="list hidden" style="position:absolute;z-index:25;top:44px;left:0;right:0;padding:8px;border:1px solid var(--line);border-radius:12px;background:var(--surface);box-shadow:var(--shadow-md)"></div></div>
           <div id="runtimeBanner" class="status-banner offline"><span class="sync-dot offline"></span><span>未登录，业务功能已锁定</span></div>
+          <button class="btn small" id="vipStatusBtn" data-page="membership" title="查看会员权益">Free</button>
           <div class="local-summary" id="authStatus"><span id="userSummary">未登录</span><span class="avatar" id="userAvatar">?</span></div>
           <button class="btn small primary" id="loginBtn" data-public-action="login">登录</button>
           <button class="btn small soft hidden" id="logoutBtn" data-public-action="logout">退出</button>
@@ -485,6 +488,17 @@
           <div class="hero-row"><div><div class="eyebrow">Local privacy</div><h2>数据归你，清理也由你决定。</h2><p>本页只管理当前账号的缓存和本地待同步状态。服务端记录需要在对应页面逐条删除。</p></div><span class="tag green">账号隔离缓存</span></div>
           <div class="grid grid-2"><div class="card card-pad"><div class="section-head"><div><h3>草稿管理</h3><p>当前账号的本地缓存与云端草稿列表</p></div><div class="toolbar-group"><button class="btn small" id="refreshDraftsBtn">刷新</button><button class="btn small danger" id="deleteSelectedDraftsBtn">删除选中</button></div></div><label style="display:flex;align-items:center;gap:8px;margin-top:15px;color:var(--muted);font-size:11px"><input type="checkbox" id="selectAllDrafts"> 全选草稿</label><div id="draftList" class="list" style="margin-top:10px"></div><div id="draftPagination"></div></div><div class="card card-pad"><div class="section-head"><div><h3>账号缓存</h3><p>数据仅保存在当前登录账号的命名空间</p></div><span class="metric-icon">◐</span></div><div class="empty" style="margin-top:15px;text-align:left"><strong>当前缓存归属</strong><div id="clientIdValue" class="dark-note" style="margin-top:5px;word-break:break-all">登录后显示 JWT 用户标识</div><div style="font-size:12px;line-height:1.8;margin-top:8px">简历 checkpoint · 职业规划状态 · 测评答案 · 咨询会话 · 投递待同步队列</div></div><div class="toolbar-group" style="margin-top:15px"><button class="btn danger" id="clearLocalBtn">清理当前账号缓存</button></div><div class="toolbar-group" style="margin-top:10px"><button class="btn soft" id="exportAllLocalBtn">导出全部本地数据</button><button class="btn" id="deleteSelectedEvidenceBtn">删除选中经历</button></div><p class="field-help" style="margin-top:12px">旧版未绑定账号的 client_id 缓存不会自动归属到任何账号，避免共用设备的数据泄露。</p></div></div>
           <div class="section-block"><details class="card collapse static"><summary><div><h3>后续扩展入口</h3><p style="margin-top:3px;color:var(--muted);font-size:11px">当前仅静态占位，不新增接口</p></div><span class="tag">规划中</span></summary><div class="collapse-content"><div class="grid grid-2"><div class="list-item"><h4>MySQL / PostgreSQL 迁移配置</h4><p>未来可替换本期 SQLite 过渡数据层。</p></div><div class="list-item"><h4>招聘数据源与 ATS 对接</h4><p>仅支持获得授权的官方或企业接口。</p></div><div class="list-item"><h4>登录、多端同步与团队版</h4><p>当前已具备 JWT 登录与账号数据隔离底座。</p></div><div class="list-item"><h4>HTTPS 部署与套餐配置</h4><p>上线时配置前端域名与后端 HTTPS 域名。</p></div></div></div></details></div>
+        </section>
+
+        <section class="page-section" id="page-membership">
+          <div class="hero-row"><div><div class="eyebrow">Membership</div><h2>让求职工具跟上你的投入。</h2><p>当前权益和订单只归属于已登录账号。演示环境可完成模拟付款，不会产生真实扣费。</p></div><button class="btn soft" data-page="orders">查看订单记录</button></div>
+          <div class="card card-pad"><div class="section-head"><div><h3>当前会员状态</h3><p id="vipStatusDescription">登录后同步云端权益。</p></div><span class="tag blue" id="vipStatusTag">Free</span></div></div>
+          <div class="section-block"><div class="section-head"><div><h3>选择订阅方案</h3><p>价格以分为后端存储单位，页面按人民币显示。</p></div><span class="field-help">付款完成后即时刷新权益</span></div><div class="grid grid-3" id="membershipPackages" style="margin-top:14px"></div></div>
+        </section>
+
+        <section class="page-section" id="page-orders">
+          <div class="hero-row"><div><div class="eyebrow">Orders</div><h2>查看你的订阅订单。</h2><p>订单状态、支付渠道与本次权益到期时间均以云端记录为准。</p></div><button class="btn soft" data-page="membership">购买会员</button></div>
+          <div class="card card-pad"><div class="section-head"><div><h3>历史订单</h3><p>仅展示当前登录账号创建的订单。</p></div><button class="btn small" id="refreshOrdersBtn">刷新</button></div><div id="orderHistoryList" class="list" style="margin-top:15px"></div></div>
         </section>
       </div>
     </main>
@@ -645,6 +659,7 @@
       pendingQueue: loadLocal("resume-dashboard-queue", []),
       drafts: loadLocal("resume-dashboard-drafts", mock.drafts),
       selectedDrafts: new Set(),
+      activeDraftId: null,
       assessmentStep: 0,
       assessmentAnswers: loadLocal("resume-dashboard-assessment-answers", {}),
       assessmentResult: loadLocal("resume-dashboard-assessment-result", null),
@@ -677,7 +692,11 @@
       toastVisible: false,
       networkOnline: typeof navigator === "undefined" ? true : navigator.onLine !== false,
       requestSequence: 0,
-      saveStatusTimer: null
+      saveStatusTimer: null,
+      // 本期商业化缓存：只保存当前 JWT 用户的展示权益，后端仍是唯一权限裁决者。
+      vip: loadLocal("resume-dashboard-vip-status", { vip_level: "free", expire_time: null, auto_renew: false, max_drafts: 3, max_compare_jobs: 2 }),
+      vipPackages: [],
+      orders: []
     };
     const extensionDefaults = {
       version: 1,
@@ -720,9 +739,11 @@
       assessment: ["职业测评", "先理解自己，再决定方向。"],
       delivery: ["投递行动台", "每一次投递，都有下一步。"],
       insights: ["年度就业洞察", "把公开静态资料，变成可执行判断。"],
+      membership: ["会员订阅", "查看权益并选择适合当前求职节奏的方案。"],
+      orders: ["订单记录", "订单和有效期均按当前登录账号隔离。"],
       privacy: ["本地隐私", "数据归你，清理也由你决定。"]
     };
-    const localKeys = ["resume-dashboard-evidence", "resume-dashboard-deliveries", "resume-dashboard-queue", "resume-dashboard-drafts", "resume-dashboard-assessment-answers", "resume-dashboard-assessment-result", "resume-dashboard-assessment-history", "resume-dashboard-resume"];
+    const localKeys = ["resume-dashboard-evidence", "resume-dashboard-deliveries", "resume-dashboard-queue", "resume-dashboard-drafts", "resume-dashboard-assessment-answers", "resume-dashboard-assessment-result", "resume-dashboard-assessment-history", "resume-dashboard-resume", "resume-dashboard-vip-status"];
 
     function isBusinessCacheKey(key) {
       return String(key).startsWith("resume-dashboard-") && !WEB_UI_CACHE_KEYS.has(String(key)) && String(key) !== AUTH_TOKEN_STORAGE_KEY;
@@ -903,6 +924,7 @@
       return true;
     }
     function exportAllBusinessData() {
+      if (!requireVipFeature("bulk_all_data")) return false;
       const data = localBusinessSnapshot();
       const exported = downloadText("ai-resume-full-backup.json", JSON.stringify(data, null, 2), "application/json");
       if (exported) {
@@ -914,6 +936,7 @@
       return exported;
     }
     function importAllBusinessData(file) {
+      if (!requireVipFeature("bulk_all_data")) return;
       const reader = new FileReader();
       reader.onload = () => {
         const data = safeJsonParse(reader.result, null);
@@ -1173,6 +1196,140 @@
       openLoginModal(message);
       return false;
     }
+    /* 本期商业化底座：前端仅做体验预检，任何关键权限仍由后端 JWT + VIP 依赖裁决。 */
+    const vipFeatureNames = {
+      full_job_report: "完整岗位匹配报告",
+      full_assessment: "完整职业测评方案",
+      draft_limit: "更多简历草稿",
+      job_compare: "更多岗位对比名额",
+      bulk_evidence_export: "经历批量导入导出",
+      watermark_free_export: "无水印导出",
+      industry_insight: "行业薪资与就业洞察",
+      interview_bank: "完整面试题库",
+      multi_draft_compare: "多版本简历对比",
+      bulk_all_data: "全部业务数据导出"
+    };
+    function normalizeVipStatus(value = {}) {
+      const level = ["free", "basic", "premium"].includes(value.vip_level) ? value.vip_level : "free";
+      return {
+        vip_level: level,
+        expire_time: value.expire_time || null,
+        auto_renew: Boolean(value.auto_renew),
+        max_drafts: value.max_drafts === null || Number.isFinite(value.max_drafts) ? value.max_drafts : level === "free" ? 3 : null,
+        max_compare_jobs: Number(value.max_compare_jobs) || (level === "free" ? 2 : 4)
+      };
+    }
+    function vipLabel(level = state.vip?.vip_level) {
+      return ({ free: "Free", basic: "基础会员", premium: "高级会员" })[level] || "Free";
+    }
+    function formatVipExpiry(expireTime) {
+      if (!expireTime) return "当前为 Free 权益";
+      const date = new Date(expireTime);
+      return Number.isNaN(date.getTime()) ? "有效期以云端记录为准" : `有效至 ${date.toLocaleDateString("zh-CN")}`;
+    }
+    function vipAllows(feature) {
+      const level = state.vip?.vip_level || "free";
+      if (["full_job_report", "full_assessment", "bulk_evidence_export", "deep_polish"].includes(feature)) return level === "basic" || level === "premium";
+      if (["watermark_free_export", "industry_insight", "interview_bank", "multi_draft_compare", "bulk_all_data"].includes(feature)) return level === "premium";
+      return true;
+    }
+    function requireVipFeature(feature) {
+      if (!requireLogin()) return false;
+      if (vipAllows(feature)) return true;
+      openMembershipModal(feature);
+      return false;
+    }
+    function membershipPackageFallback() {
+      return [
+        { package_type: "monthly", name: "月度基础会员", vip_level: "basic", duration_days: 30, total_amount: 2900, benefits: ["不限简历草稿", "最多对比 4 个岗位", "完整匹配报告与测评"] },
+        { package_type: "quarterly", name: "季度基础会员", vip_level: "basic", duration_days: 90, total_amount: 7900, benefits: ["不限简历草稿", "最多对比 4 个岗位", "一次经历批量导出"] },
+        { package_type: "annual", name: "年度高级会员", vip_level: "premium", duration_days: 365, total_amount: 19900, benefits: ["全部功能解锁", "无水印导出", "完整题库与长期文件存储"] }
+      ];
+    }
+    function renderVipStatus() {
+      const button = $("#vipStatusBtn");
+      if (!button) return;
+      const loggedIn = authSession.hasToken();
+      button.textContent = loggedIn ? vipLabel() : "登录解锁";
+      button.classList.toggle("soft", state.vip?.vip_level !== "premium");
+      button.classList.toggle("primary", state.vip?.vip_level === "premium");
+    }
+    async function refreshVipStatus() {
+      if (!authSession.hasToken()) {
+        state.vip = normalizeVipStatus();
+        renderVipStatus();
+        return state.vip;
+      }
+      const requestToken = authSession.token;
+      const result = await apiOrMock("/api/user/vip-info", {}, () => state.vip, "会员状态");
+      if (isApiServiceFailure(result) || !authSession.hasToken() || authSession.token !== requestToken) return state.vip;
+      state.vip = normalizeVipStatus(result);
+      saveLocal("resume-dashboard-vip-status", state.vip);
+      renderVipStatus();
+      return state.vip;
+    }
+    async function refreshOrders() {
+      if (!authSession.hasToken()) { state.orders = []; renderOrders(); return []; }
+      const requestToken = authSession.token;
+      const result = await apiOrMock("/api/user/order-list", {}, () => ({ items: state.orders }), "订单记录");
+      if (isApiServiceFailure(result) || !authSession.hasToken() || authSession.token !== requestToken) return state.orders;
+      state.orders = asArray(result?.items || result);
+      renderOrders();
+      return state.orders;
+    }
+    async function refreshMembershipData(includeOrders = false) {
+      if (!authSession.hasToken()) { renderMembership(); return; }
+      const packages = await apiOrMock("/api/pay/package-list", {}, () => ({ items: membershipPackageFallback() }), "会员套餐");
+      if (!isApiServiceFailure(packages)) state.vipPackages = asArray(packages?.items || packages);
+      await refreshVipStatus();
+      renderMembership();
+      if (includeOrders) await refreshOrders();
+    }
+    function bindMembershipActions(container = document) {
+      $$('[data-purchase-package]', container).forEach(button => button.onclick = () => beginDemoCheckout(button.dataset.purchasePackage));
+    }
+    function renderMembership() {
+      const packages = state.vipPackages.length ? state.vipPackages : membershipPackageFallback();
+      const tag = $("#vipStatusTag");
+      const description = $("#vipStatusDescription");
+      const target = $("#membershipPackages");
+      if (tag) { tag.textContent = vipLabel(); tag.className = `tag ${state.vip?.vip_level === "premium" ? "green" : state.vip?.vip_level === "basic" ? "blue" : "amber"}`; }
+      if (description) description.textContent = authSession.hasToken() ? `${formatVipExpiry(state.vip?.expire_time)} · ${state.vip?.max_drafts === null ? "简历草稿不限" : `最多 ${state.vip.max_drafts} 份草稿`}` : "登录后同步云端权益和订单。";
+      if (!target) return;
+      target.innerHTML = packages.map(item => `<article class="card card-pad"><div class="section-head"><div><h3>${escapeHtml(item.name || "会员方案")}</h3><p>${escapeHtml(vipLabel(item.vip_level))} · ${Number(item.duration_days || 0)} 天</p></div><span class="tag ${item.vip_level === "premium" ? "green" : "blue"}">${(Number(item.total_amount || 0) / 100).toFixed(0)} 元</span></div><ul class="action-list" style="margin-top:15px">${asArray(item.benefits).map(benefit => `<li>${escapeHtml(benefit)}</li>`).join("")}</ul><button class="btn primary" type="button" data-purchase-package="${escapeHtml(item.package_type)}" style="margin-top:18px">模拟支付</button></article>`).join("");
+      bindMembershipActions(target);
+    }
+    function renderOrders() {
+      const target = $("#orderHistoryList");
+      if (!target) return;
+      target.innerHTML = state.orders.length ? state.orders.map(order => `<div class="list-item"><div class="list-item-head"><div><strong>${escapeHtml(String(order.package_type || "会员订阅"))}</strong><p>订单号：${escapeHtml(order.order_id || "-")} · 创建于 ${escapeHtml(formatVipExpiry(order.create_time).replace("有效至 ", ""))}</p></div><span class="tag ${order.payment_status === "paid" ? "green" : "amber"}">${order.payment_status === "paid" ? "已支付" : "待支付"}</span></div><div class="delivery-meta"><span>${(Number(order.total_amount || 0) / 100).toFixed(2)} 元</span><span>渠道：${escapeHtml(order.payment_channel || "待支付")}</span><span>${escapeHtml(formatVipExpiry(order.entitlement_expire_time))}</span></div></div>`).join("") : `<div class="empty"><strong>还没有订单记录</strong><p>选择套餐并完成模拟支付后，订单会在这里出现。</p><button class="btn small primary" data-page="membership" style="margin-top:12px">去选择套餐</button></div>`;
+      $$('[data-page="membership"]', target).forEach(button => button.onclick = () => setPage("membership"));
+    }
+    async function beginDemoCheckout(packageType) {
+      if (!requireLogin("登录后才能创建专属会员订单")) return;
+      try {
+        const order = await api("/api/pay/create-order", { method: "POST", body: JSON.stringify({ package_type: packageType, auto_renew: false }) });
+        const completed = await api("/api/pay/callback", { method: "POST", body: JSON.stringify({ order_id: order.order_id, payment_channel: "demo", payment_status: "paid" }) });
+        state.vip = normalizeVipStatus(completed?.vip || state.vip);
+        saveLocal("resume-dashboard-vip-status", state.vip);
+        renderVipStatus();
+        await refreshMembershipData(true);
+        renderOrders();
+        closeModal();
+        showToast("模拟支付成功，会员权益已刷新");
+      } catch (error) {
+        showToast(`创建订单失败：${error.message || "请检查支付演示配置"}`);
+      }
+    }
+    function openMembershipModal(feature = "") {
+      if (!authSession.hasToken()) { openLoginModal("登录后即可查看会员权益"); return; }
+      const featureName = vipFeatureNames[feature] || "该功能";
+      const packages = state.vipPackages.length ? state.vipPackages : membershipPackageFallback();
+      openModal("升级会员后继续", `<p class="field-help" style="margin:0 0 14px">${escapeHtml(featureName)}需要更高会员权益。当前：${escapeHtml(vipLabel())}。</p><div class="list">${packages.map(item => `<div class="list-item"><div class="list-item-head"><div><strong>${escapeHtml(item.name)}</strong><p>${escapeHtml(asArray(item.benefits).slice(0, 2).join(" · "))}</p></div><button class="btn small primary" type="button" data-purchase-package="${escapeHtml(item.package_type)}">模拟支付</button></div></div>`).join("")}</div>`, () => false, "关闭");
+      $("#modalConfirm").style.display = "none";
+      $("#modalCancel").textContent = "关闭";
+      bindMembershipActions($("#modalBody"));
+    }
     function updateAuthStatus() {
       const loggedIn = authSession.hasToken();
       const userId = authSession.userId();
@@ -1181,17 +1338,21 @@
       $("#userAvatar").textContent = loggedIn ? (phone || userId || "U").slice(-2).toUpperCase() : "?";
       $("#loginBtn").classList.toggle("hidden", loggedIn);
       $("#logoutBtn").classList.toggle("hidden", !loggedIn);
+      renderVipStatus();
       updateRuntimeBanner();
     }
     function loadUserScopedState() {
+      state.activeDraftId = null;
       state.evidence = loadLocal("resume-dashboard-evidence", mock.evidence);
       state.deliveries = loadLocal("resume-dashboard-deliveries", mock.deliveries);
       state.pendingQueue = loadLocal("resume-dashboard-queue", []);
-      state.drafts = loadLocal("resume-dashboard-drafts", mock.drafts);
+      // 已登录账号以云端草稿为准；没有用户命名空间缓存时不继承游客演示草稿，避免免费额度被演示数据占满。
+      state.drafts = loadLocal("resume-dashboard-drafts", []);
       state.assessmentAnswers = loadLocal("resume-dashboard-assessment-answers", {});
       state.assessmentResult = loadLocal("resume-dashboard-assessment-result", null);
       state.assessmentHistory = loadLocal("resume-dashboard-assessment-history", mock.assessmentHistory);
       state.resume = loadLocal("resume-dashboard-resume", defaultResume);
+      state.vip = normalizeVipStatus(loadLocal("resume-dashboard-vip-status", {}));
       state.extension = normalizeExtension(loadLocal("resume-dashboard-extension", {}));
       state.favoriteJobs = state.extension.favoriteJobs;
       state.jobAdvancedFilters = state.extension.jobFilters;
@@ -1200,9 +1361,10 @@
       state.jobs = [...mock.jobs]; state.selectedJobs = []; state.favoriteJobs = [];
       state.evidence = [...mock.evidence]; state.evidenceSelected = new Set();
       state.deliveries = [...mock.deliveries]; state.pendingQueue = [];
-      state.drafts = [...mock.drafts]; state.selectedDrafts = new Set();
+      state.drafts = [...mock.drafts]; state.selectedDrafts = new Set(); state.activeDraftId = null;
       state.assessmentAnswers = {}; state.assessmentResult = null; state.assessmentHistory = [...mock.assessmentHistory];
       state.resume = { ...defaultResume }; state.resumeDirty = false; state.evidenceDirty = false; state.deliveryDirty = false;
+      state.vip = normalizeVipStatus(); state.vipPackages = []; state.orders = [];
       state.extension = normalizeExtension({}); state.jobAdvancedFilters = state.extension.jobFilters;
     }
     function renderLoggedOutState() {
@@ -1214,6 +1376,8 @@
       loadUserScopedState();
       fillResume(); renderDashboard(); renderJobs(); renderFavorites(); renderTiers(); renderEvidence(); bindEvidenceAttachments();
       renderAssessment(); renderDeliveries(); renderDrafts(); renderCompletionFeatures(); renderPrivacy();
+      renderVipStatus();
+      refreshMembershipData(true);
     }
     async function hydrateAuthSession(showPrompt = false) {
       if (!authSession.hasToken()) { authSession.clear(); updateAuthStatus(); return false; }
@@ -1345,6 +1509,8 @@
       if (page === "resume") { renderResumeExtensionPanel(); updateResumePreview(); }
       if (page === "privacy") renderPrivacyExtensionControls();
       if (page === "privacy") { renderDrafts(); renderPrivacy(); }
+      if (page === "membership") { renderMembership(); refreshMembershipData(true); }
+      if (page === "orders") { renderOrders(); refreshOrders(); }
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
     function hasDirtyState() {
@@ -1373,13 +1539,20 @@
         const { allowAnonymous: _ignored, ...requestOptions } = options;
         const response = await fetch(`${API_BASE_URL}${path}`, { ...requestOptions, headers, signal: controller.signal });
         const envelope = await response.json().catch(() => null);
-        if (response.status === 401 || response.status === 403) {
+        if (response.status === 401) {
           authSession.clear();
           renderLoggedOutState();
           updateAuthStatus();
           const error = new Error("登录状态已失效，请重新登录");
           error.code = "AUTH_INVALID";
           openLoginModal(error.message);
+          throw error;
+        }
+        if (response.status === 403 && envelope?.code === "vip_required") {
+          const error = new Error(envelope.message || "当前会员等级暂不支持该功能");
+          error.code = "VIP_REQUIRED";
+          error.isServiceError = true;
+          openMembershipModal();
           throw error;
         }
         if (!response.ok) {
@@ -1490,11 +1663,12 @@
       if (isApiServiceFailure(draftData) || isApiServiceFailure(assessmentData)) return;
       const serverDrafts = asArray(draftData?.items || draftData).map(normalizeDraft);
       const serverAssessment = assessmentData?.result || null;
+      const receivedDraftList = Array.isArray(draftData?.items) || Array.isArray(draftData);
       const localData = { drafts: state.drafts, assessment: state.assessmentResult };
       const serverData = { drafts: serverDrafts, assessment: serverAssessment };
-      const changed = JSON.stringify(localData) !== JSON.stringify(serverData) && (serverDrafts.length || serverAssessment);
+      const changed = JSON.stringify(localData) !== JSON.stringify(serverData) && (receivedDraftList || serverAssessment);
       const applyServer = () => {
-        if (serverDrafts.length) state.drafts = serverDrafts;
+        if (receivedDraftList) state.drafts = serverDrafts;
         if (serverAssessment) state.assessmentResult = serverAssessment;
         saveLocal("resume-dashboard-drafts", state.drafts);
         saveLocal("resume-dashboard-assessment-result", state.assessmentResult);
@@ -1706,9 +1880,10 @@
       </article>`).join("");
       $$("[data-job-check]").forEach(input => input.addEventListener("change", event => {
         const name = event.target.dataset.jobCheck;
-        if (event.target.checked && state.selectedJobs.length < 4) state.selectedJobs.push(name);
+        const maxCompareJobs = Number(state.vip?.max_compare_jobs) || 2;
+        if (event.target.checked && state.selectedJobs.length < maxCompareJobs) state.selectedJobs.push(name);
         else if (!event.target.checked) state.selectedJobs = state.selectedJobs.filter(item => item !== name);
-        else event.target.checked = false;
+        else { event.target.checked = false; openMembershipModal("job_compare"); }
         renderJobs(); renderComparison(); renderMatchReport(); renderTiers();
       }));
       $$('[data-favorite-job]').forEach(button => button.addEventListener("click", () => toggleFavoriteJob(button.dataset.favoriteJob)));
@@ -1756,7 +1931,7 @@
       const selected = selectedJobs();
       $("#compareCount").textContent = `已选 ${selected.length} 个`;
       if (selected.length < 2) {
-        $("#comparisonContent").innerHTML = `<div class="empty"><strong>选择 2–4 个岗位后开始比较</strong>匹配分、技能缺口与风险提示会在这里展开。</div>`;
+        $("#comparisonContent").innerHTML = `<div class="empty"><strong>选择 2–${Number(state.vip?.max_compare_jobs) || 2} 个岗位后开始比较</strong>匹配分、技能缺口与风险提示会在这里展开。</div>`;
         return;
       }
       $("#comparisonContent").innerHTML = `<div class="compare-actions"><button class="btn small soft" id="copyComparisonBtn">复制对比文本</button><button class="btn small" id="downloadComparisonBtn">保存对比记录</button><span class="field-help">当前比较仅使用本地岗位数据</span></div><div class="compare-table" style="margin-top:13px"><table><thead><tr><th>比较维度</th>${selected.map(job => `<th>${escapeHtml(job.roleName)}</th>`).join("")}</tr></thead><tbody>
@@ -1780,6 +1955,11 @@
       const score = role ? Math.max(45, Math.min(96, role.score - gaps.length * 8)) : 0;
       $("#matchScoreTag").textContent = role ? `匹配 ${score}%` : "待计算";
       if (!role) { $("#matchReportContent").innerHTML = `<div class="empty">先选择或查询一个岗位。</div>`; return; }
+      if (!vipAllows("full_job_report")) {
+        $("#matchReportContent").innerHTML = `<div class="empty"><strong>完整岗位匹配报告需要基础会员</strong><p>升级后可查看技能缺口与完整 7 / 30 / 90 天补齐路线。</p><button class="btn small primary" id="unlockMatchReportBtn" style="margin-top:12px">查看会员方案</button></div>`;
+        $("#unlockMatchReportBtn").onclick = () => openMembershipModal("full_job_report");
+        return;
+      }
       const reportText = [`岗位匹配报告：${role.roleName}`, `匹配度：${score}%`, `现有优势：${role.skills.filter(skill => knownSkills.has(skill)).join("、") || "暂无"}`, `缺失技能：${gaps.join("、") || "暂无"}`, "7天：基础练习并记录结果", "30天：完成可展示的小项目", "90天：根据面试反馈更新简历"].join("\n");
       $("#matchReportContent").innerHTML = `<div class="toolbar-group" style="margin-bottom:12px"><button class="btn small soft" id="copyMatchReportBtn">复制匹配报告</button></div><div class="grid grid-2"><div><h4>当前匹配优势</h4><div class="tag-row" style="margin-top:10px">${role.skills.filter(skill => knownSkills.has(skill)).map(skill => `<span class="tag green">${escapeHtml(skill)}</span>`).join("") || '<span class="field-help">暂未找到已验证技能</span>'}</div><h4 style="margin-top:20px">缺失技能清单</h4><div class="tag-row" style="margin-top:10px">${gaps.map(skill => `<span class="tag amber">${escapeHtml(skill)}</span>`).join("") || '<span class="tag green">暂无明显缺口</span>'}</div></div><div><h4>7 / 30 / 90 天补齐路径</h4><ul class="action-list"><li>7 天：围绕 ${escapeHtml(gaps[0] || "岗位核心技能")} 完成基础练习并记录结果</li><li>30 天：完成一个可展示的小项目，补齐背景、动作与结果</li><li>90 天：用面试反馈更新简历版本和投递方向</li></ul></div></div>`;
       $("#copyMatchReportBtn").addEventListener("click", () => copyText(reportText, "匹配报告已复制"));
@@ -1958,10 +2138,12 @@
       }, "写入");
     }
     function exportEvidence() {
+      if (!requireVipFeature("bulk_evidence_export")) return;
       const text = JSON.stringify({ exportedAt: new Date().toISOString(), cacheOwner: authSession.userId(), evidence: state.evidence }, null, 2);
       downloadText("经历证据备份.json", text, "application/json");
     }
     function importEvidence(file) {
+      if (!requireVipFeature("bulk_evidence_export")) return;
       const reader = new FileReader();
       reader.onload = () => {
         try {
@@ -2150,6 +2332,7 @@
       showToast("已生成空白经历草稿，请替换为真实内容");
     }
     function openDraftComparison() {
+      if (!requireVipFeature("multi_draft_compare")) return;
       if (state.drafts.length < 2) { showToast("至少需要两份草稿才能对比"); return; }
       openModal("简历版本对比", `<div class="form-grid"><div class="field"><label>版本 A</label><select class="select" id="compareDraftA">${state.drafts.map(item => `<option value="${item.id}">${escapeHtml(item.title)}</option>`).join("")}</select></div><div class="field"><label>版本 B</label><select class="select" id="compareDraftB">${state.drafts.map(item => `<option value="${item.id}">${escapeHtml(item.title)}</option>`).join("")}</select></div></div><div id="draftComparisonBody" style="margin-top:15px"></div>`, closeModal, "关闭");
       const render = () => {
@@ -2228,7 +2411,9 @@
       const assessmentText = [`职业测评报告：${score} / 100`, `工作方式：${result.work_style_summary || "—"}`, `兴趣方向：${asArray(result.top_interests).map(item => `${item.label}(${item.score})`).join("、") || "—"}`, `推荐岗位：${asArray(result.recommended_roles).join("、") || "—"}`, `优势证据：${asArray(result.strength_evidence).join("、") || "—"}`].join("\n");
       $("#assessmentBody").innerHTML = `<div class="result-hero"><div class="eyebrow">Assessment signal</div><div class="result-score">${score}<small> / 100</small></div><p style="margin:5px 0 0">${escapeHtml(result.work_style_summary || "已生成当前职业信号")}</p><div class="tag-row" style="margin-top:15px">${(result.top_interests || []).map(item => `<span class="tag blue">${escapeHtml(item.label)} · ${item.score}</span>`).join("")}</div><div class="tag-row" style="margin-top:10px">${(result.recommended_roles || []).map(item => `<span class="tag green">${escapeHtml(item)}</span>`).join("")}</div></div><div class="toolbar-group" style="margin-top:15px"><button class="btn primary" id="syncAssessmentBtn">同步到三档职业规划</button><button class="btn" id="resetAssessmentBtn">重新测评</button><button class="btn small" id="assessmentHistoryInlineBtn">查看历史</button><button class="btn small soft" id="copyAssessmentBtn">复制测评报告</button></div><div style="margin-top:17px"><h3>已说明的真实优势</h3><p style="margin-top:7px">${escapeHtml((result.strength_evidence || []).join(" · ") || "暂未记录足够的优势证据")}</p></div>`;
       $("#assessmentResult").style.display = "block";
-      $("#assessmentResult").innerHTML = `<details class="collapse static" open><summary><div><h3>7 / 30 / 90 天行动计划</h3><p style="margin:3px 0 0;color:var(--muted);font-size:11px">把测评结果转成可执行动作</p></div></summary><div class="collapse-content"><div class="grid grid-3">${[["7 天", result.action_plan?.seven_day], ["30 天", result.action_plan?.thirty_day], ["90 天", result.action_plan?.ninety_day]].map(([title, list]) => `<div class="tier"><span class="tag blue">${title}</span><ul class="action-list">${(list || []).map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>`).join("")}</div></div></details>`;
+      const hasFullAssessment = vipAllows("full_assessment") && result.report_scope !== "simplified";
+      $("#assessmentResult").innerHTML = hasFullAssessment ? `<details class="collapse static" open><summary><div><h3>7 / 30 / 90 天行动计划</h3><p style="margin:3px 0 0;color:var(--muted);font-size:11px">把测评结果转成可执行动作</p></div></summary><div class="collapse-content"><div class="grid grid-3">${[["7 天", result.action_plan?.seven_day], ["30 天", result.action_plan?.thirty_day], ["90 天", result.action_plan?.ninety_day]].map(([title, list]) => `<div class="tier"><span class="tag blue">${title}</span><ul class="action-list">${(list || []).map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>`).join("")}</div></div></details>` : `<div class="empty"><strong>已生成简化测评结果</strong><p>升级基础会员可解锁完整 7 / 30 / 90 天职业路线。</p><button class="btn small primary" id="unlockAssessmentPlanBtn" style="margin-top:12px">查看会员方案</button></div>`;
+      $("#unlockAssessmentPlanBtn")?.addEventListener("click", () => openMembershipModal("full_assessment"));
       $("#syncAssessmentBtn").addEventListener("click", syncAssessmentToPlans);
       $("#resetAssessmentBtn").addEventListener("click", () => { state.assessmentResult = null; state.assessmentAnswers = {}; state.assessmentStep = 0; saveLocal("resume-dashboard-assessment-result", null); saveLocal("resume-dashboard-assessment-answers", {}); renderAssessment(); showToast("已开始新的测评"); });
       $("#assessmentHistoryInlineBtn").addEventListener("click", openAssessmentHistory);
@@ -2250,6 +2435,7 @@
       }));
     }
     function openAssessmentExtensions() {
+      if (!requireVipFeature("full_assessment")) return;
       const history = state.assessmentHistory;
       const current = state.assessmentResult;
       openModal("测评档案与规划文档", `<div class="toolbar-group"><button class="btn small" id="compareAssessmentBtn">比较两份测评</button><button class="btn small soft" id="downloadAssessmentPlanBtn">生成规划文档</button></div><div class="list" style="margin-top:14px">${history.length ? history.map(item => `<div class="list-item"><strong>${escapeHtml(item.createdAt)}</strong><p>方向清晰度 ${item.score} / 100</p></div>`).join("") : '<div class="empty">完成一次测评后会在这里永久存档。</div>'}</div><div class="field" style="margin-top:14px"><label>新增自定义测评题</label><div class="toolbar-group"><input class="input" id="customAssessmentQuestion" maxlength="120" placeholder="例如：我希望工作包含多少比例的沟通？"><button class="btn small soft" id="saveCustomAssessmentBtn">保存题目</button></div></div>`, closeModal, "关闭");
@@ -2357,6 +2543,7 @@
     function openDraft(id) {
       const draft = state.drafts.find(item => item.id === id);
       if (!draft) return;
+      state.activeDraftId = draft.id;
       if (draft.resume) state.resume = { ...defaultResume, ...draft.resume };
       fillResume();
       setPage("resume", true);
@@ -2367,6 +2554,9 @@
     function renderDrafts() {
       $("#draftCount").textContent = state.drafts.length;
       state.drafts = state.drafts.map(normalizeDraft);
+      const newDraftButton = $("#newDraftBtn");
+      const atFreeDraftLimit = state.vip?.max_drafts !== null && state.drafts.length >= Number(state.vip?.max_drafts || 3);
+      if (newDraftButton) newDraftButton.classList.toggle("hidden", atFreeDraftLimit);
       const page = paginate(state.drafts, state.draftPage, state.pageSize);
       state.draftPage = page.currentPage;
       $("#draftList").innerHTML = state.drafts.length ? page.items.map(draft => `<article class="list-item"><div class="list-item-head"><label style="display:flex;align-items:flex-start;gap:8px"><input type="checkbox" data-draft-check="${escapeHtml(draft.id)}" ${state.selectedDrafts.has(draft.id) ? "checked" : ""}><span><strong>${escapeHtml(draft.title)}</strong><small style="display:block;color:var(--muted);margin-top:3px">${escapeHtml(draft.template)} · 更新于 ${escapeHtml(draft.updatedAt)}</small></span></label><span class="tag blue">草稿</span></div><div class="toolbar-group" style="margin-top:12px"><button class="btn small soft" data-open-draft="${escapeHtml(draft.id)}">打开</button><button class="btn small" data-copy-draft="${escapeHtml(draft.id)}">复制</button><button class="btn small danger" data-delete-draft="${escapeHtml(draft.id)}">删除</button></div></article>`).join("") : `<div class="empty"><strong>还没有简历草稿</strong><p>完成一次保存后，草稿会出现在这里。</p><button class="btn small primary" data-empty-action="resume" style="margin-top:12px">新建第一份草稿</button></div>`;
@@ -2376,7 +2566,7 @@
         state.draftPage = nextPage;
         renderDrafts();
       });
-      $$("[data-copy-draft]").forEach(button => button.addEventListener("click", () => { const original = state.drafts.find(item => item.id === button.dataset.copyDraft); if (original) { state.drafts.push({ ...original, id: `${original.id}-copy-${Date.now()}`, title: `${original.title} · 副本`, updatedAt: "刚刚" }); renderDrafts(); showToast("草稿副本已创建"); } }));
+      $$("[data-copy-draft]").forEach(button => button.addEventListener("click", () => { if (state.vip?.max_drafts !== null && state.drafts.length >= Number(state.vip?.max_drafts || 3)) { openMembershipModal("draft_limit"); return; } const original = state.drafts.find(item => item.id === button.dataset.copyDraft); if (original) { state.drafts.push({ ...original, id: `${original.id}-copy-${Date.now()}`, title: `${original.title} · 副本`, updatedAt: "刚刚" }); renderDrafts(); showToast("草稿副本已创建"); } }));
       $$("[data-delete-draft]").forEach(button => button.addEventListener("click", () => deleteDrafts([button.dataset.deleteDraft])));
       saveLocal("resume-dashboard-drafts", state.drafts);
     }
@@ -2442,6 +2632,7 @@
       openModal("旧版 client_id 已停用", "<p style='margin:0;color:var(--muted)'>本期改为 JWT 用户隔离。本页面不会再读取或发送 client_id；旧版本地数据会保留且不会自动绑定到新账号。</p>", closeModal, "关闭");
     }
     function exportAllLocal() {
+      if (!requireVipFeature("bulk_all_data")) return;
       downloadText("ai-resume-local-backup.json", JSON.stringify({ exportedAt: new Date().toISOString(), cacheOwner: authSession.userId(), evidence: state.evidence, deliveries: state.deliveries, drafts: state.drafts, assessmentHistory: state.assessmentHistory, resume: state.extension.maskSensitive ? maskResume() : state.resume }, null, 2), "application/json");
     }
     function deliveryStats() {
@@ -2566,10 +2757,11 @@
       if (!requireLogin()) return;
       setSaveStatus("saving", "保存中");
       try {
-        const result = await apiOrMock("/api/draft/save", { method: "POST", body: JSON.stringify({ job_title: state.resume.role, template_id: "business", resume: dashboardResumePayload(state.resume) }) }, () => ({ id: `draft-${Date.now()}` }), "draft save");
+        const result = await apiOrMock("/api/draft/save", { method: "POST", body: JSON.stringify({ id: state.activeDraftId || undefined, job_title: state.resume.role, template_id: "business", resume: dashboardResumePayload(state.resume) }) }, () => ({ id: state.activeDraftId || `draft-${Date.now()}` }), "draft save");
         if (isApiServiceFailure(result)) { setSaveStatus("error", "云端保存失败"); return; }
         if (!authSession.hasToken()) { setSaveStatus("error", "登录已失效"); return; }
         const item = normalizeDraft({ id: result?.id || `draft-${Date.now()}`, title: state.resume.version || `${state.resume.role || "未命名"}版`, updatedAt: "刚刚", template: $("#templateName").textContent, resume: { ...state.resume } });
+        state.activeDraftId = item.id;
         const previousDrafts = state.drafts.map(draft => ({ ...draft, resume: { ...(draft.resume || {}) } }));
         const existingIndex = state.drafts.findIndex(draft => draft.id === item.id);
         if (existingIndex >= 0) state.drafts[existingIndex] = item;
@@ -2622,6 +2814,7 @@
       });
       $("#mobileMenu").addEventListener("click", () => $("#sidebar").classList.toggle("open"));
       $("#openPrivacy").addEventListener("click", () => setPage("privacy"));
+      $("#refreshOrdersBtn").addEventListener("click", refreshOrders);
       $("#themeToggle").addEventListener("click", () => { state.theme = state.theme === "dark" ? "light" : "dark"; applyTheme(); });
       $("#reconnectBtn").addEventListener("click", reconnectBackend);
       $("#globalSearchInput").addEventListener("input", event => renderGlobalSearch(event.target.value));
@@ -2687,7 +2880,8 @@
       $("#polishBtn").addEventListener("click", openPolishGuard);
       $("#blankExperienceBtn").addEventListener("click", generateBlankExperience);
       $("#newDraftBtn").addEventListener("click", () => {
-        const action = () => { state.resume = { ...defaultResume, name: "", phone: "", email: "", role: "", city: "", summary: "", project: "", skills: "", version: "", filename: "" }; fillResume(); showToast("已创建空白草稿"); };
+        if (state.vip?.max_drafts !== null && state.drafts.length >= Number(state.vip?.max_drafts || 3)) { openMembershipModal("draft_limit"); return; }
+        const action = () => { state.activeDraftId = null; state.resume = { ...defaultResume, name: "", phone: "", email: "", role: "", city: "", summary: "", project: "", skills: "", version: "", filename: "" }; fillResume(); showToast("已创建空白草稿"); };
         if (hasDirtyState()) openModal("新建空白草稿？", "<p style='margin:0;color:var(--muted)'>当前编辑中的内容尚未保存，继续后会清空简历编辑区。</p>", action, "清空并新建");
         else action();
       });
@@ -2878,6 +3072,7 @@
       openModal("投递跟进日历", "", closeModal, "关闭"); render();
     }
     function openInterviewBank(deliveryId = state.deliveries[0]?.id) {
+      if (!requireVipFeature("interview_bank")) return;
       const delivery = state.deliveries.find(item => String(item.id) === String(deliveryId)) || state.deliveries[0];
       if (!delivery) { showToast("请先创建投递记录"); return; }
       const role = delivery.roleName || state.resume.role || "目标岗位";
@@ -2893,6 +3088,7 @@
       };
     }
     function openAssessmentExtensions() {
+      if (!requireVipFeature("full_assessment")) return;
       const history = state.assessmentHistory;
       const current = state.assessmentResult;
       const options = history.map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.createdAt)} · ${item.score}/100</option>`).join("");
@@ -3040,6 +3236,7 @@
       renderDeliveriesBase();
     };
     exportDeliveries = function() {
+      if (!requireVipFeature("bulk_all_data")) return;
       const headers = ["公司", "岗位", "城市", "状态", "投递日期", "跟进日期", "来源", "绑定草稿", "面试复盘", "题库笔记"];
       const rows = state.deliveries.map(item => [item.company, item.roleName, item.city, statusText[item.status], item.appliedDate, item.nextActionAt, item.source || "dashboard", state.drafts.find(draft => draft.id === item.draftId)?.title || "", item.notes, Object.entries(state.extension.interviewNotes).filter(([key]) => key.startsWith(`${item.id}:`)).map(([, note]) => note).join(" | ")]);
       const csv = [headers, ...rows].map(row => row.map(value => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -3072,6 +3269,7 @@
       renderDrafts();
       if (restoredLogin) {
         maybeCreateAutoSnapshot();
+        await refreshMembershipData(true);
         const sources = await apiOrMock("/api/knowledgebase/sources", {}, () => ({ items: [] }), "knowledgebase sources");
         const assessment = await apiOrMock("/api/career/assessment", {}, null, "assessment load");
         if (!isApiServiceFailure(sources) && !isApiServiceFailure(assessment)) {
@@ -3087,6 +3285,8 @@
       }
       renderAssessment();
       renderDashboard();
+      renderMembership();
+      renderOrders();
       updateRuntimeBanner();
       renderCompletionFeatures();
     }

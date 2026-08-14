@@ -13,24 +13,35 @@ from app.services.export_filenames import build_export_filename
 from app.services.export_pdf import render_pdf_resume
 from app.services.export_word import render_word_resume
 from app.services.auth import current_user_id
+from app.services.membership import VipStatus, get_current_vip
 
 
 router = APIRouter(tags=["exports"])
 
 
 @router.post("/api/export/word")
-def export_word(payload: ExportRequest, request: Request, user_id: str = Depends(current_user_id)):
+def export_word(
+    payload: ExportRequest,
+    request: Request,
+    user_id: str = Depends(current_user_id),
+    vip: VipStatus = Depends(get_current_vip),
+):
     draft = request.app.state.draft_repository.get(user_id, payload.draft_id)
     resume = ResumePayload.model_validate(draft["resume"])
     filename = build_export_filename(resume.basic.name, resume.job.target_role, "docx")
     output_path = _output_path(request, "docx")
-    render_word_resume(resume, output_path)
+    render_word_resume(resume, output_path, vip.watermark_text)
     result = request.app.state.download_service.register(user_id, output_path, filename)
     return success(result.model_dump(mode="json"))
 
 
 @router.post("/api/export/pdf")
-async def export_pdf(payload: ExportRequest, request: Request, user_id: str = Depends(current_user_id)):
+async def export_pdf(
+    payload: ExportRequest,
+    request: Request,
+    user_id: str = Depends(current_user_id),
+    vip: VipStatus = Depends(get_current_vip),
+):
     draft = request.app.state.draft_repository.get(user_id, payload.draft_id)
     resume = ResumePayload.model_validate(draft["resume"])
     filename = build_export_filename(resume.basic.name, resume.job.target_role, "pdf")
@@ -42,6 +53,7 @@ async def export_pdf(payload: ExportRequest, request: Request, user_id: str = De
         output_path,
         settings.pdf_renderer,
         settings.playwright_browsers_path,
+        vip.watermark_text,
     )
     result = request.app.state.download_service.register(user_id, output_path, filename)
     return success(result.model_dump(mode="json"))

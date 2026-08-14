@@ -22,8 +22,9 @@ async def render_pdf_resume(
     output_path: Path,
     renderer: str,
     browser_root: str,
+    watermark_text: str | None = None,
 ) -> None:
-    html = render_resume_html(resume, template_id)
+    html = render_resume_html(resume, template_id, watermark_text)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     if renderer == "playwright":
         await _render_with_playwright(html, output_path, browser_root)
@@ -34,11 +35,15 @@ async def render_pdf_resume(
     raise PdfRendererUnavailableError(f"Unsupported PDF renderer: {renderer}")
 
 
-def render_resume_html(resume: ResumePayload, template_id: str) -> str:
+def render_resume_html(
+    resume: ResumePayload, template_id: str, watermark_text: str | None = None
+) -> str:
     template_root = Path(__file__).resolve().parents[1] / "templates" / "html"
     base_html = (template_root / "base.html").read_text(encoding="utf-8")
     theme_styles = (template_root / f"{template_id}.html").read_text(encoding="utf-8")
     content = _render_content(resume)
+    if watermark_text:
+        content += f'<p style="margin-top: 24px; color: #7a8494; font-size: 10px; text-align: center;">{escape(watermark_text)}</p>'
     return base_html.replace("{{ theme_styles }}", theme_styles).replace("{{ content }}", content)
 
 

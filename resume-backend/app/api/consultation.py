@@ -2,18 +2,23 @@ from __future__ import annotations
 
 from io import BytesIO
 
-from fastapi import APIRouter, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from pypdf import PdfReader
 
 from app.schemas.common import success
 from app.schemas.consultation import AdviceRequest, JobConsultationRequest, ResumeReviewRequest
+from app.services.membership import VipStatus, require_vip_feature
 
 
 router = APIRouter()
 
 
 @router.post("/api/consultation/job-analysis")
-async def job_analysis(payload: JobConsultationRequest, request: Request):
+async def job_analysis(
+    payload: JobConsultationRequest,
+    request: Request,
+    _: VipStatus = Depends(require_vip_feature("full_job_report")),
+):
     job = await _get_job_intelligence(payload.role_name, request)
     result = await request.app.state.ai_client.build_job_consultation(
         job,

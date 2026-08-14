@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from conftest import grant_vip
+
 
 def assert_success(response):
     assert response.status_code == 200, response.text
@@ -49,6 +51,7 @@ def test_career_recommendation_adds_guidance_only_after_assessment(api_client):
         "skills": ["Python", "SQL"],
     }
     assert_success(api_client.post("/api/career/profile/save", json=profile))
+    grant_vip(api_client, "basic")
     assert_success(
         api_client.post(
             "/api/career/assessment/submit",

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from conftest import grant_vip
 
 def assert_success(response):
     assert response.status_code == 200
@@ -41,6 +42,7 @@ def make_text_pdf(text: str) -> bytes:
 
 
 def test_job_analysis_returns_nine_sections_and_detailed_identity_plan(api_client):
+    grant_vip(api_client, "basic")
     data = assert_success(
         api_client.post(
             "/api/consultation/job-analysis",
@@ -61,6 +63,7 @@ def test_job_analysis_returns_nine_sections_and_detailed_identity_plan(api_clien
 
 
 def test_job_analysis_returns_growth_route_risk_markers_and_custom_requirement_notes(api_client):
+    grant_vip(api_client, "basic")
     data = assert_success(
         api_client.post(
             "/api/consultation/job-analysis",
@@ -88,6 +91,7 @@ def test_job_analysis_returns_growth_route_risk_markers_and_custom_requirement_n
 
 
 def test_all_identities_receive_distinct_detailed_plans(api_client):
+    grant_vip(api_client, "basic")
     expected_titles = {
         "1": "在校学生全套求职解决方案",
         "2": "应届毕业生全套求职解决方案",
@@ -108,6 +112,7 @@ def test_all_identities_receive_distinct_detailed_plans(api_client):
 
 
 def test_job_analysis_rejects_unknown_identity_code(api_client):
+    grant_vip(api_client, "basic")
     response = api_client.post(
         "/api/consultation/job-analysis",
         json={"role_name": "Data Engineer", "identity_code": "6"},

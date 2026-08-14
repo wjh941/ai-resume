@@ -203,6 +203,28 @@ def initialize_database(database_path: Path) -> None:
                 expires_at TEXT NOT NULL,
                 created_at TEXT NOT NULL
             );
+            -- 二期商业化底座：每个用户一行当前权益，所有过期降级在仓储层完成。
+            CREATE TABLE IF NOT EXISTS user_vip (
+                user_id TEXT PRIMARY KEY REFERENCES users(user_id),
+                vip_level TEXT NOT NULL DEFAULT 'free' CHECK (vip_level IN ('free', 'basic', 'premium')),
+                expire_time TEXT,
+                auto_renew INTEGER NOT NULL DEFAULT 0,
+                create_time TEXT NOT NULL
+            );
+            -- total_amount 为人民币分，避免 SQLite REAL 的金额精度问题。
+            CREATE TABLE IF NOT EXISTS order_record (
+                order_id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL REFERENCES users(user_id),
+                package_type TEXT NOT NULL CHECK (package_type IN ('monthly', 'quarterly', 'annual')),
+                total_amount INTEGER NOT NULL CHECK (total_amount >= 0),
+                payment_status TEXT NOT NULL CHECK (payment_status IN ('pending', 'paid', 'closed')),
+                create_time TEXT NOT NULL,
+                payment_channel TEXT,
+                entitlement_expire_time TEXT,
+                auto_renew INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE INDEX IF NOT EXISTS idx_order_record_owner_created
+            ON order_record (user_id, create_time DESC, order_id DESC);
             CREATE TABLE IF NOT EXISTS job_catalog (
                 role_name TEXT PRIMARY KEY,
                 category TEXT NOT NULL,

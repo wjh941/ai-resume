@@ -9,6 +9,11 @@ const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)]
 assert.equal(scripts.length, 1, 'dashboard must keep one inline script');
 
 const storage = new Map();
+const createElement = () => ({
+  className: '', textContent: '', innerHTML: '', value: '', checked: false,
+  style: {}, dataset: {}, classList: { add() {}, remove() {}, toggle() {} },
+  addEventListener() {}, appendChild() {}, setAttribute() {}, removeAttribute() {}
+});
 const sandbox = {
   console,
   atob: value => Buffer.from(value, 'base64').toString('utf8'),
@@ -22,6 +27,9 @@ const sandbox = {
     removeItem(key) { storage.delete(String(key)); }
   },
   navigator: { onLine: true },
+  document: { querySelector: () => createElement(), querySelectorAll: () => [], createElement, body: createElement() },
+  window: { scrollTo() {} },
+  AbortController,
   setTimeout,
   clearTimeout
 };
@@ -51,6 +59,11 @@ globalThis.__dashboardTestApi = {
   deliveryStats: typeof deliveryStats === 'function' ? deliveryStats : undefined,
   mergeRestoredExtension: typeof mergeRestoredExtension === 'function' ? mergeRestoredExtension : undefined,
   removeEvidenceAttachments: typeof removeEvidenceAttachments === 'function' ? removeEvidenceAttachments : undefined,
+  refreshVipStatus: typeof refreshVipStatus === 'function' ? refreshVipStatus : undefined,
+  refreshOrders: typeof refreshOrders === 'function' ? refreshOrders : undefined,
+  openDraft: typeof openDraft === 'function' ? openDraft : undefined,
+  saveDraft: typeof saveDraft === 'function' ? saveDraft : undefined,
+  loadUserScopedState: typeof loadUserScopedState === 'function' ? loadUserScopedState : undefined,
   state
 };`;
 const source = scripts[0].replace(/\n\s*initialize\(\);\s*$/, exportApi);
@@ -144,6 +157,57 @@ assert.match(html, /function saveLocalBatch\b/);
 assert.match(html, /id="loginBtn"/);
 assert.match(html, /Authorization\s*=\s*`Bearer \$\{authSession\.token\}`/);
 assert.match(html, /resume-dashboard:\$\{userId\}:\$\{String\(key\)/);
+assert.match(html, /id="vipStatusBtn"/, 'top navigation must display the current membership tier');
+assert.match(html, /data-page="membership"/, 'membership purchase page must be reachable from navigation');
+assert.match(html, /data-page="orders"/, 'order history page must be reachable from navigation');
+assert.match(html, /\/api\/user\/vip-info/, 'dashboard must load the server membership status');
+assert.match(html, /\/api\/pay\/package-list/, 'dashboard must load server packages');
+assert.match(html, /\/api\/pay\/create-order/, 'dashboard must create an order before checkout');
+assert.match(html, /\/api\/pay\/callback/, 'dashboard must complete demo payment through the API');
+assert.match(html, /\/api\/user\/order-list/, 'dashboard must load current-user order history');
+assert.match(html, /resume-dashboard-vip-status/, 'membership cache must be JWT-user scoped');
+assert.match(html, /function requireVipFeature\b/, 'restricted actions must have a shared membership interceptor');
+assert.match(html, /function openMembershipModal\b/, 'privilege errors must open a membership guide');
+assert.match(html, /vip_required/, 'API privilege responses must be handled without clearing a valid login');
 assert.doesNotMatch(html, /location\.protocol\s*===\s*["']file:/, 'file:// Mock export branch must be removed');
+
+const firstAccountJwt = `header.${Buffer.from(JSON.stringify({ sub: 'owner-a', token_version: 1, exp: 9999999999 })).toString('base64url')}.signature`;
+const secondAccountJwt = `header.${Buffer.from(JSON.stringify({ sub: 'owner-b', token_version: 1, exp: 9999999999 })).toString('base64url')}.signature`;
+api.authSession.set(firstAccountJwt);
+api.state.vip = { vip_level: 'free', expire_time: null, auto_renew: false, max_drafts: 3, max_compare_jobs: 2 };
+let resolveVipRequest;
+sandbox.fetch = () => new Promise(resolve => { resolveVipRequest = () => resolve({ ok: true, status: 200, json: async () => ({ code: 'ok', data: { vip_level: 'premium', expire_time: '2030-01-01T00:00:00+00:00', auto_renew: false, max_drafts: null, max_compare_jobs: 4 } }) }); });
+const pendingVip = api.refreshVipStatus();
+api.authSession.set(secondAccountJwt);
+await Promise.resolve();
+resolveVipRequest();
+await pendingVip;
+assert.equal(api.state.vip.vip_level, 'free', 'a delayed VIP response must not overwrite a different account');
+assert.equal(sandbox.localStorage.getItem('resume-dashboard:owner-b:vip-status'), null, 'a delayed VIP response must not be cached for a different account');
+
+api.state.orders = [];
+let resolveOrdersRequest;
+sandbox.fetch = () => new Promise(resolve => { resolveOrdersRequest = () => resolve({ ok: true, status: 200, json: async () => ({ code: 'ok', data: { items: [{ order_id: 'owner-b-order', payment_status: 'paid' }] } }) }); });
+const pendingOrders = api.refreshOrders();
+api.authSession.set(firstAccountJwt);
+await Promise.resolve();
+resolveOrdersRequest();
+await pendingOrders;
+assert.deepEqual(Array.from(api.state.orders), [], 'a delayed order response must not appear for a different account');
+
+api.state.drafts = [{ id: 'existing-draft', title: 'Existing', template: 'business', resume: { ...dashboardResume } }];
+api.state.resumeDirty = false;
+api.openDraft('existing-draft');
+assert.equal(api.state.activeDraftId, 'existing-draft', 'opening a draft must retain its ID for the next save');
+let savedDraftId;
+sandbox.fetch = (_url, options) => {
+  savedDraftId = JSON.parse(options.body).id;
+  return Promise.resolve({ ok: true, status: 200, json: async () => ({ code: 'ok', data: { id: 'existing-draft' } }) });
+};
+await api.saveDraft();
+assert.equal(savedDraftId, 'existing-draft', 'saving an opened draft must update it rather than create a new draft');
+api.state.activeDraftId = 'existing-draft';
+api.loadUserScopedState();
+assert.equal(api.state.activeDraftId, null, 'switching account storage must clear the active draft ID');
 
 console.log('premium dashboard contract checks passed');

@@ -49,6 +49,14 @@ class Settings:
     wechat_open_app_id: str = ""
     wechat_open_app_secret: str = ""
     wechat_open_redirect_uri: str = ""
+    # 二期商业化底座。真实支付接入前只能在演示环境开启模拟回调。
+    membership_enabled: bool = True
+    payment_demo_mode: bool = True
+    wechat_pay_mch_id: str = ""
+    wechat_pay_api_v3_key: str = ""
+    wechat_pay_app_id: str = ""
+    alipay_app_id: str = ""
+    alipay_private_key: str = ""
     cors_origins: tuple[str, ...] = ()
 
 
@@ -100,5 +108,12 @@ def load_settings() -> Settings:
         wechat_open_app_id=os.getenv("WECHAT_OPEN_APP_ID", ""),
         wechat_open_app_secret=os.getenv("WECHAT_OPEN_APP_SECRET", ""),
         wechat_open_redirect_uri=os.getenv("WECHAT_OPEN_REDIRECT_URI", ""),
+        membership_enabled=_read_bool("MEMBERSHIP_ENABLED", True),
+        payment_demo_mode=_read_bool("PAYMENT_DEMO_MODE", app_env != "production"),
+        wechat_pay_mch_id=os.getenv("WECHAT_PAY_MCH_ID", ""),
+        wechat_pay_api_v3_key=os.getenv("WECHAT_PAY_API_V3_KEY", ""),
+        wechat_pay_app_id=os.getenv("WECHAT_PAY_APP_ID", ""),
+        alipay_app_id=os.getenv("ALIPAY_APP_ID", ""),
+        alipay_private_key=os.getenv("ALIPAY_PRIVATE_KEY", ""),
         cors_origins=_read_csv("CORS_ORIGINS"),
     )

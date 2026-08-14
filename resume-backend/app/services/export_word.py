@@ -7,7 +7,9 @@ from docx import Document
 from app.schemas.resume import ResumePayload
 
 
-def render_word_resume(resume: ResumePayload, output_path: Path) -> None:
+def render_word_resume(
+    resume: ResumePayload, output_path: Path, watermark_text: str | None = None
+) -> None:
     document = Document()
     visibility = resume.section_visibility
     if visibility.basic:
@@ -63,6 +65,9 @@ def render_word_resume(resume: ResumePayload, output_path: Path) -> None:
         _add_entries(document, "技能证书", [", ".join(resume.skills.skills + resume.skills.certificates)])
     if visibility.self_evaluation:
         _add_entries(document, "自我评价", [resume.self_evaluation])
+    if watermark_text:
+        watermark = document.add_paragraph(watermark_text)
+        watermark.style = document.styles["Caption"]
     output_path.parent.mkdir(parents=True, exist_ok=True)
     document.save(output_path)
 

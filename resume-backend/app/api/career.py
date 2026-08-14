@@ -3,9 +3,10 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from app.repositories.assessment import AssessmentNotFoundError
-from app.schemas.career import CareerComparisonRequest, CareerProfilePayload
+from app.schemas.career import CareerComparisonRequest, CareerProfilePayload, ComparisonActionPlan
 from app.schemas.common import success
 from app.services.auth import current_user_id
+from app.services.membership import VipPermissionError, VipStatus, get_current_vip
 
 
 router = APIRouter()
@@ -56,15 +57,23 @@ async def get_career_profile(request: Request, user_id: str = Depends(current_us
 
 
 @router.post("/api/career/recommend")
-async def career_recommend(request: Request, user_id: str = Depends(current_user_id)):
+async def career_recommend(
+    request: Request,
+    user_id: str = Depends(current_user_id),
+    vip: VipStatus = Depends(get_current_vip),
+):
     profile = request.app.state.career_profile_repository.get(user_id)
     try:
         assessment = request.app.state.assessment_repository.get(user_id)
     except AssessmentNotFoundError:
         assessment = None
+    assessment_result = assessment["result"] if assessment else None
+    if assessment_result and not vip.allows("full_assessment"):
+        # 同一份已存档测评不能经推荐接口绕过 Free 版的 7/30/90 天路线限制。
+        assessment_result = {**assessment_result, "action_plan": {}}
     recommendation = request.app.state.career_recommender.recommend(
         profile,
-        assessment_result=assessment["result"] if assessment else None,
+        assessment_result=assessment_result,
     )
     return success(recommendation.model_dump())
 
@@ -74,7 +83,12 @@ async def career_compare(
     payload: CareerComparisonRequest,
     request: Request,
     user_id: str = Depends(current_user_id),
+    vip: VipStatus = Depends(get_current_vip),
 ):
+    if len(payload.role_names) > vip.max_compare_jobs:
+        raise VipPermissionError(
+            f"当前会员最多对比 {vip.max_compare_jobs} 个岗位，请升级后继续分析"
+        )
     profile = request.app.state.career_profile_repository.get(user_id)
     try:
         roles = request.app.state.career_catalog_repository.get_roles_by_names(
@@ -89,9 +103,17 @@ async def career_compare(
         verified_evidence=[item for item in evidence if item.verified],
     )
     for item in comparison.items:
-        item.action_plan = await request.app.state.ai_client.build_comparison_action_plan(
-            item.role.role_name,
-            profile.model_dump(),
-            [entry.title for entry in evidence if entry.verified],
-        )
+        if vip.vip_level == "free":
+            # Free 保留当周行动建议；完整 7/30/90 天路线由基础会员以上解锁。
+            item.action_plan = ComparisonActionPlan(
+                seven_day=[f"核对 {item.role.role_name} 的两项核心技能，并补充一条真实经历。"],
+                thirty_day=[],
+                ninety_day=[],
+            )
+        else:
+            item.action_plan = await request.app.state.ai_client.build_comparison_action_plan(
+                item.role.role_name,
+                profile.model_dump(),
+                [entry.title for entry in evidence if entry.verified],
+            )
     return success(comparison.model_dump())

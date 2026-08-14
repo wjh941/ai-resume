@@ -3,6 +3,8 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 from pathlib import Path
+from datetime import datetime, timedelta, timezone
+import sqlite3
 import sys
 
 
@@ -47,6 +49,25 @@ def auth_headers(api_client):
         return {"Authorization": f"Bearer {response.json()['data']['token']}"}
 
     return create
+
+
+def grant_vip(api_client, level: str = "premium", days: int = 365) -> None:
+    """测试夹具：显式配置当前 JWT 用户的会员状态，不绕过业务路由的鉴权。"""
+    token = api_client.headers["Authorization"].split(" ", 1)[1]
+    user_id = api_client.app.state.auth_service.verify(token)
+    now = datetime.now(timezone.utc)
+    with sqlite3.connect(api_client.app.state.settings.database_path) as connection:
+        connection.execute(
+            """
+            INSERT INTO user_vip (user_id, vip_level, expire_time, auto_renew, create_time)
+            VALUES (?, ?, ?, 0, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+                vip_level = excluded.vip_level,
+                expire_time = excluded.expire_time,
+                auto_renew = 0
+            """,
+            (user_id, level, (now + timedelta(days=days)).isoformat(), now.isoformat()),
+        )
 
 
 def make_resume_payload() -> dict:

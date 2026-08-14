@@ -8,7 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import ai, applications, assessment, auth, career, consultation, drafts, evidence, exports, knowledgebase, templates
+from app.api import ai, applications, assessment, auth, career, consultation, drafts, evidence, exports, knowledgebase, membership, templates
 from app.repositories.applications import ApplicationNotFoundError, ApplicationRepository
 from app.config import Settings, load_settings
 from app.db import initialize_database
@@ -18,6 +18,7 @@ from app.repositories.career_profiles import CareerProfileNotFoundError, CareerP
 from app.repositories.drafts import DraftNotFoundError, DraftRepository
 from app.repositories.evidence import EvidenceRepository
 from app.repositories.knowledgebase import KnowledgebaseRepository, KnowledgebaseRoleNotFoundError
+from app.repositories.membership import MembershipRepository, OrderNotFoundError
 from app.repositories.templates import TemplateRepository
 from app.repositories.users import UserRepository
 from app.schemas.common import error, success
@@ -32,6 +33,7 @@ from app.services.rewrite_guard import RewriteFactViolation
 from app.services.template_service import TemplateService
 from app.services.auth import AuthService
 from app.services.auth import current_user_id
+from app.services.membership import MembershipPackageConflictError, MembershipService, PaymentChannelUnavailableError, PaymentDemoDisabledError, VipPermissionError, get_current_vip
 from app.services.web_search import build_web_search_client
 
 
@@ -70,6 +72,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.user_repository = UserRepository(settings.database_path)
     app.state.auth_service = AuthService(settings, app.state.user_repository)
+    app.state.membership_repository = MembershipRepository(settings.database_path)
+    app.state.membership_service = MembershipService(app.state.membership_repository, settings)
     app.state.draft_repository = DraftRepository(settings.database_path)
     app.state.application_repository = ApplicationRepository(settings.database_path)
     app.state.evidence_repository = EvidenceRepository(settings.database_path)
@@ -140,6 +144,35 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def download_not_found(_: Request, __: DownloadNotFoundError):
         return JSONResponse(status_code=404, content=error("not_found", "Download not found"))
 
+    @app.exception_handler(OrderNotFoundError)
+    def order_not_found(_: Request, __: OrderNotFoundError):
+        return JSONResponse(status_code=404, content=error("not_found", "Order not found"))
+
+    @app.exception_handler(VipPermissionError)
+    def vip_permission_denied(_: Request, exception: VipPermissionError):
+        return JSONResponse(status_code=403, content=error("vip_required", exception.message))
+
+    @app.exception_handler(PaymentDemoDisabledError)
+    def payment_demo_disabled(_: Request, __: PaymentDemoDisabledError):
+        return JSONResponse(
+            status_code=503,
+            content=error("payment_demo_disabled", "演示支付已关闭，请配置真实支付渠道"),
+        )
+
+    @app.exception_handler(MembershipPackageConflictError)
+    def membership_package_conflict(_: Request, __: MembershipPackageConflictError):
+        return JSONResponse(
+            status_code=409,
+            content=error("membership_package_conflict", "当前高级会员有效，请在到期后购买基础套餐"),
+        )
+
+    @app.exception_handler(PaymentChannelUnavailableError)
+    def payment_channel_unavailable(_: Request, __: PaymentChannelUnavailableError):
+        return JSONResponse(
+            status_code=503,
+            content=error("payment_channel_unavailable", "支付渠道尚未配置，请使用演示支付或联系管理员"),
+        )
+
     @app.exception_handler(PdfRendererUnavailableError)
     def pdf_renderer_unavailable(_: Request, __: PdfRendererUnavailableError):
         return JSONResponse(
@@ -169,10 +202,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         evidence.router,
         exports.router,
         knowledgebase.router,
+        membership.router,
         templates.router,
     )
     for router in business_routers:
-        app.include_router(router, dependencies=[Depends(current_user_id)])
+        app.include_router(router, dependencies=[Depends(current_user_id), Depends(get_current_vip)])
     app.include_router(auth.router)
     return app
 

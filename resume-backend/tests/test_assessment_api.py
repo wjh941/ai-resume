@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from conftest import grant_vip
 
 def assert_success(response):
     assert response.status_code == 200, response.text
@@ -40,6 +41,7 @@ def test_assessment_submission_ignores_forged_client_id(api_client):
 
 
 def test_annual_insight_keeps_local_provenance(api_client):
+    grant_vip(api_client)
     created = assert_success(
         api_client.post(
             "/api/career/annual-insights",
