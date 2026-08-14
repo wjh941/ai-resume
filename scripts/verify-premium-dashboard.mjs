@@ -13,10 +13,11 @@ const sandbox = {
   console,
   crypto: { randomUUID: () => 'test-id' },
   localStorage: {
+    failKey: '',
     get length() { return storage.size; },
     key(index) { return [...storage.keys()][index] ?? null; },
     getItem(key) { return storage.get(String(key)) ?? null; },
-    setItem(key, value) { storage.set(String(key), String(value)); },
+    setItem(key, value) { if (this.failKey === String(key)) throw new Error('quota'); storage.set(String(key), String(value)); },
     removeItem(key) { storage.delete(String(key)); }
   },
   navigator: { onLine: true },
@@ -28,6 +29,8 @@ sandbox.globalThis = sandbox;
 const exportApi = `
 globalThis.__dashboardTestApi = {
   safeJsonParse,
+  saveLocal,
+  saveLocalBatch,
   maskSensitiveText,
   filterJobs,
   reorderByIds: typeof reorderByIds === 'function' ? reorderByIds : undefined,
@@ -40,6 +43,8 @@ globalThis.__dashboardTestApi = {
   assessmentPlanningText: typeof assessmentPlanningText === 'function' ? assessmentPlanningText : undefined,
   validateShortcuts: typeof validateShortcuts === 'function' ? validateShortcuts : undefined,
   deliveryStats: typeof deliveryStats === 'function' ? deliveryStats : undefined,
+  mergeRestoredExtension: typeof mergeRestoredExtension === 'function' ? mergeRestoredExtension : undefined,
+  removeEvidenceAttachments: typeof removeEvidenceAttachments === 'function' ? removeEvidenceAttachments : undefined,
   state
 };`;
 const source = scripts[0].replace(/\n\s*initialize\(\);\s*$/, exportApi);
@@ -49,6 +54,11 @@ vm.runInNewContext(source, sandbox, { filename: 'premium-dashboard.inline.js' })
 const api = sandbox.__dashboardTestApi;
 assert.equal(api.safeJsonParse('{"ok":true}', null).ok, true);
 assert.equal(api.safeJsonParse('{', 'fallback'), 'fallback');
+assert.equal(api.saveLocalBatch([['batch-one', { ok: true }], ['batch-two', { ok: true }]]), true);
+sandbox.localStorage.failKey = 'batch-fail';
+assert.equal(api.saveLocalBatch([['batch-restore', { changed: true }], ['batch-fail', { changed: true }]]), false);
+assert.equal(sandbox.localStorage.getItem('batch-restore'), null);
+sandbox.localStorage.failKey = '';
 assert.equal(api.maskSensitiveText('13800000000', true), '138****0000');
 assert.equal(api.maskSensitiveText('name@example.com', true), 'n***@example.com');
 assert.deepEqual(
@@ -73,12 +83,21 @@ assert.equal(typeof api.cleanupExpiredDeliveries, 'function');
 api.state.drafts = [{ id: 'draft-1' }, { id: 'draft-2' }, { id: 'draft-3' }];
 assert.equal(api.cleanupOldDrafts(2), 1);
 assert.deepEqual(Array.from(api.state.drafts, item => item.id), ['draft-1', 'draft-2']);
-api.state.deliveries = [{ id: 1, nextActionAt: '2026-01-01' }, { id: 2, nextActionAt: '2026-03-01' }];
+api.state.deliveries = [{ id: 1, status: 'applied', nextActionAt: '2026-01-01' }, { id: 2, status: 'closed', nextActionAt: '2026-01-01' }, { id: 3, status: 'closed', nextActionAt: '2026-03-01' }];
 assert.equal(api.cleanupExpiredDeliveries('2026-02-01'), 1);
-assert.deepEqual(Array.from(api.state.deliveries, item => item.id), [2]);
+assert.deepEqual(Array.from(api.state.deliveries, item => item.id), [1, 3]);
 api.state.deliveries = [{ status: 'interview', appliedDate: '2026-02-01' }, { status: 'offer', appliedDate: '2026-02-02' }, { status: 'applied', appliedDate: '2026-02-03' }];
 assert.equal(api.deliveryStats?.().interviewRate, 50);
 assert.equal(api.deliveryStats?.().offerRate, 33);
+assert.equal(typeof api.mergeRestoredExtension, 'function');
+const mergedExtension = api.mergeRestoredExtension({ favoriteJobs: [{ roleName: 'Imported' }] }, { snapshots: [{ id: 'protect' }], backups: [{ id: 'export' }], favoriteJobs: [] });
+assert.deepEqual(Array.from(mergedExtension.favoriteJobs, item => item.roleName), ['Imported']);
+assert.deepEqual(JSON.parse(JSON.stringify(mergedExtension.snapshots)), [{ id: 'protect' }]);
+assert.deepEqual(JSON.parse(JSON.stringify(mergedExtension.backups)), [{ id: 'export' }]);
+assert.equal(typeof api.removeEvidenceAttachments, 'function');
+api.state.extension.evidenceAttachments = { 1: [{ id: 'file' }], 2: [{ id: 'keep' }] };
+api.removeEvidenceAttachments([1]);
+assert.deepEqual(JSON.parse(JSON.stringify(api.state.extension.evidenceAttachments)), { 2: [{ id: 'keep' }] });
 assert.deepEqual(Array.from(api.calendarMonthDays?.(2026, 1).slice(0, 3) || []), [1, 2, 3]);
 assert.equal(api.interviewNotesKey?.('delivery-1', 2), 'delivery-1:2');
 assert.equal(JSON.stringify(api.compareAssessments?.({ score: 80 }, { score: 70 })), JSON.stringify({ scoreDelta: 10, roles: [[], []] }));
@@ -94,5 +113,8 @@ assert.match(html, /function openChangelog\b/);
 assert.match(html, /footer\.id\s*=\s*"releaseFooter"/);
 assert.match(html, /面试通过率/);
 assert.match(html, /openEvidenceOrganizerToolbarBtn/);
+assert.match(html, /items\.length && isExpiredDate\(date\)/);
+assert.match(html, /图片附件未保存，请释放本地空间后重试/);
+assert.match(html, /function saveLocalBatch\b/);
 
 console.log('premium dashboard contract checks passed');

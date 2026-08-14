@@ -693,7 +693,18 @@
       }
     }
     function saveLocal(key, value) {
-      try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Direct-file mode may block storage. */ }
+      try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch { return false; }
+    }
+    function saveLocalBatch(entries) {
+      const previous = [];
+      try {
+        entries.forEach(([key]) => previous.push([key, localStorage.getItem(key)]));
+        entries.forEach(([key, value]) => localStorage.setItem(key, JSON.stringify(value)));
+        return true;
+      } catch {
+        previous.forEach(([key, value]) => { try { value === null ? localStorage.removeItem(key) : localStorage.setItem(key, value); } catch {} });
+        return false;
+      }
     }
     function normalizeExtension(value = {}) {
       const source = value && typeof value === "object" ? value : {};
@@ -719,12 +730,26 @@
         shortcutConfig: { ...extensionDefaults.shortcutConfig, ...(source.shortcutConfig || {}) }
       };
     }
+    function mergeRestoredExtension(incoming = {}, current = state.extension) {
+      return normalizeExtension({
+        ...(current || {}),
+        ...(incoming || {}),
+        snapshots: asArray(current?.snapshots),
+        backups: asArray(current?.backups),
+        backupPreparedAt: Number(current?.backupPreparedAt || 0),
+        lastAutoBackupAt: Number(current?.lastAutoBackupAt || 0)
+      });
+    }
     function saveExtension() {
       state.extension = normalizeExtension(state.extension);
       state.favoriteJobs = state.extension.favoriteJobs;
       state.jobAdvancedFilters = state.extension.jobFilters;
-      saveLocal("resume-dashboard-extension", state.extension);
+      if (!saveLocal("resume-dashboard-extension", state.extension)) {
+        showToast("本地空间不足，未能保存本次变更；请先导出备份并清理数据");
+        return false;
+      }
       checkStorageCapacity();
+      return true;
     }
     function safeJsonParse(value, fallback = null) {
       try { return JSON.parse(value); } catch { return fallback; }
@@ -736,7 +761,7 @@
           const key = localStorage.key(index) || "";
           used += (key.length + String(localStorage.getItem(key) || "").length) * 2;
         }
-        const quota = Number(state.extension?.storageQuota) || 5 * 1024 * 1024;
+        const quota = 5 * 1024 * 1024;
         return { used, quota, ratio: used / quota, percent: Math.round((used / quota) * 100) };
       } catch { return { used: 0, quota: 5 * 1024 * 1024, ratio: 0, percent: 0 }; }
     }
@@ -773,37 +798,39 @@
     }
     function createSnapshot(label = "手动快照") {
       const snapshot = { id: `snapshot-${Date.now()}`, label, createdAt: new Date().toISOString(), data: localBusinessSnapshot() };
+      const previous = state.extension.snapshots;
       state.extension.snapshots = [snapshot, ...asArray(state.extension.snapshots)].slice(0, 30);
-      saveExtension();
+      if (!saveExtension()) { state.extension.snapshots = previous; return null; }
       return snapshot;
     }
     function restoreSnapshot(id) {
       const snapshot = state.extension.snapshots.find(item => String(item.id) === String(id));
       if (!snapshot?.data) return false;
       const data = snapshot.data;
-      state.evidence = asArray(data.evidence).map(normalizeEvidence);
-      state.deliveries = asArray(data.deliveries).map(normalizeDelivery);
-      state.drafts = asArray(data.drafts).map(normalizeDraft);
-      state.assessmentHistory = asArray(data.assessmentHistory);
-      state.assessmentResult = data.assessmentResult || null;
-      state.resume = { ...defaultResume, ...(data.resume || {}) };
-      state.extension = normalizeExtension(data.extension || state.extension);
+      const next = {
+        evidence: asArray(data.evidence).map(normalizeEvidence),
+        deliveries: asArray(data.deliveries).map(normalizeDelivery),
+        drafts: asArray(data.drafts).map(normalizeDraft),
+        assessmentHistory: asArray(data.assessmentHistory),
+        assessmentResult: data.assessmentResult || null,
+        resume: { ...defaultResume, ...(data.resume || {}) },
+        extension: mergeRestoredExtension(data.extension || {}, state.extension)
+      };
+      const entries = [
+        ["resume-dashboard-evidence", next.evidence], ["resume-dashboard-deliveries", next.deliveries], ["resume-dashboard-drafts", next.drafts],
+        ["resume-dashboard-assessment-history", next.assessmentHistory], ["resume-dashboard-assessment-result", next.assessmentResult], ["resume-dashboard-resume", next.resume], ["resume-dashboard-extension", next.extension]
+      ];
+      if (!saveLocalBatch(entries)) { showToast("本地空间不足，快照未恢复，当前数据保持不变"); return false; }
+      Object.assign(state, next);
       state.favoriteJobs = state.extension.favoriteJobs;
       state.jobAdvancedFilters = state.extension.jobFilters;
-      saveLocal("resume-dashboard-evidence", state.evidence);
-      saveLocal("resume-dashboard-deliveries", state.deliveries);
-      saveLocal("resume-dashboard-drafts", state.drafts);
-      saveLocal("resume-dashboard-assessment-history", state.assessmentHistory);
-      saveLocal("resume-dashboard-assessment-result", state.assessmentResult);
-      saveLocal("resume-dashboard-resume", state.resume);
-      saveExtension();
       fillResume(); renderEvidence(); renderDeliveries(); renderDrafts(); renderAssessment(); renderDashboard();
       return true;
     }
     function maybeCreateAutoSnapshot() {
       const age = Date.now() - Number(state.extension.lastAutoBackupAt || 0);
       if (age < 7 * 86400000) return false;
-      createSnapshot("7天自动快照");
+      if (!createSnapshot("7天自动快照")) return false;
       state.extension.lastAutoBackupAt = Date.now();
       saveExtension();
       return true;
@@ -824,19 +851,25 @@
       reader.onload = () => {
         const data = safeJsonParse(reader.result, null);
         if (!data || typeof data !== "object") { showToast("备份文件格式不正确"); return; }
-        createSnapshot("导入前自动保护");
-        state.evidence = asArray(data.evidence).map(normalizeEvidence);
-        state.deliveries = asArray(data.deliveries).map(normalizeDelivery);
-        state.drafts = asArray(data.drafts).map(normalizeDraft);
-        state.assessmentHistory = asArray(data.assessmentHistory);
-        state.assessmentResult = data.assessmentResult || null;
-        state.resume = { ...defaultResume, ...(data.resume || {}) };
-        state.extension = normalizeExtension(data.extension || state.extension);
-        [
-          ["resume-dashboard-evidence", state.evidence], ["resume-dashboard-deliveries", state.deliveries], ["resume-dashboard-drafts", state.drafts],
-          ["resume-dashboard-assessment-history", state.assessmentHistory], ["resume-dashboard-assessment-result", state.assessmentResult], ["resume-dashboard-resume", state.resume]
-        ].forEach(([key, value]) => saveLocal(key, value));
-        saveExtension(); fillResume(); renderEvidence(); renderDeliveries(); renderDrafts(); renderAssessment(); renderDashboard(); renderPrivacy(); showToast("全量本地数据已导入");
+        if (!createSnapshot("导入前自动保护")) { showToast("本地空间不足，无法创建导入保护快照"); return; }
+        const next = {
+          evidence: asArray(data.evidence).map(normalizeEvidence),
+          deliveries: asArray(data.deliveries).map(normalizeDelivery),
+          drafts: asArray(data.drafts).map(normalizeDraft),
+          assessmentHistory: asArray(data.assessmentHistory),
+          assessmentResult: data.assessmentResult || null,
+          resume: { ...defaultResume, ...(data.resume || {}) },
+          extension: mergeRestoredExtension(data.extension || {}, state.extension)
+        };
+        const entries = [
+          ["resume-dashboard-evidence", next.evidence], ["resume-dashboard-deliveries", next.deliveries], ["resume-dashboard-drafts", next.drafts],
+          ["resume-dashboard-assessment-history", next.assessmentHistory], ["resume-dashboard-assessment-result", next.assessmentResult], ["resume-dashboard-resume", next.resume], ["resume-dashboard-extension", next.extension]
+        ];
+        if (!saveLocalBatch(entries)) { showToast("本地空间不足，导入未保存，原数据保持不变"); return; }
+        Object.assign(state, next);
+        state.favoriteJobs = state.extension.favoriteJobs;
+        state.jobAdvancedFilters = state.extension.jobFilters;
+        fillResume(); renderEvidence(); renderDeliveries(); renderDrafts(); renderAssessment(); renderDashboard(); renderPrivacy(); showToast("全量本地数据已导入");
       };
       reader.readAsText(file, "utf-8");
     }
@@ -864,7 +897,7 @@
       return removed.length;
     }
     function cleanupExpiredDeliveries(today = todayString()) {
-      const removed = state.deliveries.filter(item => item.nextActionAt && item.nextActionAt < today);
+      const removed = state.deliveries.filter(item => item.status === "closed" && item.nextActionAt && item.nextActionAt < today);
       state.deliveries = state.deliveries.filter(item => !removed.includes(item));
       saveLocal("resume-dashboard-deliveries", state.deliveries);
       return removed.length;
@@ -1616,6 +1649,11 @@
       });
       if (item) $("#modalEvidenceStatus").value = item.status;
     }
+    function removeEvidenceAttachments(ids) {
+      const deleted = new Set(asArray(ids).map(String));
+      const attachments = state.extension.evidenceAttachments || {};
+      state.extension.evidenceAttachments = Object.fromEntries(Object.entries(attachments).filter(([id]) => !deleted.has(String(id))));
+    }
     function deleteEvidence(ids) {
       if (!ids.length) { showToast("请先选择经历"); return; }
       openModal("删除经历记录？", "<p style='margin:0;color:var(--muted)'>删除只影响本地经历证据库，不会修改已经保存的简历草稿。</p>", () => {
@@ -1623,8 +1661,10 @@
         const failures = ids.filter(id => !existingIds.has(id)).map(id => ({ label: String(id), reason: "记录不存在或已被删除" }));
         const successCount = ids.filter(id => existingIds.has(id)).length;
         state.evidence = state.evidence.filter(item => !ids.includes(item.id));
+        removeEvidenceAttachments(ids);
         state.evidenceSelected.clear();
         saveLocal("resume-dashboard-evidence", state.evidence);
+        saveExtension();
         renderEvidence(); renderDashboard();
         showBatchReport("经历删除", successCount, failures);
       }, "删除");
@@ -1754,7 +1794,7 @@
     function openResumeSnapshots() {
       const items = state.extension.snapshots;
       openModal("简历本地快照", items.length ? `<div class="list">${items.map(item => `<div class="list-item"><div class="list-item-head"><div><strong>${escapeHtml(item.label)}</strong><p>${escapeHtml(item.createdAt)}</p></div><button class="btn small soft" data-restore-snapshot="${escapeHtml(item.id)}">回滚</button></div></div>`).join("")}</div>` : '<div class="empty">保存草稿后会生成快照。</div>', closeModal, "关闭");
-      $$('[data-restore-snapshot]').forEach(button => button.addEventListener("click", () => { closeModal(); openModal("回滚简历快照？", "<p style='margin:0;color:var(--muted)'>当前未保存内容会被快照版本替换。建议先保存当前草稿。</p>", () => { createSnapshot("回滚前保护"); restoreSnapshot(button.dataset.restoreSnapshot); showToast("已恢复快照"); }, "确认回滚"); }));
+      $$('[data-restore-snapshot]').forEach(button => button.addEventListener("click", () => { closeModal(); openModal("回滚简历快照？", "<p style='margin:0;color:var(--muted)'>当前未保存内容会被快照版本替换。建议先保存当前草稿。</p>", () => { if (!createSnapshot("回滚前保护")) return false; if (!restoreSnapshot(button.dataset.restoreSnapshot)) return false; showToast("已恢复快照"); }, "确认回滚"); }));
     }
     function batchResumeVersions() {
       ["应届生版", "实习版", "社招版"].forEach((variant, index) => state.drafts.unshift(normalizeDraft({ id: `draft-${variant}-${Date.now()}-${index}`, title: `${state.resume.role || "目标岗位"} · ${variant}`, updatedAt: "刚刚", template: $("#templateName")?.textContent, resume: { ...state.resume, version: variant } })));
@@ -2115,7 +2155,7 @@
       const exports = asArray(state.extension.backups);
       const body = `${items.length ? `<div class="list">${items.map(item => `<div class="list-item"><div class="list-item-head"><div><strong>${escapeHtml(item.label)}</strong><p>${escapeHtml(item.createdAt)}</p></div><button class="btn small soft" data-restore-snapshot="${escapeHtml(item.id)}">恢复</button></div></div>`).join("")}</div>` : '<div class="empty">暂无可回滚快照，保存草稿后会自动生成。</div>'}${exports.length ? `<p class="field-help" style="margin-top:14px">最近全量导出：${exports.map(item => escapeHtml(item.createdAt)).join("；")}</p>` : ""}`;
       openModal("本地备份与快照", body, closeModal, "关闭");
-      $$('[data-restore-snapshot]').forEach(button => button.addEventListener("click", () => { closeModal(); openModal("确认恢复备份？", "<p style='margin:0;color:var(--muted)'>恢复将替换当前本地证据、投递、草稿和测评状态。</p>", () => { createSnapshot("恢复前保护"); restoreSnapshot(button.dataset.restoreSnapshot); showToast("备份已恢复"); }, "恢复"); }));
+      $$('[data-restore-snapshot]').forEach(button => button.addEventListener("click", () => { closeModal(); openModal("确认恢复备份？", "<p style='margin:0;color:var(--muted)'>恢复将替换当前本地证据、投递、草稿和测评状态。</p>", () => { if (!createSnapshot("恢复前保护")) return false; if (!restoreSnapshot(button.dataset.restoreSnapshot)) return false; showToast("备份已恢复"); }, "恢复"); }));
     }
     function resetClientId() {
       openModal("重置匿名 client_id？", "<p style='margin:0;color:var(--muted)'>重置前必须先导出全量本地备份。导出成功后，后端服务会把后续草稿和测评请求视为新的匿名空间，本地历史数据仍会保留。</p>", () => { if (!exportAllBusinessData()) return false; state.clientId = `demo-${crypto.randomUUID?.() || Date.now()}`; saveLocal("resume-dashboard-client-id", state.clientId); renderPrivacy(); showToast("匿名 client_id 已重置"); }, "导出并重置");
@@ -2229,14 +2269,26 @@
       try {
         const result = await apiOrMock("/api/draft/save", { method: "POST", body: JSON.stringify({ client_id: state.clientId, job_title: state.resume.role, template_id: "business", resume: state.resume }) }, () => ({ id: `draft-${Date.now()}` }), "draft save");
         const item = normalizeDraft({ id: result?.id || `draft-${Date.now()}`, title: state.resume.version || `${state.resume.role || "未命名"}版`, updatedAt: "刚刚", template: $("#templateName").textContent, resume: { ...state.resume } });
+        const previousDrafts = state.drafts.map(draft => ({ ...draft, resume: { ...(draft.resume || {}) } }));
         const existingIndex = state.drafts.findIndex(draft => draft.id === item.id);
         if (existingIndex >= 0) state.drafts[existingIndex] = item;
         else state.drafts.unshift(item);
+        if (!saveLocal("resume-dashboard-drafts", state.drafts)) {
+          state.drafts = previousDrafts;
+          setSaveStatus("error", "本地保存失败");
+          showToast("本地空间不足，草稿未保存；请先导出备份并清理数据");
+          return;
+        }
+        if (!createSnapshot("保存草稿快照")) {
+          state.drafts = previousDrafts;
+          saveLocal("resume-dashboard-drafts", previousDrafts);
+          setSaveStatus("error", "快照保存失败");
+          showToast("本地空间不足，草稿已回退；请先导出备份并清理数据");
+          return;
+        }
+        maybeCreateAutoSnapshot();
         state.draftPage = 1;
         state.resumeDirty = false;
-        saveLocal("resume-dashboard-drafts", state.drafts);
-        createSnapshot("保存草稿快照");
-        maybeCreateAutoSnapshot();
         renderDrafts();
         setSaveStatus("saved", "已保存");
         showToast(state.runtime === "mock" ? "草稿已保存到本地 Mock 空间" : "草稿已保存到后端");
@@ -2502,7 +2554,7 @@
         if (!day) return '<div class="calendar-day muted"></div>';
         const date = `${prefix}-${String(day).padStart(2, "0")}`;
         const items = grouped[date] || [];
-        return `<div class="calendar-day ${isExpiredDate(date) ? "expired" : items.length ? "due" : ""} ${date === todayString() ? "today" : ""}"><strong>${day}</strong><p>${items.length ? `${items.length} 条 · ${escapeHtml(items[0].company)}` : ""}</p></div>`;
+        return `<div class="calendar-day ${items.length && isExpiredDate(date) ? "expired" : items.length ? "due" : ""} ${date === todayString() ? "today" : ""}"><strong>${day}</strong><p>${items.length ? `${items.length} 条 · ${escapeHtml(items[0].company)}` : ""}</p></div>`;
       }).join("")}</div>`;
     }
     function openDeliveryCalendar() {
@@ -2528,7 +2580,11 @@
         questions.forEach((_, index) => { state.extension.interviewNotes[interviewNotesKey(delivery.id, index)] = $(`[data-interview-note="${index}"]`).value.trim(); });
         saveExtension(); showToast("面试笔记已绑定投递记录");
       }, "保存笔记");
-      $("#interviewDeliverySelect").onchange = event => openInterviewBank(event.target.value);
+      $("#interviewDeliverySelect").onchange = event => {
+        questions.forEach((_, index) => { state.extension.interviewNotes[interviewNotesKey(delivery.id, index)] = $(`[data-interview-note="${index}"]`).value.trim(); });
+        if (!saveExtension()) { event.target.value = delivery.id; return; }
+        openInterviewBank(event.target.value);
+      };
     }
     function openAssessmentExtensions() {
       const history = state.assessmentHistory;
@@ -2569,14 +2625,7 @@
       refreshStorageQuota();
     }
     function refreshStorageQuota() {
-      if (!navigator.storage?.estimate) return;
-      navigator.storage.estimate().then(estimate => {
-        if (estimate.quota && estimate.quota !== state.extension.storageQuota) {
-          state.extension.storageQuota = estimate.quota;
-          saveLocal("resume-dashboard-extension", normalizeExtension(state.extension));
-          renderPrivacyExtensionControls();
-        }
-      }).catch(() => {});
+      return storageUsage();
     }
 
     const renderFavoritesBase = renderFavorites;
@@ -2628,13 +2677,22 @@
     attachEvidenceImage = function(id, file) {
       if (!file?.type?.startsWith("image/")) { showToast("请选择图片文件"); return; }
       if (file.size > 1024 * 1024) { showToast("图片不能超过 1 MB"); return; }
+      const usage = storageUsage();
+      if (usage.used + Math.ceil(file.size * 1.4) >= usage.quota * .9) { showToast("图片会占满本地空间，请先导出备份并清理数据"); return; }
       const reader = new FileReader();
       reader.onload = () => {
         const current = state.extension.evidenceAttachments[id];
-        const files = Array.isArray(current) ? current : current ? [{ id: "legacy", dataUrl: current, name: "附件" }] : [];
-        files.push({ id: `attachment-${Date.now()}`, dataUrl: reader.result, name: file.name || "图片" });
+        const previous = current;
+        const files = Array.isArray(current) ? [...current] : current ? [{ id: "legacy", dataUrl: current, name: "附件" }] : [];
+        files.push({ id: `attachment-${crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`}`, dataUrl: reader.result, name: file.name || "图片" });
         state.extension.evidenceAttachments[id] = files.slice(-6);
-        saveExtension(); renderEvidence(); showToast("图片附件已保存在本地");
+        if (!saveExtension()) {
+          if (previous === undefined) delete state.extension.evidenceAttachments[id];
+          else state.extension.evidenceAttachments[id] = previous;
+          showToast("图片附件未保存，请释放本地空间后重试");
+          return;
+        }
+        renderEvidence(); showToast("图片附件已保存在本地");
       };
       reader.readAsDataURL(file);
     };
