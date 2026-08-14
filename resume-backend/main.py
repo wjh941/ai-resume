@@ -7,7 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.api import ai, applications, assessment, career, consultation, drafts, evidence, exports, knowledgebase, templates
+from app.api import ai, applications, assessment, auth, career, consultation, drafts, evidence, exports, knowledgebase, templates
 from app.repositories.applications import ApplicationNotFoundError, ApplicationRepository
 from app.config import Settings, load_settings
 from app.db import initialize_database
@@ -18,6 +18,7 @@ from app.repositories.drafts import DraftNotFoundError, DraftRepository
 from app.repositories.evidence import EvidenceRepository
 from app.repositories.knowledgebase import KnowledgebaseRepository, KnowledgebaseRoleNotFoundError
 from app.repositories.templates import TemplateRepository
+from app.repositories.users import UserRepository
 from app.schemas.common import error, success
 from app.services.ai_client import build_ai_client
 from app.services.career_recommender import CareerRecommender
@@ -28,6 +29,7 @@ from app.services.export_pdf import PdfRendererUnavailableError
 from app.services.job_cache import JobCache
 from app.services.rewrite_guard import RewriteFactViolation
 from app.services.template_service import TemplateService
+from app.services.auth import AuthService
 from app.services.web_search import build_web_search_client
 
 
@@ -55,6 +57,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(title="Resume Demo API", lifespan=lifespan)
     app.state.settings = settings
+    app.state.user_repository = UserRepository(settings.database_path)
+    app.state.auth_service = AuthService(settings, app.state.user_repository)
     app.state.draft_repository = DraftRepository(settings.database_path)
     app.state.application_repository = ApplicationRepository(settings.database_path)
     app.state.evidence_repository = EvidenceRepository(settings.database_path)
@@ -137,6 +141,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return success({"status": "healthy"})
 
     app.include_router(ai.router)
+    app.include_router(auth.router)
     app.include_router(applications.router)
     app.include_router(assessment.router)
     app.include_router(career.router)

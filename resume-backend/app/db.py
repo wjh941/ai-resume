@@ -117,6 +117,8 @@ JOB_CATALOG = (
 def connect(database_path: Path) -> sqlite3.Connection:
     connection = sqlite3.connect(database_path)
     connection.row_factory = sqlite3.Row
+    # 本期 SQLite 必须逐连接启用外键；二期数据库迁移由同一仓储 user_id 接口承接。
+    connection.execute("PRAGMA foreign_keys = ON")
     return connection
 
 
@@ -125,6 +127,13 @@ def initialize_database(database_path: Path) -> None:
     with connect(database_path) as connection:
         connection.executescript(
             """
+            CREATE TABLE IF NOT EXISTS users (
+                user_id TEXT PRIMARY KEY,
+                phone TEXT NOT NULL UNIQUE,
+                token_version INTEGER NOT NULL DEFAULT 1 CHECK (token_version >= 1),
+                created_at TEXT NOT NULL,
+                last_login TEXT NOT NULL
+            );
             CREATE TABLE IF NOT EXISTS user_draft (
                 id TEXT PRIMARY KEY,
                 client_id TEXT NOT NULL,

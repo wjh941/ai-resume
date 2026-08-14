@@ -15,11 +15,26 @@ if str(BACKEND_ROOT) not in sys.path:
 def api_client(tmp_path, monkeypatch):
     monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "resume_demo.db"))
     monkeypatch.setenv("TEMP_FILE_PATH", str(tmp_path / "temp"))
+    monkeypatch.setenv("AUTH_DEMO_MODE", "true")
+    monkeypatch.setenv("JWT_SECRET", "test-jwt-secret-for-authentication")
 
     from main import create_app
 
     with TestClient(create_app()) as client:
         yield client
+
+
+@pytest.fixture
+def auth_headers(api_client):
+    def create(phone: str = "13800138000") -> dict[str, str]:
+        response = api_client.post(
+            "/api/auth/login-phone",
+            json={"phone": phone, "code": "123456"},
+        )
+        assert response.status_code == 200
+        return {"Authorization": f"Bearer {response.json()['data']['token']}"}
+
+    return create
 
 
 def make_resume_payload() -> dict:

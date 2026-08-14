@@ -1,5 +1,5 @@
-def test_template_list_returns_the_four_seeded_templates_in_a_success_envelope(api_client):
-    response = api_client.get("/api/template/list")
+def test_template_list_returns_the_four_seeded_templates_in_a_success_envelope(api_client, auth_headers):
+    response = api_client.get("/api/template/list", headers=auth_headers())
 
     assert response.status_code == 200
     assert response.json()["code"] == "ok"

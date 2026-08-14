@@ -7,3 +7,4 @@ weasyprint
 aiofiles
 pypdf
 python-multipart
+PyJWT>=2.8,<3
