@@ -30,6 +30,7 @@ def test_demo_phone_login_returns_a_versioned_bearer_token(api_client):
 
 
 def test_business_route_rejects_a_missing_bearer_token(api_client):
+    api_client.headers.pop("Authorization")
     response = api_client.get("/api/template/list")
 
     assert response.status_code == 401

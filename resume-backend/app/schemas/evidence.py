@@ -25,7 +25,6 @@ def _normalize_text(value: str, field_name: str, maximum: int, *, required: bool
 
 class ResumeEvidenceSaveRequest(BaseModel):
     id: str | None = None
-    client_id: str = Field(min_length=1, max_length=120)
     kind: EvidenceKind
     title: str = Field(min_length=1, max_length=160)
     context: str = Field(default="", max_length=2_000)
@@ -34,14 +33,13 @@ class ResumeEvidenceSaveRequest(BaseModel):
     proof_note: str = Field(default="", max_length=1_000)
     verified: bool = False
 
-    @field_validator("id", "client_id", "title", "context", "actions", "outcome", "proof_note")
+    @field_validator("id", "title", "context", "actions", "outcome", "proof_note")
     @classmethod
     def normalize_text_fields(cls, value: str | None, info) -> str | None:
         if value is None:
             return None
         limits = {
             "id": (120, False),
-            "client_id": (120, True),
             "title": (160, True),
             "context": (2_000, False),
             "actions": (4_000, True),

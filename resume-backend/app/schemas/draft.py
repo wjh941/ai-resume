@@ -10,7 +10,6 @@ from app.schemas.resume import ResumePayload
 
 class DraftSaveRequest(BaseModel):
     id: str | None = None
-    client_id: str
     job_title: str
     template_id: Literal["business", "technology", "graduate", "analytics"]
     resume: ResumePayload
@@ -18,4 +17,4 @@ class DraftSaveRequest(BaseModel):
 
 
 class DraftCopyRequest(BaseModel):
-    client_id: str
+    """复制归属由 JWT 决定，保留空模型以兼容现有 POST 路由。"""

@@ -15,13 +15,7 @@ def _normalized_text(value: str, field_name: str, maximum: int) -> str:
 
 
 class AssessmentSubmitPayload(BaseModel):
-    client_id: str = Field(min_length=1, max_length=120)
     answers: dict[str, StrictInt] = Field(default_factory=dict, max_length=40)
-
-    @field_validator("client_id")
-    @classmethod
-    def normalize_client_id(cls, value: str) -> str:
-        return _normalized_text(value, "client_id", 120)
 
     @field_validator("answers")
     @classmethod

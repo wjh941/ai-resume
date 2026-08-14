@@ -31,7 +31,6 @@ def _normalize_list(values: list[str]) -> list[str]:
 
 
 class CareerProfilePayload(BaseModel):
-    client_id: str = Field(min_length=1, max_length=120)
     identity_code: IdentityCode
     major: str = Field(min_length=1, max_length=120)
     education_level: str = Field(min_length=1, max_length=60)
@@ -43,7 +42,7 @@ class CareerProfilePayload(BaseModel):
     skills: list[str] = Field(default_factory=list, max_length=80)
     draft_id: str | None = Field(default=None, max_length=120)
 
-    @field_validator("client_id", "major", "education_level")
+    @field_validator("major", "education_level")
     @classmethod
     def normalize_required_text(cls, value: str) -> str:
         return _normalize_text(value, "text")
@@ -145,13 +144,7 @@ class CareerRecommendationResponse(BaseModel):
 
 
 class CareerComparisonRequest(BaseModel):
-    client_id: str = Field(min_length=1, max_length=120)
     role_names: list[str] = Field(min_length=2, max_length=4)
-
-    @field_validator("client_id")
-    @classmethod
-    def normalize_comparison_client_id(cls, value: str) -> str:
-        return _normalize_text(value, "client_id")
 
     @field_validator("role_names")
     @classmethod

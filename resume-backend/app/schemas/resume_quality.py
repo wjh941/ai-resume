@@ -22,7 +22,6 @@ class EvidenceSuggestionResponse(BaseModel):
 
 
 class EvidenceSuggestionRequest(BaseModel):
-    client_id: str = Field(min_length=1, max_length=120)
     role_name: str = Field(min_length=1, max_length=160)
 
 

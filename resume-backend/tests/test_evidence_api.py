@@ -22,25 +22,25 @@ def make_evidence_payload(**changes) -> dict:
     return payload
 
 
-def test_evidence_api_is_client_scoped_and_generates_pending_safe_suggestions(api_client):
+def test_evidence_api_is_user_scoped_and_generates_pending_safe_suggestions(api_client, auth_headers):
     saved = assert_success(api_client.post("/api/evidence", json=make_evidence_payload()))
 
-    assert saved["client_id"] == "demo-client"
+    assert "client_id" not in saved
     assert_success(
-        api_client.get("/api/evidence", params={"client_id": "other-client"})
+        api_client.get("/api/evidence", headers=auth_headers("13900139000"))
     ) == {"items": []}
 
     suggestions = assert_success(
         api_client.post(
             "/api/resume/evidence-suggestions",
-            json={"client_id": "demo-client", "role_name": "Data Engineer"},
+            json={"role_name": "Data Engineer"},
         )
     )
     assert suggestions["items"][0]["source_evidence_id"] == saved["id"]
     assert "[待确认]" in suggestions["items"][0]["description"]
 
 
-def test_evidence_api_updates_and_deletes_only_the_owner_record(api_client):
+def test_evidence_api_updates_and_deletes_only_the_owner_record(api_client, auth_headers):
     saved = assert_success(api_client.post("/api/evidence", json=make_evidence_payload()))
 
     rejected = api_client.post(
@@ -50,20 +50,20 @@ def test_evidence_api_updates_and_deletes_only_the_owner_record(api_client):
             client_id="other-client",
             title="Should not update",
         ),
+        headers=auth_headers("13900139000"),
     )
     assert rejected.status_code == 404
     assert rejected.json()["code"] == "not_found"
 
     hidden = api_client.delete(
         f"/api/evidence/{saved['id']}",
-        params={"client_id": "other-client"},
+        headers=auth_headers("13900139000"),
     )
     assert hidden.status_code == 404
 
     deleted = assert_success(
         api_client.delete(
             f"/api/evidence/{saved['id']}",
-            params={"client_id": "demo-client"},
         )
     )
     assert deleted == {"id": saved["id"]}

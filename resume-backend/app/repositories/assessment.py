@@ -17,49 +17,56 @@ class AssessmentRepository:
 
     def save(
         self,
+        user_id: str,
         *,
-        client_id: str,
         version: int,
         answers: dict[str, int],
         result: dict[str, object],
     ) -> dict[str, object]:
         updated_at = datetime.now(timezone.utc).isoformat()
         with connect(self._database_path) as connection:
-            connection.execute(
-                """
-                INSERT INTO career_assessment (
-                    client_id, assessment_version, answers_json, result_json, updated_at
-                ) VALUES (?, ?, ?, ?, ?)
-                ON CONFLICT(client_id) DO UPDATE SET
-                    assessment_version = excluded.assessment_version,
-                    answers_json = excluded.answers_json,
-                    result_json = excluded.result_json,
-                    updated_at = excluded.updated_at
-                """,
-                (
-                    client_id,
-                    version,
-                    json.dumps(answers, ensure_ascii=False),
-                    json.dumps(result, ensure_ascii=False),
-                    updated_at,
-                ),
+            existing = connection.execute(
+                "SELECT client_id FROM career_assessment WHERE user_id = ?", (user_id,)
+            ).fetchone()
+            values = (
+                version,
+                json.dumps(answers, ensure_ascii=False),
+                json.dumps(result, ensure_ascii=False),
+                updated_at,
             )
-        return self.get(client_id)
+            if existing is None:
+                connection.execute(
+                    """
+                    INSERT INTO career_assessment (
+                        client_id, user_id, assessment_version, answers_json, result_json, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (user_id, user_id, *values),
+                )
+            else:
+                connection.execute(
+                    """
+                    UPDATE career_assessment
+                    SET assessment_version = ?, answers_json = ?, result_json = ?, updated_at = ?
+                    WHERE user_id = ?
+                    """,
+                    (*values, user_id),
+                )
+        return self.get(user_id)
 
-    def get(self, client_id: str) -> dict[str, object]:
+    def get(self, user_id: str) -> dict[str, object]:
         with connect(self._database_path) as connection:
             row = connection.execute(
                 """
-                SELECT client_id, assessment_version, answers_json, result_json, updated_at
+                SELECT assessment_version, answers_json, result_json, updated_at
                 FROM career_assessment
-                WHERE client_id = ?
+                WHERE user_id = ?
                 """,
-                (client_id,),
+                (user_id,),
             ).fetchone()
         if row is None:
-            raise AssessmentNotFoundError(client_id)
+            raise AssessmentNotFoundError(user_id)
         return {
-            "client_id": str(row["client_id"]),
             "version": int(row["assessment_version"]),
             "answers": json.loads(str(row["answers_json"])),
             "result": json.loads(str(row["result_json"])),

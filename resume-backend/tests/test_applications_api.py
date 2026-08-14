@@ -26,7 +26,7 @@ def application_payload(client_id: str, **changes) -> dict:
     return payload
 
 
-def test_application_crud_is_scoped_and_orders_next_actions(api_client):
+def test_application_crud_is_scoped_and_orders_next_actions(api_client, auth_headers):
     first = assert_success(
         api_client.post("/api/applications", json=application_payload("client-a"))
     )
@@ -47,18 +47,18 @@ def test_application_crud_is_scoped_and_orders_next_actions(api_client):
     )
 
     items = assert_success(
-        api_client.get("/api/applications", params={"client_id": "client-a"})
+        api_client.get("/api/applications")
     )["items"]
     assert [item["role_name"] for item in items] == ["数据分析师", "数据工程师"]
     assert assert_success(
-        api_client.get("/api/applications", params={"client_id": "client-b"})
+        api_client.get("/api/applications", headers=auth_headers("13900139000"))
     ) == {"items": []}
     assert first["company"] == "[待确认]"
 
     interview_items = assert_success(
         api_client.get(
             "/api/applications",
-            params={"client_id": "client-a", "status": "interview"},
+            params={"status": "interview"},
         )
     )["items"]
     assert [item["id"] for item in interview_items] == [second["id"]]
@@ -81,16 +81,15 @@ def test_application_crud_is_scoped_and_orders_next_actions(api_client):
     assert_success(
         api_client.delete(
             f"/api/applications/{second['id']}",
-            params={"client_id": "client-a"},
         )
     )
     remaining = assert_success(
-        api_client.get("/api/applications", params={"client_id": "client-a"})
+        api_client.get("/api/applications")
     )["items"]
     assert [item["id"] for item in remaining] == [first["id"]]
 
 
-def test_application_rejects_invalid_status_and_cross_client_mutation(api_client):
+def test_application_rejects_invalid_status_and_cross_client_mutation(api_client, auth_headers):
     saved = assert_success(
         api_client.post("/api/applications", json=application_payload("owner-client"))
     )
@@ -102,13 +101,14 @@ def test_application_rejects_invalid_status_and_cross_client_mutation(api_client
             id=saved["id"],
             company="Not allowed",
         ),
+        headers=auth_headers("13900139000"),
     )
     assert cross_client_update.status_code == 404
     assert cross_client_update.json()["code"] == "not_found"
 
     cross_client_delete = api_client.delete(
         f"/api/applications/{saved['id']}",
-        params={"client_id": "other-client"},
+        headers=auth_headers("13900139000"),
     )
     assert cross_client_delete.status_code == 404
 

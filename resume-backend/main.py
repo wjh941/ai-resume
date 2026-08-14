@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from contextlib import asynccontextmanager, suppress
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
@@ -30,6 +30,7 @@ from app.services.job_cache import JobCache
 from app.services.rewrite_guard import RewriteFactViolation
 from app.services.template_service import TemplateService
 from app.services.auth import AuthService
+from app.services.auth import current_user_id
 from app.services.web_search import build_web_search_client
 
 
@@ -140,17 +141,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def health():
         return success({"status": "healthy"})
 
-    app.include_router(ai.router)
+    # 业务 Router 在组装处统一注入 JWT 依赖，新增端点不会遗漏鉴权边界。
+    business_routers = (
+        ai.router,
+        applications.router,
+        assessment.router,
+        career.router,
+        consultation.router,
+        drafts.router,
+        evidence.router,
+        exports.router,
+        knowledgebase.router,
+        templates.router,
+    )
+    for router in business_routers:
+        app.include_router(router, dependencies=[Depends(current_user_id)])
     app.include_router(auth.router)
-    app.include_router(applications.router)
-    app.include_router(assessment.router)
-    app.include_router(career.router)
-    app.include_router(consultation.router)
-    app.include_router(drafts.router)
-    app.include_router(evidence.router)
-    app.include_router(exports.router)
-    app.include_router(knowledgebase.router)
-    app.include_router(templates.router)
     return app
 
 

@@ -7,7 +7,6 @@ from pydantic import BaseModel
 
 
 class ExportRequest(BaseModel):
-    client_id: str
     draft_id: str
 
 

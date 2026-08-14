@@ -18,14 +18,14 @@ class ApplicationRepository:
 
     def list(
         self,
-        client_id: str,
+        user_id: str,
         status: ApplicationStatus | None = None,
     ) -> list[ApplicationRecord]:
         query = """
             SELECT * FROM application_tracker
-            WHERE client_id = ?
+            WHERE user_id = ?
         """
-        values: list[object] = [client_id]
+        values: list[object] = [user_id]
         if status:
             query += " AND status = ?"
             values.append(status)
@@ -40,7 +40,7 @@ class ApplicationRepository:
             rows = connection.execute(query, values).fetchall()
         return [self._from_row(row) for row in rows]
 
-    def save(self, payload: ApplicationSaveRequest) -> ApplicationRecord:
+    def save(self, user_id: str, payload: ApplicationSaveRequest) -> ApplicationRecord:
         application_id = payload.id or str(uuid4())
         now = datetime.now(timezone.utc).isoformat()
         values = (
@@ -63,9 +63,9 @@ class ApplicationRepository:
                     SET company = ?, role_name = ?, city = ?, source = ?, status = ?,
                         applied_at = ?, next_action_at = ?, interview_notes = ?,
                         draft_id = ?, notes = ?, updated_at = ?
-                    WHERE id = ? AND client_id = ?
+                    WHERE id = ? AND user_id = ?
                     """,
-                    (*values, now, application_id, payload.client_id),
+                    (*values, now, application_id, user_id),
                 )
                 if cursor.rowcount == 0:
                     raise ApplicationNotFoundError
@@ -73,26 +73,26 @@ class ApplicationRepository:
                 connection.execute(
                     """
                     INSERT INTO application_tracker (
-                        id, client_id, company, role_name, city, source, status,
+                        id, client_id, user_id, company, role_name, city, source, status,
                         applied_at, next_action_at, interview_notes, draft_id, notes,
                         created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (application_id, payload.client_id, *values, now, now),
+                    (application_id, user_id, user_id, *values, now, now),
                 )
             row = connection.execute(
-                "SELECT * FROM application_tracker WHERE id = ? AND client_id = ?",
-                (application_id, payload.client_id),
+                "SELECT * FROM application_tracker WHERE id = ? AND user_id = ?",
+                (application_id, user_id),
             ).fetchone()
         if row is None:
             raise ApplicationNotFoundError
         return self._from_row(row)
 
-    def delete(self, application_id: str, client_id: str) -> None:
+    def delete(self, user_id: str, application_id: str) -> None:
         with connect(self._database_path) as connection:
             cursor = connection.execute(
-                "DELETE FROM application_tracker WHERE id = ? AND client_id = ?",
-                (application_id, client_id),
+                "DELETE FROM application_tracker WHERE id = ? AND user_id = ?",
+                (application_id, user_id),
             )
         if cursor.rowcount == 0:
             raise ApplicationNotFoundError
@@ -101,7 +101,6 @@ class ApplicationRepository:
     def _from_row(row) -> ApplicationRecord:
         return ApplicationRecord(
             id=str(row["id"]),
-            client_id=str(row["client_id"]),
             company=str(row["company"]),
             role_name=str(row["role_name"]),
             city=str(row["city"]),

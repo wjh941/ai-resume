@@ -2,22 +2,23 @@ from __future__ import annotations
 
 from app.db import initialize_database
 from app.repositories.assessment import AssessmentRepository
+from app.repositories.users import UserRepository
 
 
 def test_assessment_round_trip_preserves_answers_and_result(tmp_path):
     database_path = tmp_path / "assessment.db"
     initialize_database(database_path)
     repository = AssessmentRepository(database_path)
+    user_id = UserRepository(database_path).find_or_create_by_phone("13800138000").user_id
 
     repository.save(
-        client_id="graduate-client",
+        user_id,
         version=1,
         answers={"interest_investigative_1": 5, "style_structure_1": 4},
         result={"interest": {"investigative": 18}, "summary": "偏好分析型任务。"},
     )
-    loaded = repository.get("graduate-client")
+    loaded = repository.get(user_id)
 
-    assert loaded["client_id"] == "graduate-client"
     assert loaded["answers"]["interest_investigative_1"] == 5
     assert loaded["result"]["summary"] == "偏好分析型任务。"
 

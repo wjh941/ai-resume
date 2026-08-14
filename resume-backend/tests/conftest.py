@@ -21,6 +21,13 @@ def api_client(tmp_path, monkeypatch):
     from main import create_app
 
     with TestClient(create_app()) as client:
+        # 既有业务测试默认以同一演示用户调用；鉴权测试会显式移除该请求头。
+        login = client.post(
+            "/api/auth/login-phone",
+            json={"phone": "13800138000", "code": "123456"},
+        )
+        assert login.status_code == 200
+        client.headers.update({"Authorization": f"Bearer {login.json()['data']['token']}"})
         yield client
 
 

@@ -28,7 +28,6 @@ def _normalize(value: str, maximum: int, *, required: bool) -> str:
 
 class ApplicationSaveRequest(BaseModel):
     id: str | None = None
-    client_id: str = Field(min_length=1, max_length=120)
     company: str = Field(default="[待确认]", max_length=200)
     role_name: str = Field(min_length=1, max_length=160)
     city: str = Field(default="", max_length=120)
@@ -42,7 +41,6 @@ class ApplicationSaveRequest(BaseModel):
 
     @field_validator(
         "id",
-        "client_id",
         "company",
         "role_name",
         "city",
@@ -57,7 +55,6 @@ class ApplicationSaveRequest(BaseModel):
             return None
         limits = {
             "id": 120,
-            "client_id": 120,
             "company": 200,
             "role_name": 160,
             "city": 120,
@@ -66,7 +63,7 @@ class ApplicationSaveRequest(BaseModel):
             "draft_id": 120,
             "notes": 4_000,
         }
-        required = info.field_name in {"client_id", "role_name"}
+        required = info.field_name == "role_name"
         normalized = _normalize(value, limits[info.field_name], required=required)
         if info.field_name == "company" and not normalized:
             return "[待确认]"

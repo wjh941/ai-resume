@@ -12,21 +12,21 @@ class EvidenceRepository:
     def __init__(self, database_path: Path) -> None:
         self._database_path = database_path
 
-    def list(self, client_id: str) -> list[ResumeEvidence]:
+    def list(self, user_id: str) -> list[ResumeEvidence]:
         with connect(self._database_path) as connection:
             rows = connection.execute(
                 """
-                SELECT id, client_id, kind, title, context, actions, outcome, proof_note,
+                SELECT id, kind, title, context, actions, outcome, proof_note,
                        verified, created_at, updated_at
                 FROM resume_evidence
-                WHERE client_id = ?
+                WHERE user_id = ?
                 ORDER BY updated_at DESC, id DESC
                 """,
-                (client_id,),
+                (user_id,),
             ).fetchall()
         return [self._from_row(row) for row in rows]
 
-    def save(self, payload: ResumeEvidenceSaveRequest) -> ResumeEvidence:
+    def save(self, user_id: str, payload: ResumeEvidenceSaveRequest) -> ResumeEvidence:
         evidence_id = payload.id or str(uuid4())
         now = datetime.now(timezone.utc).isoformat()
         with connect(self._database_path) as connection:
@@ -36,7 +36,7 @@ class EvidenceRepository:
                     UPDATE resume_evidence
                     SET kind = ?, title = ?, context = ?, actions = ?, outcome = ?,
                         proof_note = ?, verified = ?, updated_at = ?
-                    WHERE id = ? AND client_id = ?
+                    WHERE id = ? AND user_id = ?
                     """,
                     (
                         payload.kind,
@@ -48,7 +48,7 @@ class EvidenceRepository:
                         int(payload.verified),
                         now,
                         evidence_id,
-                        payload.client_id,
+                        user_id,
                     ),
                 )
                 if cursor.rowcount == 0:
@@ -57,13 +57,14 @@ class EvidenceRepository:
                 connection.execute(
                     """
                     INSERT INTO resume_evidence (
-                        id, client_id, kind, title, context, actions, outcome, proof_note,
+                        id, client_id, user_id, kind, title, context, actions, outcome, proof_note,
                         verified, created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         evidence_id,
-                        payload.client_id,
+                        user_id,
+                        user_id,
                         payload.kind,
                         payload.title,
                         payload.context,
@@ -77,22 +78,22 @@ class EvidenceRepository:
                 )
             row = connection.execute(
                 """
-                SELECT id, client_id, kind, title, context, actions, outcome, proof_note,
+                SELECT id, kind, title, context, actions, outcome, proof_note,
                        verified, created_at, updated_at
                 FROM resume_evidence
-                WHERE id = ? AND client_id = ?
+                WHERE id = ? AND user_id = ?
                 """,
-                (evidence_id, payload.client_id),
+                (evidence_id, user_id),
             ).fetchone()
         if row is None:
             raise KeyError(evidence_id)
         return self._from_row(row)
 
-    def delete(self, evidence_id: str, client_id: str) -> bool:
+    def delete(self, user_id: str, evidence_id: str) -> bool:
         with connect(self._database_path) as connection:
             cursor = connection.execute(
-                "DELETE FROM resume_evidence WHERE id = ? AND client_id = ?",
-                (evidence_id, client_id),
+                "DELETE FROM resume_evidence WHERE id = ? AND user_id = ?",
+                (evidence_id, user_id),
             )
         return cursor.rowcount > 0
 
@@ -100,7 +101,6 @@ class EvidenceRepository:
     def _from_row(row) -> ResumeEvidence:
         return ResumeEvidence(
             id=str(row["id"]),
-            client_id=str(row["client_id"]),
             kind=str(row["kind"]),
             title=str(row["title"]),
             context=str(row["context"]),

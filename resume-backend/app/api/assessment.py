@@ -1,17 +1,18 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Depends, Query, Request
 
 from app.schemas.assessment import AnnualInsightPayload, AssessmentSubmitPayload
 from app.schemas.common import success
 from app.services.career_assessment import assessment_questions, score_assessment
+from app.services.auth import current_user_id
 
 
 router = APIRouter()
 
 
 @router.get("/api/career/assessment/questions")
-async def get_assessment_questions() -> dict[str, object]:
+async def get_assessment_questions(_: str = Depends(current_user_id)) -> dict[str, object]:
     return success(
         {
             "items": assessment_questions(),
@@ -22,11 +23,13 @@ async def get_assessment_questions() -> dict[str, object]:
 
 @router.post("/api/career/assessment/submit")
 async def submit_assessment(
-    payload: AssessmentSubmitPayload, request: Request
+    payload: AssessmentSubmitPayload,
+    request: Request,
+    user_id: str = Depends(current_user_id),
 ) -> dict[str, object]:
     result = score_assessment(payload.answers)
     saved = request.app.state.assessment_repository.save(
-        client_id=payload.client_id,
+        user_id,
         version=1,
         answers=payload.answers,
         result=result,
@@ -35,13 +38,15 @@ async def submit_assessment(
 
 
 @router.get("/api/career/assessment")
-async def get_assessment(request: Request, client_id: str) -> dict[str, object]:
-    return success(request.app.state.assessment_repository.get(client_id))
+async def get_assessment(request: Request, user_id: str = Depends(current_user_id)) -> dict[str, object]:
+    return success(request.app.state.assessment_repository.get(user_id))
 
 
 @router.post("/api/career/annual-insights")
 async def create_annual_insight(
-    payload: AnnualInsightPayload, request: Request
+    payload: AnnualInsightPayload,
+    request: Request,
+    _: str = Depends(current_user_id),
 ) -> dict[str, object]:
     created = request.app.state.assessment_repository.save_annual_insight(
         payload.model_dump(mode="json")
@@ -53,6 +58,7 @@ async def create_annual_insight(
 async def list_annual_insights(
     request: Request,
     year: int | None = Query(default=None, ge=2000, le=2100),
+    _: str = Depends(current_user_id),
 ) -> dict[str, object]:
     return success(
         {"items": request.app.state.assessment_repository.list_annual_insights(year)}

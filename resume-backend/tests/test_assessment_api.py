@@ -14,7 +14,6 @@ def test_assessment_questions_submit_and_load(api_client):
         api_client.post(
             "/api/career/assessment/submit",
             json={
-                "client_id": "assessment-client",
                 "answers": {
                     "interest_investigative_1": 5,
                     "style_structure_1": 5,
@@ -24,21 +23,20 @@ def test_assessment_questions_submit_and_load(api_client):
         )
     )
     loaded = assert_success(
-        api_client.get("/api/career/assessment", params={"client_id": "assessment-client"})
+        api_client.get("/api/career/assessment")
     )
 
     assert saved["result"]["top_interests"][0]["key"] == "investigative"
     assert loaded["answers"]["evidence_sql_1"] == 4
 
 
-def test_assessment_submission_rejects_blank_client_id(api_client):
+def test_assessment_submission_ignores_forged_client_id(api_client):
     response = api_client.post(
         "/api/career/assessment/submit",
-        json={"client_id": "", "answers": {}},
+        json={"client_id": "other-user", "answers": {}},
     )
 
-    assert response.status_code == 422
-    assert response.json()["code"] == "validation_error"
+    assert response.status_code == 200
 
 
 def test_annual_insight_keeps_local_provenance(api_client):
@@ -68,7 +66,7 @@ def test_annual_insight_keeps_local_provenance(api_client):
 def test_assessment_submission_rejects_scores_outside_five_point_scale(api_client):
     response = api_client.post(
         "/api/career/assessment/submit",
-        json={"client_id": "score-client", "answers": {"interest_investigative_1": 6}},
+        json={"answers": {"interest_investigative_1": 6}},
     )
 
     assert response.status_code == 422

@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import FileResponse
 
 from app.schemas.common import success
@@ -12,25 +12,26 @@ from app.schemas.resume import ResumePayload
 from app.services.export_filenames import build_export_filename
 from app.services.export_pdf import render_pdf_resume
 from app.services.export_word import render_word_resume
+from app.services.auth import current_user_id
 
 
 router = APIRouter(tags=["exports"])
 
 
 @router.post("/api/export/word")
-def export_word(payload: ExportRequest, request: Request):
-    draft = request.app.state.draft_repository.get(payload.draft_id, payload.client_id)
+def export_word(payload: ExportRequest, request: Request, user_id: str = Depends(current_user_id)):
+    draft = request.app.state.draft_repository.get(user_id, payload.draft_id)
     resume = ResumePayload.model_validate(draft["resume"])
     filename = build_export_filename(resume.basic.name, resume.job.target_role, "docx")
     output_path = _output_path(request, "docx")
     render_word_resume(resume, output_path)
-    result = request.app.state.download_service.register(output_path, filename)
+    result = request.app.state.download_service.register(user_id, output_path, filename)
     return success(result.model_dump(mode="json"))
 
 
 @router.post("/api/export/pdf")
-async def export_pdf(payload: ExportRequest, request: Request):
-    draft = request.app.state.draft_repository.get(payload.draft_id, payload.client_id)
+async def export_pdf(payload: ExportRequest, request: Request, user_id: str = Depends(current_user_id)):
+    draft = request.app.state.draft_repository.get(user_id, payload.draft_id)
     resume = ResumePayload.model_validate(draft["resume"])
     filename = build_export_filename(resume.basic.name, resume.job.target_role, "pdf")
     output_path = _output_path(request, "pdf")
@@ -42,13 +43,13 @@ async def export_pdf(payload: ExportRequest, request: Request):
         settings.pdf_renderer,
         settings.playwright_browsers_path,
     )
-    result = request.app.state.download_service.register(output_path, filename)
+    result = request.app.state.download_service.register(user_id, output_path, filename)
     return success(result.model_dump(mode="json"))
 
 
 @router.get("/downloads/{token}")
-def download_file(token: str, request: Request):
-    download = request.app.state.download_service.resolve(token)
+def download_file(token: str, request: Request, user_id: str = Depends(current_user_id)):
+    download = request.app.state.download_service.resolve(user_id, token)
     return FileResponse(download.path, filename=download.filename)
 
 

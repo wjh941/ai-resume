@@ -27,17 +27,17 @@ class DownloadService:
         self._temp_directory = temp_directory.resolve()
         self._expire_minutes = expire_minutes
 
-    def register(self, output_path: Path, filename: str) -> ExportResult:
+    def register(self, user_id: str, output_path: Path, filename: str) -> ExportResult:
         now = datetime.now(timezone.utc)
         expires_at = now + timedelta(minutes=self._expire_minutes)
         token = uuid4().hex
         with connect(self._database_path) as connection:
             connection.execute(
                 """
-                INSERT INTO download_file (token, file_path, filename, expires_at, created_at)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO download_file (token, user_id, file_path, filename, expires_at, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """,
-                (token, str(output_path.resolve()), filename, expires_at.isoformat(), now.isoformat()),
+                (token, user_id, str(output_path.resolve()), filename, expires_at.isoformat(), now.isoformat()),
             )
         return ExportResult(
             filename=filename,
@@ -45,11 +45,11 @@ class DownloadService:
             expires_at=expires_at,
         )
 
-    def resolve(self, token: str) -> DownloadFile:
+    def resolve(self, user_id: str, token: str) -> DownloadFile:
         with connect(self._database_path) as connection:
             row = connection.execute(
-                "SELECT token, file_path, filename, expires_at FROM download_file WHERE token = ?",
-                (token,),
+                "SELECT token, file_path, filename, expires_at FROM download_file WHERE token = ? AND user_id = ?",
+                (token, user_id),
             ).fetchone()
         if row is None:
             raise DownloadNotFoundError

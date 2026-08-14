@@ -137,6 +137,7 @@ def initialize_database(database_path: Path) -> None:
             CREATE TABLE IF NOT EXISTS user_draft (
                 id TEXT PRIMARY KEY,
                 client_id TEXT NOT NULL,
+                user_id TEXT REFERENCES users(user_id),
                 job_title TEXT NOT NULL,
                 template_id TEXT NOT NULL,
                 payload_json TEXT NOT NULL,
@@ -146,6 +147,7 @@ def initialize_database(database_path: Path) -> None:
             CREATE TABLE IF NOT EXISTS resume_evidence (
                 id TEXT PRIMARY KEY,
                 client_id TEXT NOT NULL,
+                user_id TEXT REFERENCES users(user_id),
                 kind TEXT NOT NULL,
                 title TEXT NOT NULL,
                 context TEXT NOT NULL,
@@ -161,6 +163,7 @@ def initialize_database(database_path: Path) -> None:
             CREATE TABLE IF NOT EXISTS application_tracker (
                 id TEXT PRIMARY KEY,
                 client_id TEXT NOT NULL,
+                user_id TEXT REFERENCES users(user_id),
                 company TEXT NOT NULL,
                 role_name TEXT NOT NULL,
                 city TEXT NOT NULL,
@@ -194,6 +197,7 @@ def initialize_database(database_path: Path) -> None:
             );
             CREATE TABLE IF NOT EXISTS download_file (
                 token TEXT PRIMARY KEY,
+                user_id TEXT REFERENCES users(user_id),
                 file_path TEXT NOT NULL,
                 filename TEXT NOT NULL,
                 expires_at TEXT NOT NULL,
@@ -239,6 +243,7 @@ def initialize_database(database_path: Path) -> None:
             );
             CREATE TABLE IF NOT EXISTS career_profile (
                 client_id TEXT PRIMARY KEY,
+                user_id TEXT REFERENCES users(user_id),
                 identity_code TEXT NOT NULL,
                 major TEXT NOT NULL,
                 education_level TEXT NOT NULL,
@@ -253,6 +258,7 @@ def initialize_database(database_path: Path) -> None:
             );
             CREATE TABLE IF NOT EXISTS career_assessment (
                 client_id TEXT PRIMARY KEY,
+                user_id TEXT REFERENCES users(user_id),
                 assessment_version INTEGER NOT NULL,
                 answers_json TEXT NOT NULL,
                 result_json TEXT NOT NULL,
@@ -297,6 +303,7 @@ def initialize_database(database_path: Path) -> None:
             );
             """
         )
+        _migrate_user_ownership(connection)
         _migrate_catalog_provenance(connection)
         connection.executemany(
             """
@@ -385,3 +392,32 @@ def _migrate_catalog_provenance(connection: sqlite3.Connection) -> None:
         for column, definition in columns:
             if column not in existing:
                 connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
+
+def _migrate_user_ownership(connection: sqlite3.Connection) -> None:
+    """本期 SQLite 增量迁移：历史未归属记录保留 NULL，绝不自动分配给新账号。"""
+    owned_tables = (
+        "user_draft",
+        "resume_evidence",
+        "application_tracker",
+        "career_profile",
+        "career_assessment",
+        "download_file",
+    )
+    for table in owned_tables:
+        columns = {str(row["name"]) for row in connection.execute(f"PRAGMA table_info({table})")}
+        if "user_id" not in columns:
+            connection.execute(
+                f"ALTER TABLE {table} ADD COLUMN user_id TEXT REFERENCES users(user_id)"
+            )
+
+    # 二期迁移 MySQL/PostgreSQL 时保留这些 owner-first 索引与查询顺序。
+    for table, index_name, columns in (
+        ("user_draft", "idx_user_draft_owner_updated", "user_id, updated_at DESC, id DESC"),
+        ("resume_evidence", "idx_resume_evidence_owner_updated", "user_id, updated_at DESC, id DESC"),
+        ("application_tracker", "idx_application_tracker_owner_status", "user_id, status, next_action_at, updated_at DESC"),
+        ("career_profile", "idx_career_profile_owner", "user_id"),
+        ("career_assessment", "idx_career_assessment_owner", "user_id"),
+        ("download_file", "idx_download_file_owner", "user_id"),
+    ):
+        connection.execute(f"CREATE INDEX IF NOT EXISTS {index_name} ON {table} ({columns})")
