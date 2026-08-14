@@ -88,4 +88,10 @@ async def career_compare(
         roles,
         verified_evidence=[item for item in evidence if item.verified],
     )
+    for item in comparison.items:
+        item.action_plan = await request.app.state.ai_client.build_comparison_action_plan(
+            item.role.role_name,
+            profile.model_dump(),
+            [entry.title for entry in evidence if entry.verified],
+        )
     return success(comparison.model_dump())

@@ -17,10 +17,15 @@ def api_client(tmp_path, monkeypatch):
     monkeypatch.setenv("TEMP_FILE_PATH", str(tmp_path / "temp"))
     monkeypatch.setenv("AUTH_DEMO_MODE", "true")
     monkeypatch.setenv("JWT_SECRET", "test-jwt-secret-for-authentication")
+    monkeypatch.setenv("AI_PROVIDER", "openai_compatible")
+    monkeypatch.setenv("AI_API_KEY", "")
+    monkeypatch.setenv("AI_MODEL", "")
 
     from main import create_app
+    from test_support import TestAIClient
 
     with TestClient(create_app()) as client:
+        client.app.state.ai_client = TestAIClient()
         # 既有业务测试默认以同一演示用户调用；鉴权测试会显式移除该请求头。
         login = client.post(
             "/api/auth/login-phone",

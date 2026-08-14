@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query, Request
 
 from app.schemas.assessment import AnnualInsightPayload, AssessmentSubmitPayload
 from app.schemas.common import success
-from app.services.career_assessment import assessment_questions, score_assessment
+from app.services.career_assessment import assessment_questions
 from app.services.auth import current_user_id
 
 
@@ -27,7 +27,9 @@ async def submit_assessment(
     request: Request,
     user_id: str = Depends(current_user_id),
 ) -> dict[str, object]:
-    result = score_assessment(payload.answers)
+    result = await request.app.state.ai_client.assess_career(
+        assessment_questions(), payload.answers
+    )
     saved = request.app.state.assessment_repository.save(
         user_id,
         version=1,

@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager, suppress
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api import ai, applications, assessment, auth, career, consultation, drafts, evidence, exports, knowledgebase, templates
@@ -20,7 +21,7 @@ from app.repositories.knowledgebase import KnowledgebaseRepository, Knowledgebas
 from app.repositories.templates import TemplateRepository
 from app.repositories.users import UserRepository
 from app.schemas.common import error, success
-from app.services.ai_client import build_ai_client
+from app.services.ai_client import AIServiceError, build_ai_client
 from app.services.career_recommender import CareerRecommender
 from app.services.downloads import DownloadNotFoundError, DownloadService
 from app.services.job_catalog import JobCatalog
@@ -57,6 +58,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     initialize_database(settings.database_path)
 
     app = FastAPI(title="Resume Demo API", lifespan=lifespan)
+    if settings.cors_origins:
+        # 一期前端/小程序跨域白名单；生产必须填写确切 HTTPS 域名，禁止使用通配符。
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=list(settings.cors_origins),
+            allow_credentials=True,
+            allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+            allow_headers=["Authorization", "Content-Type"],
+        )
     app.state.settings = settings
     app.state.user_repository = UserRepository(settings.database_path)
     app.state.auth_service = AuthService(settings, app.state.user_repository)
@@ -135,6 +145,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return JSONResponse(
             status_code=503,
             content=error("pdf_renderer_unavailable", "PDF renderer is unavailable"),
+        )
+
+    @app.exception_handler(AIServiceError)
+    def ai_service_error(_: Request, exception: AIServiceError):
+        return JSONResponse(
+            status_code=exception.status_code,
+            content=error(exception.code, exception.message),
         )
 
     @app.get("/health")

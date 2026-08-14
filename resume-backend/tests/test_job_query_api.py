@@ -3,8 +3,10 @@ import sqlite3
 
 from app.db import initialize_database
 from app.schemas.job import JobIntelligence
-from app.services.ai_client import MOCK_CACHE_KEY
 from app.services.job_cache import JobCache
+
+
+TEST_PROVIDER_CACHE_KEY = "openai_compatible"
 
 
 def assert_success(response):
@@ -31,7 +33,7 @@ def test_expired_job_cache_refreshes_role_intelligence(api_client):
             SET expires_at = ?
             WHERE normalized_role = ? AND provider_mode = ?
             """,
-            ((datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat(), "data engineer", MOCK_CACHE_KEY),
+            ((datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat(), "data engineer", TEST_PROVIDER_CACHE_KEY),
         )
 
     assert_success(api_client.post("/api/job/query", json={"role_name": "Data Engineer"}))

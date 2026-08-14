@@ -72,7 +72,7 @@ def load_settings() -> Settings:
         app_host=os.getenv("APP_HOST", "127.0.0.1"),
         app_port=int(os.getenv("APP_PORT", "8000")),
         database_path=Path(os.getenv("DATABASE_PATH", "./data/resume_demo.db")).resolve(),
-        ai_provider=os.getenv("AI_PROVIDER", "mock"),
+        ai_provider=os.getenv("AI_PROVIDER", "openai_compatible"),
         ai_api_key=os.getenv("AI_API_KEY", ""),
         ai_base_url=os.getenv("AI_BASE_URL", "https://ark.cn-beijing.volces.com/api/v1"),
         ai_model=os.getenv("AI_MODEL", ""),
