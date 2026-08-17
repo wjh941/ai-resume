@@ -1175,15 +1175,17 @@
     }
     function defaultPromotionTracks(roleName) {
       const role = safeText(roleName, "目标岗位");
-      const makeNodes = (stages, salaries, years, descriptions) => stages.map((stage, index) => ({
-        title: role + " " + stage, level: index === 0 ? "entry" : index === 1 ? "junior" : "senior",
+      const levels = ["entry", "junior", "mid", "senior"];
+      const capabilitySets = [["岗位基础", "复盘表达"], ["独立交付", "质量意识"], ["复杂问题拆解", "跨团队协作"], ["技术判断", "影响力建设"]];
+      const makeNodes = (stages, salaries, years, descriptions) => levels.map((level, index) => ({
+        title: role + " " + stages[index], level,
         description: descriptions[index], salary_band: salaries[index], standard_years: years[index],
-        competencies: index === 0 ? ["岗位基础", "复盘表达"] : index === 1 ? ["独立交付", "质量意识"] : ["复杂问题拆解", "跨团队协作"],
+        competencies: capabilitySets[index],
         case_detail: "完成一个可复盘、可验证的真实项目成果。", skills: [], actions: []
       }));
       return [
-        { key: "technical", title: "技术专家路径", nodes: makeNodes(["入门", "初级", "高级"], ["8k-14k", "12k-20k", "20k-35k"], ["0-1 年", "1-3 年", "3-6 年"], ["建立岗位基础与真实案例。", "独立交付明确范围的任务。", "解决复杂问题并带动协作。"]) },
-        { key: "management", title: "管理发展路径", nodes: makeNodes(["协作骨干", "小组负责人", "业务负责人"], ["10k-16k", "18k-28k", "28k-45k"], ["1-2 年", "3-5 年", "5-8 年"], ["在交付中建立沟通与推进能力。", "管理目标、节奏和质量。", "连接人才、资源与业务影响。"]) }
+        { key: "technical", title: "技术专家路径", nodes: makeNodes(["入门", "初级", "中级", "高级"], ["8k-14k", "12k-20k", "18k-30k", "28k-42k"], ["0-1 年", "1-3 年", "3-6 年", "6 年以上"], ["建立岗位基础与真实案例。", "独立交付明确范围的任务。", "解决复杂问题并带动协作。", "形成技术判断并推动跨团队标准。"]) },
+        { key: "management", title: "管理发展路径", nodes: makeNodes(["协作骨干", "小组负责人", "团队经理", "业务负责人"], ["10k-16k", "18k-28k", "28k-45k", "40k-60k"], ["1-2 年", "3-5 年", "5-8 年", "8 年以上"], ["在交付中建立沟通与推进能力。", "管理目标、节奏和质量。", "培养团队并平衡资源配置。", "连接人才、资源与长期业务影响。"]) }
       ];
     }
     function normalizeCareerPlan(value = {}, fallbackRole = "目标岗位") {

@@ -61,6 +61,7 @@ globalThis.__dashboardTestApi = {
   removeEvidenceAttachments: typeof removeEvidenceAttachments === 'function' ? removeEvidenceAttachments : undefined,
   refreshVipStatus: typeof refreshVipStatus === 'function' ? refreshVipStatus : undefined,
   refreshOrders: typeof refreshOrders === 'function' ? refreshOrders : undefined,
+  defaultPromotionTracks: typeof defaultPromotionTracks === 'function' ? defaultPromotionTracks : undefined,
   normalizeCareerPlan: typeof normalizeCareerPlan === 'function' ? normalizeCareerPlan : undefined,
   projectCareerPlanForCurrentVip: typeof projectCareerPlanForCurrentVip === 'function' ? projectCareerPlanForCurrentVip : undefined,
   calculatePlanProgress: typeof calculatePlanProgress === 'function' ? calculatePlanProgress : undefined,
@@ -150,6 +151,7 @@ assert.equal(JSON.stringify(api.compareAssessments?.({ score: 80 }, { score: 70 
 assert.match(api.assessmentPlanningText?.({ action_plan: {} }) || '', /职业规划/);
 assert.equal(api.validateShortcuts?.({ save: 's', export: 's' }), '快捷键不能重复');
 assert.equal(typeof api.normalizeCareerPlan, 'function', 'career plan normalizer must exist');
+assert.equal(typeof api.defaultPromotionTracks, 'function', 'career plan fallback tracks must exist');
 assert.equal(typeof api.projectCareerPlanForCurrentVip, 'function', 'career plan must project cached detail to the current membership entitlement');
 assert.equal(typeof api.calculatePlanProgress, 'function', 'career plan progress helper must exist');
 assert.equal(typeof api.careerPlanTaskGroups, 'function', 'career plan task groups must exist');
@@ -163,6 +165,12 @@ const normalizedCareerPlan = api.normalizeCareerPlan({
 });
 assert.equal(normalizedCareerPlan.sections.length, 6, 'career plan must always normalize six report sections');
 assert.deepEqual(Array.from(normalizedCareerPlan.promotion_tracks, track => track.key), ['technical', 'management']);
+assert.deepEqual(
+  Array.from(api.defaultPromotionTracks('Data Engineer')[0].nodes, node => node.level),
+  ['entry', 'junior', 'mid', 'senior'],
+  'the technical fallback must render all four roadmap stages'
+);
+assert.equal(api.defaultPromotionTracks('Data Engineer')[1].nodes.length, 4, 'the management fallback must render all four roadmap stages');
 assert.equal(api.calculatePlanProgress([{ done: true }, { done: false }]), 50);
 assert.equal(api.calculatePlanProgress([]), 0);
 api.state.vip = { vip_level: 'free' };
