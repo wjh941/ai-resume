@@ -241,6 +241,21 @@ assert.match(html, /data-add-gap-evidence/, 'missing competencies must create a 
 assert.match(html, /career-comparison-grid/, 'comparison modal must use a responsive two-column layout');
 assert.match(html, /career-plan-task-groups/, '7/30/90 tasks must use dedicated progress blocks');
 assert.doesNotMatch(html, /location\.protocol\s*===\s*["']file:/, 'file:// Mock export branch must be removed');
+assert.match(html, /id="sidebarMask"/, 'mobile navigation must provide an immediate close mask');
+assert.match(html, /function setSidebarOpen\b/, 'mobile navigation must use one state transition helper');
+assert.match(html, /\.sidebar-mask\.open/, 'mobile navigation mask must receive the visible state');
+assert.match(html, /isOpen && window\.matchMedia\("\(max-width: 900px\)"\)\.matches/, 'desktop sidebar shortcuts must not lock document scrolling');
+assert.match(html, /\.topbar \{ align-items: flex-start; flex-wrap: wrap; padding: 14px 28px; \}/, 'tablet topbar must wrap before its action controls overflow');
+assert.match(html, /function installOverflowTooltips\b/, 'truncated interactive text must expose an on-demand tooltip');
+assert.match(html, /target\.scrollWidth <= target\.clientWidth/, 'tooltip detection must only run for actual text overflow');
+for (const visualHook of [
+  '--radius-sm:', '--radius-md:', '--radius-lg:', '--shadow-card:', '--shadow-hover:', '--shadow-modal:',
+  '--type-page:', '--type-module:', '--type-card:', '--type-body:', '--type-hint:', '--type-tag:',
+  '.btn:active', ':focus-visible', 'prefers-reduced-motion: reduce', 'backdrop-filter: blur(1px)',
+  'tbody tr:hover', 'scrollbar-color:', '::selection'
+]) {
+  assert.ok(html.includes(visualHook), `dashboard must keep the shared visual hook: ${visualHook}`);
+}
 
 const firstAccountJwt = `header.${Buffer.from(JSON.stringify({ sub: 'owner-a', token_version: 1, exp: 9999999999 })).toString('base64url')}.signature`;
 const secondAccountJwt = `header.${Buffer.from(JSON.stringify({ sub: 'owner-b', token_version: 1, exp: 9999999999 })).toString('base64url')}.signature`;
