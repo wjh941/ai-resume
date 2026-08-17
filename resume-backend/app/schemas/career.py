@@ -9,6 +9,15 @@ from app.schemas.consultation import IdentityCode
 
 MatchingLevel = Literal["high", "transferable", "needs_upskilling", "long_shot"]
 RecommendationTier = Literal["stretch", "stable", "safe"]
+JobPlanSectionKey = Literal[
+    "market_overview",
+    "responsibilities",
+    "hard_skills",
+    "soft_competencies",
+    "career_value",
+    "risks",
+]
+PromotionTrackKey = Literal["technical", "management"]
 
 
 def _normalize_text(value: str, field_name: str) -> str:
@@ -174,9 +183,9 @@ class JobPlanRequest(BaseModel):
 
 
 class JobPlanSection(BaseModel):
-    key: str
-    title: str
-    summary: str
+    key: JobPlanSectionKey
+    title: str = Field(min_length=1)
+    summary: str = Field(min_length=1)
     items: list[str] = Field(default_factory=list)
 
 
@@ -190,21 +199,21 @@ class CareerPlanComparisonItem(BaseModel):
 
 
 class PromotionNode(BaseModel):
-    title: str
-    level: str
-    description: str
-    salary_band: str = ""
-    standard_years: str = ""
-    competencies: list[str] = Field(default_factory=list)
-    case_detail: str = ""
+    title: str = Field(min_length=1)
+    level: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    salary_band: str = Field(min_length=1)
+    standard_years: str = Field(min_length=1)
+    competencies: list[str] = Field(min_length=1)
+    case_detail: str = Field(min_length=1)
     skills: list[str] = Field(default_factory=list)
     actions: list[str] = Field(default_factory=list)
 
 
 class PromotionTrack(BaseModel):
-    key: str
-    title: str
-    nodes: list[PromotionNode]
+    key: PromotionTrackKey
+    title: str = Field(min_length=1)
+    nodes: list[PromotionNode] = Field(min_length=1)
 
 
 class JobPlanResponse(BaseModel):
@@ -214,6 +223,21 @@ class JobPlanResponse(BaseModel):
     comparison_items: list[CareerPlanComparisonItem]
     promotion_tracks: list[PromotionTrack]
     action_plan: ComparisonActionPlan
+
+    @field_validator("sections")
+    @classmethod
+    def require_named_sections(cls, sections: list[JobPlanSection]) -> list[JobPlanSection]:
+        required = {"market_overview", "responsibilities", "hard_skills", "soft_competencies", "career_value", "risks"}
+        if {section.key for section in sections} != required:
+            raise ValueError("sections must contain each required job-plan section exactly once")
+        return sections
+
+    @field_validator("promotion_tracks")
+    @classmethod
+    def require_dual_promotion_tracks(cls, tracks: list[PromotionTrack]) -> list[PromotionTrack]:
+        if len(tracks) != 2 or {track.key for track in tracks} != {"technical", "management"}:
+            raise ValueError("promotion_tracks must contain technical and management tracks")
+        return tracks
 
 
 class CareerComparisonItem(BaseModel):

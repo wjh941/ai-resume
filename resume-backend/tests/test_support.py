@@ -13,6 +13,7 @@ from app.schemas.consultation import (
 from app.schemas.job import JobIntelligence
 from app.schemas.resume import ResumePayload
 from app.schemas.career import (
+    CareerPlanComparisonItem,
     ComparisonActionPlan,
     JobPlanResponse,
     JobPlanSection,
@@ -137,9 +138,9 @@ class TestAIClient:
         sections = [
             JobPlanSection(key=key, title=title, summary=f"{title} for {role_name}")
             for key, title in (
-                ("market_context", "Market context"),
+                ("market_overview", "Market overview"),
                 ("responsibilities", "Responsibilities"),
-                ("hard_skill_gaps", "Hard-skill gaps"),
+                ("hard_skills", "Hard skills"),
                 ("soft_competencies", "Soft competencies"),
                 ("career_value", "Career value"),
                 ("risks", "Risks"),
@@ -167,7 +168,20 @@ class TestAIClient:
             role_name=role_name,
             report_scope="detailed" if expand_detail else "brief",
             sections=sections,
-            comparison_items=[],
+            comparison_items=[
+                CareerPlanComparisonItem(
+                    competency="Python",
+                    category="hard",
+                    status="high",
+                    evidence=["Verified project"],
+                ),
+                CareerPlanComparisonItem(
+                    competency="Stakeholder communication",
+                    category="soft",
+                    status="transferable",
+                    evidence=["Assessment"],
+                ),
+            ],
             promotion_tracks=tracks,
             action_plan=ComparisonActionPlan(
                 seven_day=[f"Review {role_name} requirements."],
