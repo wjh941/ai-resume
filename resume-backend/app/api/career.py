@@ -65,9 +65,31 @@ def project_job_plan_for_vip(plan: JobPlanResponse, vip: VipStatus) -> JobPlanRe
                 for item in plan.comparison_items[:2]
             ],
             "promotion_tracks": [
-                track.model_copy(update={"nodes": track.nodes[:2]})
+                track.model_copy(
+                    update={
+                        "nodes": [
+                            node.model_copy(
+                                update={
+                                    "description": "Preview the current career stage and unlock detailed requirements with Basic.",
+                                    "salary_band": "Details available with Basic",
+                                    "standard_years": "Details available with Basic",
+                                    "competencies": ["Detailed competencies available with Basic"],
+                                    "case_detail": "Detailed roadmap available with Basic",
+                                    "skills": [],
+                                    "actions": [],
+                                }
+                            )
+                            for node in track.nodes[:2]
+                        ]
+                    }
+                )
                 for track in plan.promotion_tracks
             ],
+            "action_plan": ComparisonActionPlan(
+                seven_day=plan.action_plan.seven_day[:1],
+                thirty_day=[],
+                ninety_day=[],
+            ),
         }
     )
 

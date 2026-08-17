@@ -129,6 +129,20 @@ def test_free_job_plan_ignores_expand_detail(api_client, auth_headers):
     data = response.json()["data"]
     assert data["report_scope"] == "brief"
     assert all(len(track["nodes"]) == 2 for track in data["promotion_tracks"])
+    assert data["action_plan"]["thirty_day"] == []
+    assert data["action_plan"]["ninety_day"] == []
+    assert all(
+        node["salary_band"] == "Details available with Basic"
+        and node["standard_years"] == "Details available with Basic"
+        and node["competencies"] == ["Detailed competencies available with Basic"]
+        and node["case_detail"] == "Detailed roadmap available with Basic"
+        and node["skills"] == []
+        and node["actions"] == []
+        for track in data["promotion_tracks"]
+        for node in track["nodes"]
+    )
+    assert "10k-18k" not in response.text
+    assert "Ship a verified project." not in response.text
 
 
 def test_basic_job_plan_returns_detailed_content(api_client, auth_headers):
@@ -144,7 +158,11 @@ def test_basic_job_plan_returns_detailed_content(api_client, auth_headers):
     )
 
     assert response.status_code == 200, response.text
-    assert response.json()["data"]["report_scope"] == "detailed"
+    data = response.json()["data"]
+    assert data["report_scope"] == "detailed"
+    assert data["action_plan"]["thirty_day"] == ["Build a Data Engineer portfolio artifact."]
+    assert data["promotion_tracks"][0]["nodes"][0]["salary_band"] == "10k-18k"
+    assert data["promotion_tracks"][0]["nodes"][0]["case_detail"] == "Ship a verified project."
 
 
 def test_job_plan_never_passes_another_users_context_to_ai(api_client, auth_headers):
