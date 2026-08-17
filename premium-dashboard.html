@@ -1193,8 +1193,13 @@
     }
     async function requestCareerPlan(roleName, expandDetail = vipAllows("full_job_report")) {
       const role = safeText(roleName, state.jobs[0]?.roleName || "目标岗位");
+      // A plan request belongs to the account that started it. Do not leak a late
+      // response into a newly logged-in account after an account switch.
+      const requestToken = authSession.token;
+      const requestUserId = authSession.userId();
       const result = await apiOrMock("/api/job/plan", { method: "POST", body: JSON.stringify({ role_name: role, expand_detail: Boolean(expandDetail) }) }, () => buildMockCareerPlan(role, Boolean(expandDetail)), "职业规划");
       if (isApiServiceFailure(result)) return API_SERVICE_FAILURE;
+      if (!authSession.hasToken() || authSession.token !== requestToken || authSession.userId() !== requestUserId) return API_SERVICE_FAILURE;
       const plan = normalizeCareerPlan(result, role);
       state.careerPlans = { ...(state.careerPlans || {}), [role]: plan };
       saveLocal("resume-dashboard-career-plan-cache", state.careerPlans);

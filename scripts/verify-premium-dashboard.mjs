@@ -221,6 +221,18 @@ resolveOrdersRequest();
 await pendingOrders;
 assert.deepEqual(Array.from(api.state.orders), [], 'a delayed order response must not appear for a different account');
 
+api.authSession.set(firstAccountJwt);
+api.state.careerPlans = {};
+let resolveCareerPlanRequest;
+sandbox.fetch = () => new Promise(resolve => { resolveCareerPlanRequest = () => resolve({ ok: true, status: 200, json: async () => ({ code: 'ok', data: { role_name: 'Data Engineer', report_scope: 'detailed', action_plan: { seven_day: ['A-only action'], thirty_day: [], ninety_day: [] } } }) }); });
+const pendingCareerPlan = api.requestCareerPlan('Data Engineer', true);
+api.authSession.set(secondAccountJwt);
+await Promise.resolve();
+resolveCareerPlanRequest();
+await pendingCareerPlan;
+assert.deepEqual(Object.keys(api.state.careerPlans), [], 'a delayed career plan must not enter another account state');
+assert.equal(sandbox.localStorage.getItem('resume-dashboard:owner-b:career-plan-cache'), null, 'a delayed career plan must not enter another account cache');
+
 api.state.drafts = [{ id: 'existing-draft', title: 'Existing', template: 'business', resume: { ...dashboardResume } }];
 api.state.resumeDirty = false;
 api.openDraft('existing-draft');
