@@ -696,7 +696,11 @@
       // 本期商业化缓存：只保存当前 JWT 用户的展示权益，后端仍是唯一权限裁决者。
       vip: loadLocal("resume-dashboard-vip-status", { vip_level: "free", expire_time: null, auto_renew: false, max_drafts: 3, max_compare_jobs: 2 }),
       vipPackages: [],
-      orders: []
+      orders: [],
+      careerPlans: loadLocal("resume-dashboard-career-plan-cache", {}),
+      careerPlanProgress: loadLocal("resume-dashboard-career-plan-progress", {}),
+      careerPlanHistory: loadLocal("resume-dashboard-career-plan-history", []),
+      careerPlanTracks: loadLocal("resume-dashboard-career-plan-tracks", {})
     };
     const extensionDefaults = {
       version: 1,
@@ -743,7 +747,7 @@
       orders: ["订单记录", "订单和有效期均按当前登录账号隔离。"],
       privacy: ["本地隐私", "数据归你，清理也由你决定。"]
     };
-    const localKeys = ["resume-dashboard-evidence", "resume-dashboard-deliveries", "resume-dashboard-queue", "resume-dashboard-drafts", "resume-dashboard-assessment-answers", "resume-dashboard-assessment-result", "resume-dashboard-assessment-history", "resume-dashboard-resume", "resume-dashboard-vip-status"];
+    const localKeys = ["resume-dashboard-evidence", "resume-dashboard-deliveries", "resume-dashboard-queue", "resume-dashboard-drafts", "resume-dashboard-assessment-answers", "resume-dashboard-assessment-result", "resume-dashboard-assessment-history", "resume-dashboard-resume", "resume-dashboard-vip-status", "resume-dashboard-career-plan-cache", "resume-dashboard-career-plan-progress", "resume-dashboard-career-plan-history", "resume-dashboard-career-plan-tracks"];
 
     function isBusinessCacheKey(key) {
       return String(key).startsWith("resume-dashboard-") && !WEB_UI_CACHE_KEYS.has(String(key)) && String(key) !== AUTH_TOKEN_STORAGE_KEY;
@@ -1103,6 +1107,99 @@
         resume: dashboardResumeFromApi(item.resume)
       };
     }
+    /* Career-plan data utilities stay DOM-free for future Uni-App migration. */
+    const careerPlanSectionDefinitions = [
+      ["market_overview", "行业市场概览"], ["responsibilities", "核心职责拆解"],
+      ["hard_skills", "硬技能缺口"], ["soft_competencies", "软能力匹配"],
+      ["career_value", "短中长期价值"], ["risks", "行业风险与门槛"]
+    ];
+    function normalizeCareerPlanNode(node = {}, fallbackTitle = "当前阶段") {
+      return {
+        title: safeText(node.title, fallbackTitle), level: safeText(node.level, "entry"),
+        description: safeText(node.description, "围绕真实项目持续积累可验证成果。"),
+        salary_band: safeText(node.salary_band, "以岗位实际沟通为准"),
+        standard_years: safeText(node.standard_years, "按能力与机会发展"),
+        competencies: asArray(node.competencies ?? node.skills).map(item => safeText(item)).filter(Boolean),
+        case_detail: safeText(node.case_detail, "以真实项目结果验证能力增长。"),
+        skills: asArray(node.skills).map(item => safeText(item)).filter(Boolean),
+        actions: asArray(node.actions).map(item => safeText(item)).filter(Boolean)
+      };
+    }
+    function defaultPromotionTracks(roleName) {
+      const role = safeText(roleName, "目标岗位");
+      const makeNodes = (stages, salaries, years, descriptions) => stages.map((stage, index) => ({
+        title: role + " " + stage, level: index === 0 ? "entry" : index === 1 ? "junior" : "senior",
+        description: descriptions[index], salary_band: salaries[index], standard_years: years[index],
+        competencies: index === 0 ? ["岗位基础", "复盘表达"] : index === 1 ? ["独立交付", "质量意识"] : ["复杂问题拆解", "跨团队协作"],
+        case_detail: "完成一个可复盘、可验证的真实项目成果。", skills: [], actions: []
+      }));
+      return [
+        { key: "technical", title: "技术专家路径", nodes: makeNodes(["入门", "初级", "高级"], ["8k-14k", "12k-20k", "20k-35k"], ["0-1 年", "1-3 年", "3-6 年"], ["建立岗位基础与真实案例。", "独立交付明确范围的任务。", "解决复杂问题并带动协作。"]) },
+        { key: "management", title: "管理发展路径", nodes: makeNodes(["协作骨干", "小组负责人", "业务负责人"], ["10k-16k", "18k-28k", "28k-45k"], ["1-2 年", "3-5 年", "5-8 年"], ["在交付中建立沟通与推进能力。", "管理目标、节奏和质量。", "连接人才、资源与业务影响。"]) }
+      ];
+    }
+    function normalizeCareerPlan(value = {}, fallbackRole = "目标岗位") {
+      const source = value && typeof value === "object" ? value : {};
+      const roleName = safeText(source.role_name ?? source.roleName, fallbackRole);
+      const sourceSections = new Map(asArray(source.sections).map(item => [safeText(item?.key), item]));
+      const sections = careerPlanSectionDefinitions.map(([key, title]) => {
+        const item = sourceSections.get(key) || {};
+        return { key, title: safeText(item.title, title), summary: safeText(item.summary, "等待生成与当前经历匹配的分析。"), items: asArray(item.items).map(text => safeText(text)).filter(Boolean) };
+      });
+      const sourceTracks = new Map(asArray(source.promotion_tracks ?? source.promotionTracks).map(item => [safeText(item?.key), item]));
+      const promotion_tracks = defaultPromotionTracks(roleName).map(fallback => {
+        const track = sourceTracks.get(fallback.key) || {};
+        const nodes = asArray(track.nodes).map((node, index) => normalizeCareerPlanNode(node, fallback.nodes[index]?.title || fallback.nodes[0].title));
+        return { key: fallback.key, title: safeText(track.title, fallback.title), nodes: nodes.length ? nodes : fallback.nodes.map(node => normalizeCareerPlanNode(node)) };
+      });
+      const actionPlan = source.action_plan ?? source.actionPlan ?? {};
+      return {
+        role_name: roleName, report_scope: source.report_scope === "detailed" ? "detailed" : "brief", sections, promotion_tracks,
+        comparison_items: asArray(source.comparison_items ?? source.comparisonItems).map(item => ({ competency: safeText(item.competency, "待确认能力"), category: item.category === "soft" ? "soft" : "hard", status: ["high", "transferable", "needs_upskilling", "long_shot"].includes(item.status) ? item.status : "needs_upskilling", evidence: asArray(item.evidence).map(text => safeText(text)).filter(Boolean), gap: safeText(item.gap), recommendation: safeText(item.recommendation) })),
+        action_plan: { seven_day: asArray(actionPlan.seven_day).map(text => safeText(text)).filter(Boolean), thirty_day: asArray(actionPlan.thirty_day).map(text => safeText(text)).filter(Boolean), ninety_day: asArray(actionPlan.ninety_day).map(text => safeText(text)).filter(Boolean) }
+      };
+    }
+    function buildMockCareerPlan(roleName, expandDetail = false) {
+      const plan = normalizeCareerPlan({ role_name: roleName, report_scope: expandDetail ? "detailed" : "brief" }, roleName);
+      plan.sections = plan.sections.map((section, index) => ({
+        ...section,
+        summary: plan.role_name + section.title + "将基于已保存的简历、经历与测评信号生成。",
+        items: expandDetail ? ["优先使用已验证项目证据补强判断。", "记录真实反馈后再调整下一步。"] : index < 2 ? ["联网后生成个性化详细内容。"] : []
+      }));
+      plan.comparison_items = [
+        { competency: "已验证项目表达", category: "hard", status: "high", evidence: ["本地经历库"], gap: "", recommendation: "保留事实、动作与结果。" },
+        { competency: "岗位核心技能", category: "hard", status: "needs_upskilling", evidence: [], gap: "补充真实练习或项目。", recommendation: "完成一个可验证的小任务。" },
+        { competency: "沟通协作", category: "soft", status: "transferable", evidence: ["测评与项目协作记录"], gap: "", recommendation: "在复盘中说明协作贡献。" }
+      ];
+      plan.action_plan = {
+        seven_day: ["整理 " + plan.role_name + " 相关真实经历与技能证据。"],
+        thirty_day: expandDetail ? ["完成一个可展示的小型项目并复盘。"] : [],
+        ninety_day: expandDetail ? ["结合面试反馈更新简历与投递方向。"] : []
+      };
+      return plan;
+    }
+    function calculatePlanProgress(tasks = []) {
+      const items = asArray(tasks);
+      return items.length ? Math.round(items.filter(item => Boolean(item?.done)).length / items.length * 100) : 0;
+    }
+    function buildGapEvidenceDraft(skill) {
+      const name = safeText(skill, "待确认技能");
+      return normalizeEvidence({ id: crypto.randomUUID(), title: "[待确认] " + name + " 相关经历", type: "待确认", date: todayString(), status: "pending", description: "补充 " + name + " 的真实背景、行动、结果与证明材料。", tags: [name] });
+    }
+    function careerPlanText(plan) {
+      const value = normalizeCareerPlan(plan);
+      const sections = value.sections.map(section => section.title + "：" + section.summary + (section.items.length ? "\n" + section.items.map(item => "- " + item).join("\n") : ""));
+      return ["职业规划：" + value.role_name, ...sections, "7 天：" + (value.action_plan.seven_day.join("；") || "待生成"), "30 天：" + (value.action_plan.thirty_day.join("；") || "待生成"), "90 天：" + (value.action_plan.ninety_day.join("；") || "待生成")].join("\n\n");
+    }
+    async function requestCareerPlan(roleName, expandDetail = vipAllows("full_job_report")) {
+      const role = safeText(roleName, state.jobs[0]?.roleName || "目标岗位");
+      const result = await apiOrMock("/api/job/plan", { method: "POST", body: JSON.stringify({ role_name: role, expand_detail: Boolean(expandDetail) }) }, () => buildMockCareerPlan(role, Boolean(expandDetail)), "职业规划");
+      if (isApiServiceFailure(result)) return API_SERVICE_FAILURE;
+      const plan = normalizeCareerPlan(result, role);
+      state.careerPlans = { ...(state.careerPlans || {}), [role]: plan };
+      saveLocal("resume-dashboard-career-plan-cache", state.careerPlans);
+      return plan;
+    }
     function paginate(items, page, pageSize) {
       const total = items.length;
       const pages = Math.max(1, Math.ceil(total / pageSize));
@@ -1114,7 +1211,11 @@
     state.evidence = asArray(state.evidence).map(normalizeEvidence);
     state.deliveries = asArray(state.deliveries).map(normalizeDelivery);
     state.drafts = asArray(state.drafts).map(normalizeDraft);
-      state.resume = { ...defaultResume, ...(state.resume || {}) };
+    state.resume = { ...defaultResume, ...(state.resume || {}) };
+    state.careerPlans = state.careerPlans && typeof state.careerPlans === "object" ? state.careerPlans : {};
+    state.careerPlanProgress = state.careerPlanProgress && typeof state.careerPlanProgress === "object" ? state.careerPlanProgress : {};
+    state.careerPlanHistory = asArray(state.careerPlanHistory);
+    state.careerPlanTracks = state.careerPlanTracks && typeof state.careerPlanTracks === "object" ? state.careerPlanTracks : {};
     state.extension = normalizeExtension(state.extension);
     state.assessmentQuestions = state.assessmentQuestions.map(step => ({ ...step, items: [...step.items] }));
     if (state.extension.assessmentCustomQuestions.length) state.assessmentQuestions[0].items.push(...state.extension.assessmentCustomQuestions.filter(item => !state.assessmentQuestions[0].items.includes(item)));
@@ -1353,6 +1454,10 @@
       state.assessmentHistory = loadLocal("resume-dashboard-assessment-history", mock.assessmentHistory);
       state.resume = loadLocal("resume-dashboard-resume", defaultResume);
       state.vip = normalizeVipStatus(loadLocal("resume-dashboard-vip-status", {}));
+      state.careerPlans = loadLocal("resume-dashboard-career-plan-cache", {});
+      state.careerPlanProgress = loadLocal("resume-dashboard-career-plan-progress", {});
+      state.careerPlanHistory = loadLocal("resume-dashboard-career-plan-history", []);
+      state.careerPlanTracks = loadLocal("resume-dashboard-career-plan-tracks", {});
       state.extension = normalizeExtension(loadLocal("resume-dashboard-extension", {}));
       state.favoriteJobs = state.extension.favoriteJobs;
       state.jobAdvancedFilters = state.extension.jobFilters;
@@ -1365,6 +1470,7 @@
       state.assessmentAnswers = {}; state.assessmentResult = null; state.assessmentHistory = [...mock.assessmentHistory];
       state.resume = { ...defaultResume }; state.resumeDirty = false; state.evidenceDirty = false; state.deliveryDirty = false;
       state.vip = normalizeVipStatus(); state.vipPackages = []; state.orders = [];
+      state.careerPlans = {}; state.careerPlanProgress = {}; state.careerPlanHistory = []; state.careerPlanTracks = {};
       state.extension = normalizeExtension({}); state.jobAdvancedFilters = state.extension.jobFilters;
     }
     function renderLoggedOutState() {
