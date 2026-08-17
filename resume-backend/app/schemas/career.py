@@ -163,6 +163,59 @@ class ComparisonActionPlan(BaseModel):
     ninety_day: list[str]
 
 
+class JobPlanRequest(BaseModel):
+    role_name: str = Field(min_length=1, max_length=120)
+    expand_detail: bool = False
+
+    @field_validator("role_name")
+    @classmethod
+    def normalize_role_name(cls, value: str) -> str:
+        return _normalize_text(value, "role_name")
+
+
+class JobPlanSection(BaseModel):
+    key: str
+    title: str
+    summary: str
+    items: list[str] = Field(default_factory=list)
+
+
+class CareerPlanComparisonItem(BaseModel):
+    competency: str
+    category: Literal["hard", "soft"]
+    status: MatchingLevel
+    evidence: list[str] = Field(default_factory=list)
+    gap: str = ""
+    recommendation: str = ""
+
+
+class PromotionNode(BaseModel):
+    title: str
+    level: str
+    description: str
+    salary_band: str = ""
+    standard_years: str = ""
+    competencies: list[str] = Field(default_factory=list)
+    case_detail: str = ""
+    skills: list[str] = Field(default_factory=list)
+    actions: list[str] = Field(default_factory=list)
+
+
+class PromotionTrack(BaseModel):
+    key: str
+    title: str
+    nodes: list[PromotionNode]
+
+
+class JobPlanResponse(BaseModel):
+    role_name: str
+    report_scope: Literal["brief", "detailed"]
+    sections: list[JobPlanSection] = Field(min_length=6, max_length=6)
+    comparison_items: list[CareerPlanComparisonItem]
+    promotion_tracks: list[PromotionTrack]
+    action_plan: ComparisonActionPlan
+
+
 class CareerComparisonItem(BaseModel):
     role: RoleProfile
     total_score: int = Field(ge=0, le=100)

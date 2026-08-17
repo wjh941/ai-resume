@@ -15,7 +15,7 @@ from app.schemas.consultation import (
 )
 from app.schemas.job import JobIntelligence
 from app.schemas.resume import ResumePayload
-from app.schemas.career import ComparisonActionPlan
+from app.schemas.career import ComparisonActionPlan, JobPlanResponse
 
 
 class AIClient(Protocol):
@@ -28,6 +28,16 @@ class AIClient(Protocol):
     async def build_comparison_action_plan(
         self, role_name: str, profile: dict[str, object], evidence: list[str]
     ) -> ComparisonActionPlan: ...
+
+    async def build_job_plan(
+        self,
+        role_name: str,
+        profile: dict[str, object],
+        evidence: list[str],
+        resume: dict[str, object] | None,
+        assessment: dict[str, object] | None,
+        expand_detail: bool,
+    ) -> JobPlanResponse: ...
 
     async def build_job_consultation(
         self,
@@ -86,6 +96,17 @@ class UnconfiguredAIClient:
     async def build_comparison_action_plan(
         self, role_name: str, profile: dict[str, object], evidence: list[str]
     ) -> ComparisonActionPlan:
+        self._raise()
+
+    async def build_job_plan(
+        self,
+        role_name: str,
+        profile: dict[str, object],
+        evidence: list[str],
+        resume: dict[str, object] | None,
+        assessment: dict[str, object] | None,
+        expand_detail: bool,
+    ) -> JobPlanResponse:
         self._raise()
 
     async def build_job_consultation(
@@ -252,6 +273,28 @@ class OpenAICompatibleClient:
             json.dumps({"mode": mode, "resume": resume.model_dump(), "target_job": job.model_dump()}, ensure_ascii=False),
         )
         return ResumePayload.model_validate_json(content)
+
+    async def build_job_plan(
+        self,
+        role_name: str,
+        profile: dict[str, object],
+        evidence: list[str],
+        resume: dict[str, object] | None,
+        assessment: dict[str, object] | None,
+        expand_detail: bool,
+    ) -> JobPlanResponse:
+        content = await self._chat_completion(
+            "Return only valid JSON matching JobPlanResponse with exactly six named sections, "
+            "comparison_items, promotion_tracks, and action_plan. Use supplied candidate context only; "
+            "do not invent candidate facts.",
+            json.dumps({"role_name": role_name, "profile": profile, "evidence": evidence,
+                        "resume": resume, "assessment": assessment, "expand_detail": expand_detail},
+                       ensure_ascii=False),
+        )
+        try:
+            return JobPlanResponse.model_validate_json(content)
+        except ValueError as error:
+            raise AIServiceError("ai_invalid_response", "AI job plan response format is invalid") from error
 
     async def _chat_completion(self, system_prompt: str, user_prompt: str) -> str:
         try:

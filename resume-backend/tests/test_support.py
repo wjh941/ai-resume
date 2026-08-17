@@ -12,7 +12,13 @@ from app.schemas.consultation import (
 )
 from app.schemas.job import JobIntelligence
 from app.schemas.resume import ResumePayload
-from app.schemas.career import ComparisonActionPlan
+from app.schemas.career import (
+    ComparisonActionPlan,
+    JobPlanResponse,
+    JobPlanSection,
+    PromotionNode,
+    PromotionTrack,
+)
 from app.services.career_consultation import (
     build_career_advice,
     build_job_consultation,
@@ -30,6 +36,7 @@ class TestAIClient:
         self.job_query_count = 0
         self.assessment_query_count = 0
         self.action_plan_query_count = 0
+        self.job_plan_query_count = 0
         self.rewrite_result: ResumePayload | dict | None = None
 
     async def query_job(self, role_name: str) -> JobIntelligence:
@@ -115,4 +122,56 @@ class TestAIClient:
             seven_day=[f"Review {role_name} requirements."],
             thirty_day=[f"Build a {role_name} portfolio artifact."],
             ninety_day=[f"Run a {role_name} interview retrospective."],
+        )
+
+    async def build_job_plan(
+        self,
+        role_name: str,
+        profile: dict[str, object],
+        evidence: list[str],
+        resume: dict[str, object] | None,
+        assessment: dict[str, object] | None,
+        expand_detail: bool,
+    ) -> JobPlanResponse:
+        self.job_plan_query_count += 1
+        sections = [
+            JobPlanSection(key=key, title=title, summary=f"{title} for {role_name}")
+            for key, title in (
+                ("market_context", "Market context"),
+                ("responsibilities", "Responsibilities"),
+                ("hard_skill_gaps", "Hard-skill gaps"),
+                ("soft_competencies", "Soft competencies"),
+                ("career_value", "Career value"),
+                ("risks", "Risks"),
+            )
+        ]
+        tracks = [
+            PromotionTrack(
+                key="technical",
+                title="Technical track",
+                nodes=[
+                    PromotionNode(title="Associate", level="entry", description=f"Start {role_name} work.", salary_band="10k-18k", standard_years="1-3 years", competencies=["Delivery"], case_detail="Ship a verified project."),
+                    PromotionNode(title="Senior", level="advanced", description=f"Lead {role_name} delivery.", salary_band="18k-30k", standard_years="3-6 years", competencies=["Architecture"], case_detail="Lead a measurable outcome."),
+                ],
+            ),
+            PromotionTrack(
+                key="management",
+                title="Management track",
+                nodes=[
+                    PromotionNode(title="Lead", level="lead", description=f"Coordinate {role_name} work.", salary_band="20k-32k", standard_years="4-7 years", competencies=["Planning"], case_detail="Coordinate a cross-functional delivery."),
+                    PromotionNode(title="Manager", level="manager", description=f"Manage {role_name} teams.", salary_band="28k-45k", standard_years="7+ years", competencies=["People leadership"], case_detail="Set goals and review outcomes."),
+                ],
+            ),
+        ]
+        return JobPlanResponse(
+            role_name=role_name,
+            report_scope="detailed" if expand_detail else "brief",
+            sections=sections,
+            comparison_items=[],
+            promotion_tracks=tracks,
+            action_plan=ComparisonActionPlan(
+                seven_day=[f"Review {role_name} requirements."],
+                thirty_day=[f"Build a {role_name} portfolio artifact."],
+                ninety_day=[f"Run a {role_name} interview retrospective."],
+            ),
         )
