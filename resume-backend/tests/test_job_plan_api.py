@@ -128,6 +128,7 @@ def test_free_job_plan_ignores_expand_detail(api_client, auth_headers):
     assert response.status_code == 200, response.text
     data = response.json()["data"]
     assert data["report_scope"] == "brief"
+    assert [track["key"] for track in data["promotion_tracks"]] == ["technical"]
     assert all(len(track["nodes"]) == 2 for track in data["promotion_tracks"])
     assert data["action_plan"]["thirty_day"] == []
     assert data["action_plan"]["ninety_day"] == []
@@ -161,6 +162,10 @@ def test_basic_job_plan_returns_detailed_content(api_client, auth_headers):
     data = response.json()["data"]
     assert data["report_scope"] == "detailed"
     assert data["action_plan"]["thirty_day"] == ["Build a Data Engineer portfolio artifact."]
+    assert all(
+        [node["level"] for node in track["nodes"]] == ["entry", "junior", "mid", "senior"]
+        for track in data["promotion_tracks"]
+    )
     assert data["promotion_tracks"][0]["nodes"][0]["salary_band"] == "10k-18k"
     assert data["promotion_tracks"][0]["nodes"][0]["case_detail"] == "Ship a verified project."
 

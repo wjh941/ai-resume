@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.schemas.consultation import IdentityCode
 
@@ -238,6 +238,21 @@ class JobPlanResponse(BaseModel):
         if len(tracks) != 2 or {track.key for track in tracks} != {"technical", "management"}:
             raise ValueError("promotion_tracks must contain technical and management tracks")
         return tracks
+
+    @model_validator(mode="after")
+    def require_detailed_roadmap_stages(self) -> "JobPlanResponse":
+        """Keep the paid roadmap visually complete and deterministic for the dashboard."""
+        if self.report_scope != "detailed":
+            return self
+        expected_levels = ["entry", "junior", "mid", "senior"]
+        if any(
+            [node.level for node in track.nodes] != expected_levels
+            for track in self.promotion_tracks
+        ):
+            raise ValueError(
+                "detailed promotion tracks must contain entry, junior, mid, senior nodes"
+            )
+        return self
 
 
 class CareerComparisonItem(BaseModel):

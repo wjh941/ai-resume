@@ -284,9 +284,17 @@ class OpenAICompatibleClient:
         expand_detail: bool,
     ) -> JobPlanResponse:
         content = await self._chat_completion(
-            "Return only valid JSON matching JobPlanResponse with exactly six named sections, "
-            "comparison_items, promotion_tracks, and action_plan. Use supplied candidate context only; "
-            "do not invent candidate facts.",
+            "Return only valid JSON matching JobPlanResponse. Include exactly these six unique section "
+            "keys: market_overview (six-month demand, estimated salary range, entry threshold, competition), "
+            "responsibilities (complete core responsibility decomposition), hard_skills (mastered, partial, "
+            "and missing gaps), soft_competencies (logic, communication, teamwork, execution), career_value "
+            "(short and long term value), and risks (entry obstacles and industry risks). comparison_items must "
+            "use only high, transferable, needs_upskilling, or long_shot statuses and must distinguish hard and "
+            "soft competencies. promotion_tracks must contain technical and management. When expand_detail is true, "
+            "both tracks must contain exactly entry, junior, mid, senior nodes in that order; each node needs salary, "
+            "standard years, competencies, a realistic work case, skills, and learning actions. When false, keep "
+            "the same JSON shape concise. Treat market information as estimates, use supplied candidate context only, "
+            "and never invent candidate facts or evidence.",
             json.dumps({"role_name": role_name, "profile": profile, "evidence": evidence,
                         "resume": resume, "assessment": assessment, "expand_detail": expand_detail},
                        ensure_ascii=False),

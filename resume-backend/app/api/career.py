@@ -56,6 +56,7 @@ def project_job_plan_for_vip(plan: JobPlanResponse, vip: VipStatus) -> JobPlanRe
     """The browser can request detail, but entitlement projection stays server authoritative."""
     if vip.allows("full_job_report"):
         return plan
+    technical_track = next(track for track in plan.promotion_tracks if track.key == "technical")
     return plan.model_copy(
         update={
             "report_scope": "brief",
@@ -64,8 +65,9 @@ def project_job_plan_for_vip(plan: JobPlanResponse, vip: VipStatus) -> JobPlanRe
                 item.model_copy(update={"evidence": item.evidence[:1], "gap": "", "recommendation": ""})
                 for item in plan.comparison_items[:2]
             ],
+            # Free receives only a technical preview. Management progression is paid-only.
             "promotion_tracks": [
-                track.model_copy(
+                technical_track.model_copy(
                     update={
                         "nodes": [
                             node.model_copy(
@@ -79,11 +81,10 @@ def project_job_plan_for_vip(plan: JobPlanResponse, vip: VipStatus) -> JobPlanRe
                                     "actions": [],
                                 }
                             )
-                            for node in track.nodes[:2]
+                            for node in technical_track.nodes[:2]
                         ]
                     }
                 )
-                for track in plan.promotion_tracks
             ],
             "action_plan": ComparisonActionPlan(
                 seven_day=plan.action_plan.seven_day[:1],

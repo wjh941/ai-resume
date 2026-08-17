@@ -160,15 +160,19 @@ class TestAIClient:
                 title="Technical track",
                 nodes=[
                     PromotionNode(title="Associate", level="entry", description=f"Start {role_name} work.", salary_band="10k-18k", standard_years="1-3 years", competencies=["Delivery"], case_detail="Ship a verified project."),
-                    PromotionNode(title="Senior", level="advanced", description=f"Lead {role_name} delivery.", salary_band="18k-30k", standard_years="3-6 years", competencies=["Architecture"], case_detail="Lead a measurable outcome."),
+                    PromotionNode(title="Engineer", level="junior", description=f"Own scoped {role_name} delivery.", salary_band="14k-22k", standard_years="2-4 years", competencies=["Implementation"], case_detail="Own a measurable feature outcome."),
+                    PromotionNode(title="Senior", level="mid", description=f"Lead complex {role_name} delivery.", salary_band="18k-30k", standard_years="3-6 years", competencies=["Architecture"], case_detail="Lead a measurable outcome."),
+                    PromotionNode(title="Staff", level="senior", description=f"Set {role_name} technical direction.", salary_band="28k-40k", standard_years="6+ years", competencies=["Technical strategy"], case_detail="Set standards across a delivery group."),
                 ],
             ),
             PromotionTrack(
                 key="management",
                 title="Management track",
                 nodes=[
-                    PromotionNode(title="Lead", level="lead", description=f"Coordinate {role_name} work.", salary_band="20k-32k", standard_years="4-7 years", competencies=["Planning"], case_detail="Coordinate a cross-functional delivery."),
-                    PromotionNode(title="Manager", level="manager", description=f"Manage {role_name} teams.", salary_band="28k-45k", standard_years="7+ years", competencies=["People leadership"], case_detail="Set goals and review outcomes."),
+                    PromotionNode(title="Coordinator", level="entry", description=f"Coordinate {role_name} work.", salary_band="10k-18k", standard_years="1-3 years", competencies=["Planning"], case_detail="Coordinate a scoped delivery."),
+                    PromotionNode(title="Team Lead", level="junior", description=f"Lead a small {role_name} initiative.", salary_band="18k-28k", standard_years="3-5 years", competencies=["Stakeholder communication"], case_detail="Align a cross-functional delivery."),
+                    PromotionNode(title="Manager", level="mid", description=f"Manage {role_name} teams.", salary_band="28k-45k", standard_years="5-8 years", competencies=["People leadership"], case_detail="Set goals and review outcomes."),
+                    PromotionNode(title="Director", level="senior", description=f"Set the {role_name} organization direction.", salary_band="40k-60k", standard_years="8+ years", competencies=["Organization strategy"], case_detail="Set a multi-team operating model."),
                 ],
             ),
         ]
