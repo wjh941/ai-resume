@@ -8,7 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import ai, applications, assessment, auth, career, consultation, drafts, evidence, exports, knowledgebase, membership, templates
+from app.api import ai, applications, assessment, auth, career, consultation, drafts, evidence, exports, knowledgebase, membership, system, templates
 from app.repositories.applications import ApplicationNotFoundError, ApplicationRepository
 from app.config import Settings, load_settings
 from app.db import initialize_database
@@ -29,6 +29,7 @@ from app.services.job_catalog import JobCatalog
 from app.services.official_dataset_sync import OfficialDatasetSyncService
 from app.services.export_pdf import PdfRendererUnavailableError
 from app.services.job_cache import JobCache
+from app.services.job_matching import JobMatcher
 from app.services.rewrite_guard import RewriteFactViolation
 from app.services.template_service import TemplateService
 from app.services.auth import AuthService
@@ -82,6 +83,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.ai_client = build_ai_client(settings)
     app.state.job_cache = JobCache(settings.database_path, settings.cache_expire_day)
     app.state.job_catalog = JobCatalog(settings.database_path)
+    app.state.job_matcher = JobMatcher()
     app.state.knowledgebase_repository = KnowledgebaseRepository(settings.database_path)
     app.state.official_dataset_sync_service = OfficialDatasetSyncService(
         app.state.knowledgebase_repository
@@ -189,7 +191,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/health")
     def health():
-        return success({"status": "healthy"})
+        # Frontend reconnection verifies capabilities so an old process cannot masquerade as current code.
+        return success({"status": "healthy", "capabilities": ["job_plan", "job_match", "ai_setup"]})
 
     # 业务 Router 在组装处统一注入 JWT 依赖，新增端点不会遗漏鉴权边界。
     business_routers = (
@@ -203,6 +206,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         exports.router,
         knowledgebase.router,
         membership.router,
+        system.router,
         templates.router,
     )
     for router in business_routers:

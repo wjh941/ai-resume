@@ -73,6 +73,7 @@ globalThis.__dashboardTestApi = {
   buildGapEvidenceDraft: typeof buildGapEvidenceDraft === 'function' ? buildGapEvidenceDraft : undefined,
   careerPlanText: typeof careerPlanText === 'function' ? careerPlanText : undefined,
   requestCareerPlan: typeof requestCareerPlan === 'function' ? requestCareerPlan : undefined,
+  requestJobMatches: typeof requestJobMatches === 'function' ? requestJobMatches : undefined,
   apiOrMock: typeof apiOrMock === 'function' ? apiOrMock : undefined,
   buildResumeExport: typeof buildResumeExport === 'function' ? buildResumeExport : undefined,
   buildCareerReportMarkdown: typeof buildCareerReportMarkdown === 'function' ? buildCareerReportMarkdown : undefined,
@@ -116,6 +117,11 @@ assert.equal(
   null,
   'a missing assessment must be treated as an empty state instead of a service outage'
 );
+api.state.backendCurrent = null;
+api.state.runtime = 'online';
+sandbox.fetch = async () => ({ status: 200, ok: true, json: async () => ({ code: 'ok', data: { legacy: true } }) });
+await api.apiOrMock('/api/legacy-compatible-route', {}, null, 'legacy backend check');
+assert.equal(api.state.runtime, 'mock', 'an unverified backend must not be promoted to online by a legacy-compatible response');
 assert.equal(api.scopedLocalKey('resume-dashboard-evidence'), 'resume-dashboard:user-42:evidence');
 api.saveLocal('resume-dashboard-evidence', [{ id: 42 }]);
 assert.equal(sandbox.localStorage.getItem('resume-dashboard:user-42:evidence'), JSON.stringify([{ id: 42 }]));
@@ -179,6 +185,7 @@ assert.equal(typeof api.appendCareerPlanTask, 'function', 'roadmap task append h
 assert.equal(typeof api.buildGapEvidenceDraft, 'function', 'evidence draft helper must exist');
 assert.equal(typeof api.careerPlanText, 'function', 'career plan copy helper must exist');
 assert.equal(typeof api.requestCareerPlan, 'function', 'career plan API wrapper must exist');
+assert.equal(typeof api.requestJobMatches, 'function', 'job matching API wrapper must exist');
 const normalizedCareerPlan = api.normalizeCareerPlan({
   role_name: 'Data Engineer',
   action_plan: { seven_day: ['Review skills'], thirty_day: [], ninety_day: [] }
@@ -292,6 +299,15 @@ assert.match(html, /career-plan-task-groups/, '7/30/90 tasks must use dedicated 
 assert.match(html, /id="resumeExportMenu"/, 'resume editor must expose native local export choices');
 assert.match(html, /id="exportCareerReportBtn"/, 'career planning must expose a full report export action');
 assert.match(html, /id="exportDeliveryMarkdownBtn"/, 'delivery list must support filtered Markdown export');
+assert.match(html, /data-page="matching"/, 'sidebar must expose Job Matching');
+assert.match(html, /id="page-matching"/, 'dashboard must render a dedicated job matching page');
+assert.match(html, /\/api\/job\/match/, 'dashboard must request server-owned job matches');
+assert.match(html, /function requireAI\b/, 'AI actions must share one model configuration guard');
+assert.match(html, /\/api\/system\/ai-status/, 'dashboard must load model configuration status');
+assert.match(html, /data-user-menu="ai-setup"/, 'user menu must expose model connection setup');
+assert.match(html, /resume-dashboard-onboarding/, 'onboarding state must be isolated by JWT user cache');
+assert.match(html, /data-match-add-delivery/, 'matching results must create a delivery from the selected role');
+assert.match(html, /data-match-favorite/, 'matching results must support user-isolated collections');
 assert.match(html, /data-user-menu="data-manager"/, 'top user menu must reach local data management');
 assert.match(html, /id="quickAssistBtn"/, 'resume and career planning must expose a quick prompt assistant');
 assert.match(html, /data-career-task-action/, 'career plan tasks must support edit and delete actions');
@@ -343,6 +359,7 @@ assert.deepEqual(Array.from(api.state.orders), [], 'a delayed order response mus
 
 api.authSession.set(firstAccountJwt);
 api.state.careerPlans = {};
+api.state.aiStatus = { configured: true, provider: 'test', model: 'test-model', setup_allowed: false };
 let resolveCareerPlanRequest;
 sandbox.fetch = () => new Promise(resolve => { resolveCareerPlanRequest = () => resolve({ ok: true, status: 200, json: async () => ({ code: 'ok', data: { role_name: 'Data Engineer', report_scope: 'detailed', action_plan: { seven_day: ['A-only action'], thirty_day: [], ninety_day: [] } } }) }); });
 const pendingCareerPlan = api.requestCareerPlan('Data Engineer', true);
@@ -352,6 +369,18 @@ resolveCareerPlanRequest();
 await pendingCareerPlan;
 assert.deepEqual(Object.keys(api.state.careerPlans), [], 'a delayed career plan must not enter another account state');
 assert.equal(sandbox.localStorage.getItem('resume-dashboard:owner-b:career-plan-cache'), null, 'a delayed career plan must not enter another account cache');
+
+api.authSession.set(firstAccountJwt);
+api.state.backendCurrent = null;
+api.state.jobMatches = [];
+let resolveJobMatchRequest;
+sandbox.fetch = () => new Promise(resolve => { resolveJobMatchRequest = () => resolve({ ok: true, status: 200, json: async () => ({ code: 'ok', data: { items: [{ role_name: 'Owner A Role', matched_skills: ['A-only skill'], missing_skills: [] }], limited: false } }) }); });
+const pendingJobMatch = api.requestJobMatches('Owner A Role');
+api.authSession.set(secondAccountJwt);
+await Promise.resolve();
+resolveJobMatchRequest();
+await pendingJobMatch;
+assert.deepEqual(Array.from(api.state.jobMatches), [], 'a delayed job-match response must not enter another account state');
 
 api.state.drafts = [{ id: 'existing-draft', title: 'Existing', template: 'business', resume: { ...dashboardResume } }];
 api.state.resumeDirty = false;

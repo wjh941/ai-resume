@@ -18,4 +18,7 @@ def test_health_reports_a_success_envelope(api_client):
     response = api_client.get("/health")
 
     assert response.status_code == 200
-    assert response.json() == {"code": "ok", "data": {"status": "healthy"}, "message": ""}
+    assert response.json()["code"] == "ok"
+    assert response.json()["message"] == ""
+    assert response.json()["data"]["status"] == "healthy"
+    assert {"job_plan", "job_match", "ai_setup"}.issubset(response.json()["data"]["capabilities"])

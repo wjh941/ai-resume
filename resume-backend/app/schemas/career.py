@@ -166,6 +166,44 @@ class CareerComparisonRequest(BaseModel):
         return normalized
 
 
+class JobMatchRequest(BaseModel):
+    """Filters only. Candidate data is derived from JWT-owned repositories."""
+
+    city: str = Field(default="", max_length=80)
+    salary_min: int | None = Field(default=None, ge=0, le=500)
+    salary_max: int | None = Field(default=None, ge=0, le=500)
+    seniority: Literal["", "entry", "mid", "senior"] = ""
+    category: str = Field(default="", max_length=80)
+    target_role: str = Field(default="", max_length=120)
+
+    @field_validator("city", "category", "target_role")
+    @classmethod
+    def normalize_filter_text(cls, value: str) -> str:
+        return " ".join(value.split())
+
+
+class JobMatchItem(BaseModel):
+    role_name: str
+    company: str
+    city: str
+    salary_range: str
+    seniority: Literal["entry", "mid", "senior"]
+    category: str
+    match_score: int = Field(ge=0, le=100)
+    matched_skills: list[str]
+    missing_skills: list[str]
+    description: str
+    requirements: list[str]
+    detail_unlocked: bool
+
+
+class JobMatchResponse(BaseModel):
+    items: list[JobMatchItem]
+    total: int = Field(ge=0)
+    limited: bool
+    source_notice: str
+
+
 class ComparisonActionPlan(BaseModel):
     seven_day: list[str]
     thirty_day: list[str]

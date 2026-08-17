@@ -58,6 +58,7 @@ class Settings:
     alipay_app_id: str = ""
     alipay_private_key: str = ""
     cors_origins: tuple[str, ...] = ()
+    ai_config_ui_enabled: bool = True
 
 
 def _read_bool(name: str, default: bool) -> bool:
@@ -84,6 +85,8 @@ def load_settings() -> Settings:
         ai_api_key=os.getenv("AI_API_KEY", ""),
         ai_base_url=os.getenv("AI_BASE_URL", "https://ark.cn-beijing.volces.com/api/v1"),
         ai_model=os.getenv("AI_MODEL", ""),
+        # Development-only convenience. Production must keep the model key in server env.
+        ai_config_ui_enabled=_read_bool("AI_CONFIG_UI_ENABLED", app_env != "production"),
         cache_expire_day=int(os.getenv("CACHE_EXPIRE_DAY", "7")),
         temp_file_path=Path(os.getenv("TEMP_FILE_PATH", "./temp")).resolve(),
         export_file_expire_minutes=int(os.getenv("EXPORT_FILE_EXPIRE_MINUTES", "60")),

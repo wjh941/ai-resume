@@ -1,0 +1,118 @@
+from __future__ import annotations
+
+import os
+from pathlib import Path
+from typing import Literal
+
+from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel, Field, field_validator
+
+from app.config import Settings, load_settings
+from app.schemas.common import success
+from app.services.ai_client import build_ai_client
+
+
+router = APIRouter(prefix="/api/system", tags=["system"])
+
+
+class AIConfigPayload(BaseModel):
+    """Development-only model connection form. The API key is never returned."""
+
+    provider: Literal["ark", "openai_compatible"]
+    base_url: str = Field(min_length=8, max_length=500)
+    api_key: str = Field(min_length=8, max_length=1000)
+    model: str = Field(min_length=1, max_length=200)
+
+    @field_validator("base_url")
+    @classmethod
+    def normalize_base_url(cls, value: str) -> str:
+        normalized = value.strip().rstrip("/")
+        if not normalized.startswith(("https://", "http://")):
+            raise ValueError("base_url must be an HTTP(S) URL")
+        return normalized
+
+    @field_validator("api_key", "model")
+    @classmethod
+    def normalize_secret_text(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("value must not be blank")
+        return normalized
+
+
+def _setup_allowed(settings: Settings) -> bool:
+    return settings.app_env.strip().lower() != "production" and settings.ai_config_ui_enabled
+
+
+def _ai_status(settings: Settings) -> dict[str, object]:
+    configured = bool(
+        settings.ai_provider in {"ark", "openai_compatible"}
+        and settings.ai_api_key
+        and settings.ai_model
+    )
+    return {
+        "configured": configured,
+        "provider": settings.ai_provider if configured else None,
+        "model": settings.ai_model if configured else None,
+        "setup_allowed": _setup_allowed(settings),
+        "setup_notice": (
+            "Use the local development form to connect a compatible model."
+            if _setup_allowed(settings)
+            else "Model setup is disabled here. Configure server environment variables instead."
+        ),
+    }
+
+
+def _require_local_setup(request: Request) -> None:
+    settings = request.app.state.settings
+    if not _setup_allowed(settings):
+        raise HTTPException(status_code=403, detail="Local model setup is disabled")
+    host = request.client.host if request.client else ""
+    if host not in {"127.0.0.1", "::1"}:
+        raise HTTPException(status_code=403, detail="Local model setup only accepts loopback clients")
+
+
+def _write_managed_env_values(path: Path, values: dict[str, str]) -> None:
+    """Replace only AI lines, preserve existing environment comments and unrelated settings."""
+    existing = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+    remaining = dict(values)
+    output: list[str] = []
+    for line in existing:
+        key, separator, _ = line.partition("=")
+        if separator and key.strip() in remaining:
+            output.append(f"{key.strip()}={remaining.pop(key.strip())}")
+        else:
+            output.append(line)
+    output.extend(f"{key}={value}" for key, value in remaining.items())
+    temp_path = path.with_name(f"{path.name}.tmp")
+    temp_path.write_text("\n".join(output).rstrip() + "\n", encoding="utf-8")
+    temp_path.replace(path)
+
+
+@router.get("/ai-status")
+def ai_status(request: Request) -> dict[str, object]:
+    return success(_ai_status(request.app.state.settings))
+
+
+@router.post("/ai-config")
+def configure_ai(payload: AIConfigPayload, request: Request) -> dict[str, object]:
+    _require_local_setup(request)
+    values = {
+        "AI_PROVIDER": payload.provider,
+        "AI_BASE_URL": payload.base_url,
+        "AI_API_KEY": payload.api_key,
+        "AI_MODEL": payload.model,
+    }
+    config_path = getattr(
+        request.app.state,
+        "ai_config_path",
+        Path(__file__).resolve().parents[2] / ".env",
+    )
+    _write_managed_env_values(Path(config_path), values)
+
+    # Development-only hot reload: production is blocked above and never accepts browser keys.
+    os.environ.update(values)
+    settings = load_settings()
+    request.app.state.settings = settings
+    request.app.state.ai_client = build_ai_client(settings)
+    return success(_ai_status(settings))

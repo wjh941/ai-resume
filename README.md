@@ -50,6 +50,14 @@ uvicorn main:app --reload --host 127.0.0.1 --port 8000
 
 健康检查地址：`http://127.0.0.1:8000/health`
 
+如需启动单文件工作台对应的本地后端，建议从仓库根目录使用以下脚本：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start-resume-backend.ps1 -Port 8004
+```
+
+脚本会检查 `/health` 的 `job_plan`、`job_match`、`ai_setup` 能力声明；端口被旧版本后端占用时会明确拒绝启动，避免页面显示“已连接”但职业规划或岗位匹配接口实际缺失。
+
 ### 2. 启动 H5 预览
 
 另开一个 PowerShell 窗口：
@@ -108,6 +116,7 @@ TAVILY_API_KEY=
 ```
 
 - 使用豆包或 OpenAI 兼容接口时，填写 API Key、Base URL 与模型名。
+- 本地开发登录后，也可从工作台右上角用户菜单的“接入 AI 模型”填写以上三项。该入口仅允许本机回环地址和非生产环境使用，API Key 不会写入浏览器存储或返回给前端；生产环境请仅通过服务器 `.env` 配置。
 - `WEB_SEARCH_PROVIDER` 仅在具备合法 API 授权时开启。
 - 项目不包含招聘网站爬虫、登录绕过或批量抓取。
 
