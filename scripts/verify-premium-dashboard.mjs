@@ -245,7 +245,7 @@ assert.match(html, /id="sidebarMask"/, 'mobile navigation must provide an immedi
 assert.match(html, /function setSidebarOpen\b/, 'mobile navigation must use one state transition helper');
 assert.match(html, /\.sidebar-mask\.open/, 'mobile navigation mask must receive the visible state');
 assert.match(html, /isOpen && window\.matchMedia\("\(max-width: 900px\)"\)\.matches/, 'desktop sidebar shortcuts must not lock document scrolling');
-assert.match(html, /\.topbar \{ align-items: flex-start; flex-wrap: wrap; padding: 14px 28px; \}/, 'tablet topbar must wrap before its action controls overflow');
+assert.match(html, /\.topbar \{ align-items: flex-start; flex-wrap: wrap; padding: 14px (?:28px|var\(--content-gutter-compact\)); \}/, 'tablet topbar must wrap before its action controls overflow');
 assert.match(html, /function installOverflowTooltips\b/, 'truncated interactive text must expose an on-demand tooltip');
 assert.match(html, /target\.scrollWidth <= target\.clientWidth/, 'tooltip detection must only run for actual text overflow');
 for (const visualHook of [
