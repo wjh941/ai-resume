@@ -5,8 +5,10 @@ import vm from 'node:vm';
 
 const dashboardPath = path.resolve(import.meta.dirname, '..', 'premium-dashboard.html');
 const html = fs.readFileSync(dashboardPath, 'utf8');
+const viteConfig = fs.readFileSync(path.resolve(import.meta.dirname, '..', 'resume-miniprogram', 'vite.config.ts'), 'utf8');
 const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map(match => match[1]);
 assert.equal(scripts.length, 1, 'dashboard must keep one inline script');
+assert.match(viteConfig, /["']\/health["']\s*:\s*localApiTarget/, 'Vite must proxy the dashboard health check to FastAPI');
 
 const storage = new Map();
 const createElement = () => ({

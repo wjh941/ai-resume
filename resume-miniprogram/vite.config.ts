@@ -32,6 +32,7 @@ export default defineConfig(({ mode }) => {
       proxy: {
         "/api": localApiTarget,
         "/downloads": localApiTarget,
+        "/health": localApiTarget,
       },
     },
     test: {
