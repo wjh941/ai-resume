@@ -38,6 +38,7 @@ class TestAIClient:
         self.assessment_query_count = 0
         self.action_plan_query_count = 0
         self.job_plan_query_count = 0
+        self.last_job_plan_context: dict[str, object] = {}
         self.rewrite_result: ResumePayload | dict | None = None
 
     async def query_job(self, role_name: str) -> JobIntelligence:
@@ -129,12 +130,19 @@ class TestAIClient:
         self,
         role_name: str,
         profile: dict[str, object],
-        evidence: list[str],
+        evidence: list[dict[str, object]],
         resume: dict[str, object] | None,
         assessment: dict[str, object] | None,
         expand_detail: bool,
     ) -> JobPlanResponse:
         self.job_plan_query_count += 1
+        self.last_job_plan_context = {
+            "profile": deepcopy(profile),
+            "evidence": deepcopy(evidence),
+            "resume": deepcopy(resume),
+            "assessment": deepcopy(assessment),
+            "expand_detail": expand_detail,
+        }
         sections = [
             JobPlanSection(key=key, title=title, summary=f"{title} for {role_name}")
             for key, title in (

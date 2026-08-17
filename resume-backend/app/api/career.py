@@ -3,13 +3,73 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from app.repositories.assessment import AssessmentNotFoundError
-from app.schemas.career import CareerComparisonRequest, CareerProfilePayload, ComparisonActionPlan
+from app.repositories.career_profiles import CareerProfileNotFoundError
+from app.repositories.drafts import DraftNotFoundError
+from app.schemas.career import (
+    CareerComparisonRequest,
+    CareerProfilePayload,
+    ComparisonActionPlan,
+    JobPlanRequest,
+    JobPlanResponse,
+)
 from app.schemas.common import success
 from app.services.auth import current_user_id
 from app.services.membership import VipPermissionError, VipStatus, get_current_vip
 
 
 router = APIRouter()
+
+
+def _job_plan_context(request: Request, user_id: str) -> tuple[dict[str, object], list[dict[str, object]], dict[str, object] | None, dict[str, object] | None]:
+    """Assemble the plan context from JWT-owned repositories only."""
+    try:
+        profile_model = request.app.state.career_profile_repository.get(user_id)
+        profile = profile_model.model_dump()
+    except CareerProfileNotFoundError:
+        profile = {}
+
+    evidence = [
+        item.model_dump()
+        for item in request.app.state.evidence_repository.list(user_id)
+        if item.verified
+    ]
+
+    draft = None
+    draft_id = profile.get("draft_id")
+    if draft_id:
+        try:
+            draft = request.app.state.draft_repository.get(user_id, str(draft_id))
+        except DraftNotFoundError:
+            draft = None
+    if draft is None:
+        drafts = request.app.state.draft_repository.list(user_id)
+        draft = drafts[0] if drafts else None
+
+    try:
+        assessment = request.app.state.assessment_repository.get(user_id)["result"]
+    except AssessmentNotFoundError:
+        assessment = None
+    return profile, evidence, draft["resume"] if draft else None, assessment
+
+
+def project_job_plan_for_vip(plan: JobPlanResponse, vip: VipStatus) -> JobPlanResponse:
+    """The browser can request detail, but entitlement projection stays server authoritative."""
+    if vip.allows("full_job_report"):
+        return plan
+    return plan.model_copy(
+        update={
+            "report_scope": "brief",
+            "sections": [section.model_copy(update={"items": section.items[:1]}) for section in plan.sections],
+            "comparison_items": [
+                item.model_copy(update={"evidence": item.evidence[:1], "gap": "", "recommendation": ""})
+                for item in plan.comparison_items[:2]
+            ],
+            "promotion_tracks": [
+                track.model_copy(update={"nodes": track.nodes[:2]})
+                for track in plan.promotion_tracks
+            ],
+        }
+    )
 
 
 @router.get("/api/role/families")
@@ -117,3 +177,23 @@ async def career_compare(
                 [entry.title for entry in evidence if entry.verified],
             )
     return success(comparison.model_dump())
+
+
+@router.post("/api/job/plan")
+async def job_plan(
+    payload: JobPlanRequest,
+    request: Request,
+    user_id: str = Depends(current_user_id),
+    vip: VipStatus = Depends(get_current_vip),
+):
+    profile, evidence, resume, assessment = _job_plan_context(request, user_id)
+    expand_detail = payload.expand_detail and vip.allows("full_job_report")
+    plan = await request.app.state.ai_client.build_job_plan(
+        payload.role_name,
+        profile,
+        evidence,
+        resume,
+        assessment,
+        expand_detail,
+    )
+    return success(project_job_plan_for_vip(plan, vip).model_dump())

@@ -5,6 +5,7 @@ import asyncio
 import pytest
 from pydantic import ValidationError
 
+from conftest import grant_vip
 from app.schemas.career import (
     CareerPlanComparisonItem,
     ComparisonActionPlan,
@@ -76,3 +77,105 @@ def test_job_plan_requires_bearer_auth(api_client):
     api_client.headers.pop("Authorization", None)
     response = api_client.post("/api/job/plan", json={"role_name": "Data Engineer"})
     assert response.status_code == 401
+
+
+def _save_profile(api_client, headers, skills=None):
+    response = api_client.post(
+        "/api/career/profile/save",
+        headers=headers,
+        json={
+            "identity_code": "2",
+            "major": "Computer Science",
+            "education_level": "Bachelor",
+            "graduation_year": 2027,
+            "city_preferences": ["Shanghai"],
+            "minimum_salary": "10k",
+            "industry_preferences": ["Internet"],
+            "work_types": ["full_time"],
+            "skills": skills or ["Python", "SQL"],
+        },
+    )
+    assert response.status_code == 200, response.text
+
+
+def _save_verified_evidence(api_client, headers, title):
+    response = api_client.post(
+        "/api/evidence",
+        headers=headers,
+        json={
+            "kind": "project",
+            "title": title,
+            "context": "course project",
+            "actions": "Built and verified a small data pipeline.",
+            "outcome": "Documented result.",
+            "proof_note": "local evidence",
+            "verified": True,
+        },
+    )
+    assert response.status_code == 200, response.text
+
+
+def test_free_job_plan_ignores_expand_detail(api_client, auth_headers):
+    headers = auth_headers("13900000001")
+    _save_profile(api_client, headers)
+
+    response = api_client.post(
+        "/api/job/plan",
+        headers=headers,
+        json={"role_name": "Data Engineer", "expand_detail": True},
+    )
+
+    assert response.status_code == 200, response.text
+    data = response.json()["data"]
+    assert data["report_scope"] == "brief"
+    assert all(len(track["nodes"]) == 2 for track in data["promotion_tracks"])
+
+
+def test_basic_job_plan_returns_detailed_content(api_client, auth_headers):
+    headers = auth_headers("13900000002")
+    _save_profile(api_client, headers)
+    api_client.headers.update(headers)
+    grant_vip(api_client, "basic")
+
+    response = api_client.post(
+        "/api/job/plan",
+        headers=headers,
+        json={"role_name": "Data Engineer", "expand_detail": True},
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["data"]["report_scope"] == "detailed"
+
+
+def test_job_plan_never_passes_another_users_context_to_ai(api_client, auth_headers):
+    owner_headers = auth_headers("13900000003")
+    _save_profile(api_client, owner_headers, ["OWNER-ONLY-SKILL"])
+    _save_verified_evidence(api_client, owner_headers, "OWNER-ONLY-EVIDENCE")
+    other_headers = auth_headers("13900000004")
+
+    response = api_client.post(
+        "/api/job/plan",
+        headers=other_headers,
+        json={"role_name": "Data Engineer", "expand_detail": False},
+    )
+
+    assert response.status_code == 200, response.text
+    context = api_client.app.state.ai_client.last_job_plan_context
+    assert context["profile"] == {}
+    assert context["evidence"] == []
+
+
+def test_job_plan_accepts_missing_optional_user_records(api_client, auth_headers):
+    headers = auth_headers("13900000005")
+
+    response = api_client.post(
+        "/api/job/plan",
+        headers=headers,
+        json={"role_name": "Data Engineer", "expand_detail": False},
+    )
+
+    assert response.status_code == 200, response.text
+    context = api_client.app.state.ai_client.last_job_plan_context
+    assert context["profile"] == {}
+    assert context["resume"] is None
+    assert context["assessment"] is None
