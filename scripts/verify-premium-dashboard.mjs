@@ -62,7 +62,10 @@ globalThis.__dashboardTestApi = {
   refreshVipStatus: typeof refreshVipStatus === 'function' ? refreshVipStatus : undefined,
   refreshOrders: typeof refreshOrders === 'function' ? refreshOrders : undefined,
   normalizeCareerPlan: typeof normalizeCareerPlan === 'function' ? normalizeCareerPlan : undefined,
+  projectCareerPlanForCurrentVip: typeof projectCareerPlanForCurrentVip === 'function' ? projectCareerPlanForCurrentVip : undefined,
   calculatePlanProgress: typeof calculatePlanProgress === 'function' ? calculatePlanProgress : undefined,
+  careerPlanTaskGroups: typeof careerPlanTaskGroups === 'function' ? careerPlanTaskGroups : undefined,
+  appendCareerPlanTask: typeof appendCareerPlanTask === 'function' ? appendCareerPlanTask : undefined,
   buildGapEvidenceDraft: typeof buildGapEvidenceDraft === 'function' ? buildGapEvidenceDraft : undefined,
   careerPlanText: typeof careerPlanText === 'function' ? careerPlanText : undefined,
   requestCareerPlan: typeof requestCareerPlan === 'function' ? requestCareerPlan : undefined,
@@ -147,7 +150,10 @@ assert.equal(JSON.stringify(api.compareAssessments?.({ score: 80 }, { score: 70 
 assert.match(api.assessmentPlanningText?.({ action_plan: {} }) || '', /职业规划/);
 assert.equal(api.validateShortcuts?.({ save: 's', export: 's' }), '快捷键不能重复');
 assert.equal(typeof api.normalizeCareerPlan, 'function', 'career plan normalizer must exist');
+assert.equal(typeof api.projectCareerPlanForCurrentVip, 'function', 'career plan must project cached detail to the current membership entitlement');
 assert.equal(typeof api.calculatePlanProgress, 'function', 'career plan progress helper must exist');
+assert.equal(typeof api.careerPlanTaskGroups, 'function', 'career plan task groups must exist');
+assert.equal(typeof api.appendCareerPlanTask, 'function', 'roadmap task append helper must exist');
 assert.equal(typeof api.buildGapEvidenceDraft, 'function', 'evidence draft helper must exist');
 assert.equal(typeof api.careerPlanText, 'function', 'career plan copy helper must exist');
 assert.equal(typeof api.requestCareerPlan, 'function', 'career plan API wrapper must exist');
@@ -159,6 +165,28 @@ assert.equal(normalizedCareerPlan.sections.length, 6, 'career plan must always n
 assert.deepEqual(Array.from(normalizedCareerPlan.promotion_tracks, track => track.key), ['technical', 'management']);
 assert.equal(api.calculatePlanProgress([{ done: true }, { done: false }]), 50);
 assert.equal(api.calculatePlanProgress([]), 0);
+api.state.vip = { vip_level: 'free' };
+const downgradedPlan = api.projectCareerPlanForCurrentVip({
+  role_name: 'Data Engineer', report_scope: 'detailed',
+  sections: [{ key: 'market_overview', title: 'Market', summary: 'Paid detail', items: ['Paid-only item'] }],
+  comparison_items: [{ competency: 'SQL', category: 'hard', status: 'high', evidence: ['Private detail'], gap: 'Paid gap', recommendation: 'Paid recommendation' }],
+  promotion_tracks: [{ key: 'technical', title: 'Technical', nodes: [{ title: 'Engineer', level: 'junior', description: 'Paid detail', salary_band: '20k', standard_years: '3 years', competencies: ['SQL'], case_detail: 'Paid case' }] }],
+  action_plan: { seven_day: ['Keep seven-day action'], thirty_day: ['Paid 30-day action'], ninety_day: ['Paid 90-day action'] }
+});
+assert.equal(downgradedPlan.report_scope, 'brief');
+assert.equal(downgradedPlan.sections[0].items.length, 0, 'downgraded cached plans must not retain detailed section items');
+assert.equal(downgradedPlan.comparison_items[0].evidence.length, 0, 'downgraded cached plans must not retain detailed comparison evidence');
+assert.equal(downgradedPlan.promotion_tracks.length, 1, 'downgraded cached plans must only expose the brief technical track');
+assert.deepEqual(Array.from(downgradedPlan.promotion_tracks[0].nodes[0].competencies), [], 'downgraded cached plans must not retain paid roadmap competencies');
+assert.deepEqual(Array.from(downgradedPlan.action_plan.thirty_day), [], 'downgraded cached plans must not retain 30-day actions');
+api.state.vip = { vip_level: 'basic' };
+const taskGroups = api.careerPlanTaskGroups({ role_name: 'Data Engineer', action_plan: { seven_day: ['Review skills'], thirty_day: ['Build portfolio'], ninety_day: ['Run interview retrospective'] } });
+assert.deepEqual(Array.from(taskGroups, group => group.key), ['seven_day', 'thirty_day', 'ninety_day']);
+assert.equal(taskGroups.flatMap(group => group.tasks).length, 3, '7/30/90 tasks must render as individual progress items');
+assert.equal(taskGroups[0].tasks[0].done, false);
+const appendedCareerTask = api.appendCareerPlanTask({ role_name: 'Data Engineer', action_plan: { seven_day: [], thirty_day: [], ninety_day: [] } }, 'thirty_day', 'Complete a portfolio case study');
+assert.deepEqual(Array.from(appendedCareerTask.action_plan.thirty_day), ['Complete a portfolio case study']);
+assert.equal(api.appendCareerPlanTask(appendedCareerTask, 'thirty_day', 'Complete a portfolio case study').action_plan.thirty_day.length, 1, 'roadmap tasks must not duplicate');
 const gapEvidence = api.buildGapEvidenceDraft('SQL');
 assert.match(gapEvidence.title, /待确认/);
 assert.deepEqual(Array.from(gapEvidence.tags), ['SQL']);
@@ -195,6 +223,15 @@ assert.match(html, /\/api\/job\/plan/, 'dashboard must request the authenticated
 assert.match(html, /resume-dashboard-career-plan-cache/, 'career-plan cache must be JWT-user scoped');
 assert.match(html, /resume-dashboard-career-plan-progress/, 'career-plan task progress must be JWT-user scoped');
 assert.match(html, /resume-dashboard-career-plan-history/, 'career-plan comparison history must be JWT-user scoped');
+assert.match(html, /function renderCareerPlanCard\b/, 'each Sprint/Safe/Backup card must render the detailed plan');
+assert.match(html, /data-career-plan-refresh/, 'plan cards must allow an explicit detailed generation request');
+assert.match(html, /data-career-track/, 'plan cards must switch between technical and management tracks');
+assert.match(html, /data-roadmap-node/, 'promotion roadmap nodes must be interactive');
+assert.match(html, /data-career-plan-task/, '7/30/90 tasks must persist completion interactions');
+assert.match(html, /data-open-career-comparison/, 'each plan card must open the personal competency comparison');
+assert.match(html, /data-add-gap-evidence/, 'missing competencies must create a pending evidence draft');
+assert.match(html, /career-comparison-grid/, 'comparison modal must use a responsive two-column layout');
+assert.match(html, /career-plan-task-groups/, '7/30/90 tasks must use dedicated progress blocks');
 assert.doesNotMatch(html, /location\.protocol\s*===\s*["']file:/, 'file:// Mock export branch must be removed');
 
 const firstAccountJwt = `header.${Buffer.from(JSON.stringify({ sub: 'owner-a', token_version: 1, exp: 9999999999 })).toString('base64url')}.signature`;
