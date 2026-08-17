@@ -1820,7 +1820,7 @@
       // response into a newly logged-in account after an account switch.
       const requestToken = authSession.token;
       const requestUserId = authSession.userId();
-      const result = await apiOrMock("/api/job/plan", { method: "POST", body: JSON.stringify({ role_name: role, expand_detail: Boolean(expandDetail) }) }, () => buildMockCareerPlan(role, Boolean(expandDetail)), "职业规划");
+      const result = await apiOrMock("/api/job/plan", { method: "POST", body: JSON.stringify({ role_name: role, expand_detail: Boolean(expandDetail) }) }, () => buildMockCareerPlan(role, Boolean(expandDetail)), "职业规划", true);
       if (isApiServiceFailure(result)) return API_SERVICE_FAILURE;
       if (!authSession.hasToken() || authSession.token !== requestToken || authSession.userId() !== requestUserId) return API_SERVICE_FAILURE;
       const plan = normalizeCareerPlan(result, role);
@@ -2448,7 +2448,7 @@
         return false;
       }
     }
-    async function apiOrMock(path, options, fallback, label = path) {
+    async function apiOrMock(path, options, fallback, label = path, requiresAI = false) {
       if (path !== "/health" && state.backendCurrent === false) return API_SERVICE_FAILURE;
       try {
         const result = await api(path, options);
@@ -2459,7 +2459,8 @@
         if (error?.code === "AUTH_REQUIRED" || error?.code === "AUTH_INVALID") return API_SERVICE_FAILURE;
         if (error?.code === "ai_not_configured") {
           state.aiStatus = { configured: false, provider: "", model: "", setup_allowed: Boolean(state.aiStatus?.setup_allowed) };
-          openAISetupModal(label);
+          if (requiresAI) openAISetupModal(label);
+          else showToast(`${label}暂时不可用`, "warning", "接入 AI 模型后可使用相关智能分析");
           return API_SERVICE_FAILURE;
         }
         if (error?.isNetworkError) {
@@ -3161,7 +3162,7 @@
       state.jobs = buildJobCandidates(suggestions, query).slice(0, 8).map(normalizeJob);
       state.jobPage = 1;
       if (!requireAI("岗位智能分析")) { state.jobLoading = false; renderJobs(); return; }
-      const intelligence = await apiOrMock("/api/job/query", { method: "POST", body: JSON.stringify({ role_name: query }) }, null, "job intelligence");
+      const intelligence = await apiOrMock("/api/job/query", { method: "POST", body: JSON.stringify({ role_name: query }) }, null, "job intelligence", true);
       if (isApiServiceFailure(intelligence)) { state.jobLoading = false; renderJobs(); return; }
       if (!authSession.hasToken()) { state.jobLoading = false; renderJobs(); return; }
       if (intelligence) {
@@ -3478,7 +3479,7 @@
     }
     async function openPolishGuard() {
       if (!requireAI("简历轻度润色")) return;
-      const result = await apiOrMock("/api/resume/ai-rewrite", { method: "POST", body: JSON.stringify({ resume: dashboardResumePayload(state.resume), job: resumeRewriteJob(), mode: "light" }) }, null, "简历轻度润色");
+      const result = await apiOrMock("/api/resume/ai-rewrite", { method: "POST", body: JSON.stringify({ resume: dashboardResumePayload(state.resume), job: resumeRewriteJob(), mode: "light" }) }, null, "简历轻度润色", true);
       if (isApiServiceFailure(result) || !result) return;
       const suggestion = dashboardResumeFromApi(result);
       const fields = ["summary", "project"].filter(key => String(suggestion[key] || "").trim() && suggestion[key] !== state.resume[key]);
@@ -3492,7 +3493,7 @@
     }
     async function openResumeSmartFill() {
       if (!requireAI("简历智能填充")) return;
-      const result = await apiOrMock("/api/resume/ai-rewrite", { method: "POST", body: JSON.stringify({ resume: dashboardResumePayload(state.resume), job: resumeRewriteJob(), mode: "light" }) }, null, "简历智能填充");
+      const result = await apiOrMock("/api/resume/ai-rewrite", { method: "POST", body: JSON.stringify({ resume: dashboardResumePayload(state.resume), job: resumeRewriteJob(), mode: "light" }) }, null, "简历智能填充", true);
       if (isApiServiceFailure(result) || !result) return;
       const suggestion = dashboardResumeFromApi(result);
       const fields = ["summary", "project", "skills"].filter(key => !String(state.resume[key] || "").trim() && String(suggestion[key] || "").trim());
@@ -3572,7 +3573,7 @@
         strength_evidence: ["能从真实项目中提炼方法和结果"],
         recommended_roles: ["数据分析师", "产品分析师"],
         action_plan: { seven_day: ["整理 2 条真实项目证据"], thirty_day: ["完成岗位相关小项目并复盘"], ninety_day: ["用面试反馈更新方向与简历版本"] }
-      } }), "assessment submit");
+      } }), "assessment submit", true);
       state.assessmentLoading = false;
       if (isApiServiceFailure(result)) { renderAssessment(); return; }
       if (!authSession.hasToken()) { renderAssessment(); return; }
