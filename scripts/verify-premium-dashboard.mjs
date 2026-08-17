@@ -67,9 +67,15 @@ globalThis.__dashboardTestApi = {
   calculatePlanProgress: typeof calculatePlanProgress === 'function' ? calculatePlanProgress : undefined,
   careerPlanTaskGroups: typeof careerPlanTaskGroups === 'function' ? careerPlanTaskGroups : undefined,
   appendCareerPlanTask: typeof appendCareerPlanTask === 'function' ? appendCareerPlanTask : undefined,
+  deleteCareerPlanTask: typeof deleteCareerPlanTask === 'function' ? deleteCareerPlanTask : undefined,
   buildGapEvidenceDraft: typeof buildGapEvidenceDraft === 'function' ? buildGapEvidenceDraft : undefined,
   careerPlanText: typeof careerPlanText === 'function' ? careerPlanText : undefined,
   requestCareerPlan: typeof requestCareerPlan === 'function' ? requestCareerPlan : undefined,
+  buildResumeExport: typeof buildResumeExport === 'function' ? buildResumeExport : undefined,
+  buildCareerReportMarkdown: typeof buildCareerReportMarkdown === 'function' ? buildCareerReportMarkdown : undefined,
+  buildDeliveryMarkdown: typeof buildDeliveryMarkdown === 'function' ? buildDeliveryMarkdown : undefined,
+  fuzzyIncludes: typeof fuzzyIncludes === 'function' ? fuzzyIncludes : undefined,
+  collectCurrentUserBackup: typeof collectCurrentUserBackup === 'function' ? collectCurrentUserBackup : undefined,
   openDraft: typeof openDraft === 'function' ? openDraft : undefined,
   saveDraft: typeof saveDraft === 'function' ? saveDraft : undefined,
   loadUserScopedState: typeof loadUserScopedState === 'function' ? loadUserScopedState : undefined,
@@ -195,10 +201,39 @@ assert.equal(taskGroups[0].tasks[0].done, false);
 const appendedCareerTask = api.appendCareerPlanTask({ role_name: 'Data Engineer', action_plan: { seven_day: [], thirty_day: [], ninety_day: [] } }, 'thirty_day', 'Complete a portfolio case study');
 assert.deepEqual(Array.from(appendedCareerTask.action_plan.thirty_day), ['Complete a portfolio case study']);
 assert.equal(api.appendCareerPlanTask(appendedCareerTask, 'thirty_day', 'Complete a portfolio case study').action_plan.thirty_day.length, 1, 'roadmap tasks must not duplicate');
+assert.equal(typeof api.deleteCareerPlanTask, 'function', 'career plan tasks must support deletion');
+const retainedProgressPlan = api.normalizeCareerPlan({ role_name: 'Progress Role', action_plan: { seven_day: ['Finish brief', 'Review evidence'], thirty_day: [], ninety_day: [] } });
+api.state.careerPlans = { 'Progress Role': retainedProgressPlan };
+api.state.careerPlanProgress = { 'Progress Role': { 'seven_day:0:Finish brief': { done: true }, 'seven_day:1:Review evidence': { done: false } } };
+assert.equal(api.deleteCareerPlanTask('Progress Role', { id: 'seven_day:0:Finish brief', phase: 'seven_day', index: 0 }), true);
+assert.deepEqual(Array.from(api.state.careerPlans['Progress Role'].action_plan.seven_day), ['Review evidence']);
+assert.equal(api.state.careerPlanProgress['Progress Role']['seven_day:0:Review evidence'].done, false, 'deleting a task must preserve the remaining task progress');
 const gapEvidence = api.buildGapEvidenceDraft('SQL');
 assert.match(gapEvidence.title, /待确认/);
 assert.deepEqual(Array.from(gapEvidence.tags), ['SQL']);
 assert.equal(gapEvidence.status, 'pending');
+assert.equal(typeof api.buildResumeExport, 'function', 'native resume export content builder must exist');
+assert.equal(typeof api.buildCareerReportMarkdown, 'function', 'career report export builder must exist');
+assert.equal(typeof api.buildDeliveryMarkdown, 'function', 'delivery markdown export builder must exist');
+assert.equal(typeof api.fuzzyIncludes, 'function', 'global search must support fuzzy matching');
+assert.equal(typeof api.collectCurrentUserBackup, 'function', 'current user local backup collector must exist');
+api.state.extension.maskSensitive = false;
+const exportedResume = api.buildResumeExport({ name: 'Alice Chen', role: 'Data Analyst', email: '', skills: 'SQL, Python', project: 'Retail reporting' }, 'markdown');
+assert.match(exportedResume, /# Alice Chen/);
+assert.match(exportedResume, /SQL, Python/);
+assert.doesNotMatch(exportedResume, /邮箱：/);
+const exportedCareerReport = api.buildCareerReportMarkdown({ role_name: 'Data Engineer', sections: [{ title: '行业概览', summary: '需求稳定', items: ['看重数据质量'] }], promotion_tracks: [], comparison_items: [], action_plan: { seven_day: ['完善项目'], thirty_day: [], ninety_day: [] } });
+assert.match(exportedCareerReport, /# Data Engineer 职业规划报告/);
+assert.match(exportedCareerReport, /行业概览/);
+assert.match(exportedCareerReport, /7 天行动/);
+const exportedDeliveries = api.buildDeliveryMarkdown([{ company: 'Acme', roleName: 'Analyst', appliedDate: '2026-08-01', status: 'applied', notes: 'Follow up' }]);
+assert.match(exportedDeliveries, /\| 公司 \| 岗位/);
+assert.match(exportedDeliveries, /Acme/);
+assert.equal(api.fuzzyIncludes('Data Engineer', 'dt eng'), true);
+api.authSession.set(testJwt);
+const collectedBackup = api.collectCurrentUserBackup();
+assert.equal(collectedBackup.cacheOwner, 'user-42');
+assert.equal(collectedBackup.format, 'resume-dashboard-local-backup');
 assert.match(html, /function attachSortable\b/);
 assert.match(html, /data-draft-sort/);
 assert.match(html, /data-favorite-sort/);
@@ -240,6 +275,17 @@ assert.match(html, /data-open-career-comparison/, 'each plan card must open the 
 assert.match(html, /data-add-gap-evidence/, 'missing competencies must create a pending evidence draft');
 assert.match(html, /career-comparison-grid/, 'comparison modal must use a responsive two-column layout');
 assert.match(html, /career-plan-task-groups/, '7/30/90 tasks must use dedicated progress blocks');
+assert.match(html, /id="resumeExportMenu"/, 'resume editor must expose native local export choices');
+assert.match(html, /id="exportCareerReportBtn"/, 'career planning must expose a full report export action');
+assert.match(html, /id="exportDeliveryMarkdownBtn"/, 'delivery list must support filtered Markdown export');
+assert.match(html, /data-user-menu="data-manager"/, 'top user menu must reach local data management');
+assert.match(html, /id="quickAssistBtn"/, 'resume and career planning must expose a quick prompt assistant');
+assert.match(html, /data-career-task-action/, 'career plan tasks must support edit and delete actions');
+assert.match(html, /#page-jobs > \.card:has\(\.job-suggestions:not\(\.hidden\)\)/, 'open job suggestions must elevate above candidate cards');
+assert.match(html, /insight-signal-grid/, 'annual employment insights must expose structured market signals');
+assert.match(html, /insight-action-panel/, 'annual employment insights must include actionable planning guidance');
+assert.match(html, /aria-labelledby="modalTitle"/, 'modal dialog must expose its accessible title');
+assert.match(html, /id="toast" role="status" aria-live="polite"/, 'toast messages must announce non-blocking status changes');
 assert.doesNotMatch(html, /location\.protocol\s*===\s*["']file:/, 'file:// Mock export branch must be removed');
 assert.match(html, /id="sidebarMask"/, 'mobile navigation must provide an immediate close mask');
 assert.match(html, /function setSidebarOpen\b/, 'mobile navigation must use one state transition helper');
