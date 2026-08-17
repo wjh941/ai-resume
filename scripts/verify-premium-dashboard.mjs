@@ -73,6 +73,7 @@ globalThis.__dashboardTestApi = {
   buildGapEvidenceDraft: typeof buildGapEvidenceDraft === 'function' ? buildGapEvidenceDraft : undefined,
   careerPlanText: typeof careerPlanText === 'function' ? careerPlanText : undefined,
   requestCareerPlan: typeof requestCareerPlan === 'function' ? requestCareerPlan : undefined,
+  apiOrMock: typeof apiOrMock === 'function' ? apiOrMock : undefined,
   buildResumeExport: typeof buildResumeExport === 'function' ? buildResumeExport : undefined,
   buildCareerReportMarkdown: typeof buildCareerReportMarkdown === 'function' ? buildCareerReportMarkdown : undefined,
   buildDeliveryMarkdown: typeof buildDeliveryMarkdown === 'function' ? buildDeliveryMarkdown : undefined,
@@ -104,6 +105,17 @@ assert.equal(api.dashboardResumeFromApi(backendResume).project, 'Retail metrics 
 const testJwt = `header.${Buffer.from(JSON.stringify({ sub: 'user-42', token_version: 1, exp: 9999999999 })).toString('base64url')}.signature`;
 api.authSession.set(testJwt);
 assert.equal(api.authSession.userId(), 'user-42');
+assert.equal(typeof api.apiOrMock, 'function', 'API fallback wrapper must be available for optional remote state');
+sandbox.fetch = async () => ({
+  status: 404,
+  ok: false,
+  json: async () => ({ code: 'not_found', data: {}, message: 'Career assessment not found' })
+});
+assert.equal(
+  await api.apiOrMock('/api/career/assessment', { allowNotFound: true }, null, 'assessment load'),
+  null,
+  'a missing assessment must be treated as an empty state instead of a service outage'
+);
 assert.equal(api.scopedLocalKey('resume-dashboard-evidence'), 'resume-dashboard:user-42:evidence');
 api.saveLocal('resume-dashboard-evidence', [{ id: 42 }]);
 assert.equal(sandbox.localStorage.getItem('resume-dashboard:user-42:evidence'), JSON.stringify([{ id: 42 }]));

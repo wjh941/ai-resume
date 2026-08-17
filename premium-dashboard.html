@@ -2241,6 +2241,7 @@
     /* 本期过渡代码 - 所有云端业务请求自动携带 JWT；后端只信任 Token 的 sub。 */
     async function api(path, options = {}) {
       const allowAnonymous = Boolean(options.allowAnonymous);
+      const allowNotFound = Boolean(options.allowNotFound);
       if (!allowAnonymous && !authSession.hasToken()) {
         const error = new Error("请先登录后再访问云端数据");
         error.code = "AUTH_REQUIRED";
@@ -2253,7 +2254,7 @@
       const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
       if (authSession.hasToken()) headers.Authorization = `Bearer ${authSession.token}`;
       try {
-        const { allowAnonymous: _ignored, ...requestOptions } = options;
+        const { allowAnonymous: _ignored, allowNotFound: _allowNotFound, ...requestOptions } = options;
         const response = await fetch(`${API_BASE_URL}${path}`, { ...requestOptions, headers, signal: controller.signal });
         const envelope = await response.json().catch(() => null);
         if (response.status === 401) {
@@ -2272,6 +2273,8 @@
           openMembershipModal();
           throw error;
         }
+        // A first-time user has no saved assessment yet; callers explicitly opt into this empty state.
+        if (response.status === 404 && allowNotFound) return null;
         if (!response.ok) {
           const error = new Error(envelope?.message || envelope?.detail || `请求失败（HTTP ${response.status}）`);
           error.code = envelope?.code || "API_ERROR";
@@ -2374,7 +2377,7 @@
       if (!authSession.hasToken()) return;
       const [draftData, assessmentData] = await Promise.all([
         apiOrMock("/api/draft/list", {}, null),
-        apiOrMock("/api/career/assessment", {}, null)
+        apiOrMock("/api/career/assessment", { allowNotFound: true }, null)
       ]);
       if (!authSession.hasToken()) return;
       if (isApiServiceFailure(draftData) || isApiServiceFailure(assessmentData)) return;
@@ -4190,7 +4193,7 @@
         maybeCreateAutoSnapshot();
         await refreshMembershipData(true);
         const sources = await apiOrMock("/api/knowledgebase/sources", {}, () => ({ items: [] }), "knowledgebase sources");
-        const assessment = await apiOrMock("/api/career/assessment", {}, null, "assessment load");
+        const assessment = await apiOrMock("/api/career/assessment", { allowNotFound: true }, null, "assessment load");
         if (!isApiServiceFailure(sources) && !isApiServiceFailure(assessment)) {
           if (assessment?.result && !state.assessmentResult) {
             state.assessmentResult = assessment.result;
