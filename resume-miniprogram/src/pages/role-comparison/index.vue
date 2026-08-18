@@ -59,7 +59,7 @@ onMounted(() => {
           <text class="section-title">共有优势</text>
           <text v-for="item in result.commonStrengths" :key="item" class="bullet">- {{ item }}</text>
         </view>
-        <view v-for="item in result.items" :key="item.role.roleName" class="role-card">
+        <view v-for="item in result.items" :key="item.role.roleName" class="role-card comparison-card">
           <view class="role-top">
             <view>
               <text class="role-name">{{ item.role.roleName }}</text>
@@ -94,4 +94,7 @@ onMounted(() => {
 .description,.notice { display: block; margin-top: 16rpx; color: #64748b; font-size: 24rpx; line-height: 1.6; }.chip-row { display: flex; flex-wrap: wrap; gap: 10rpx; margin-top: 16rpx; }.chip { padding: 7rpx 12rpx; border-radius: 999rpx; font-size: 22rpx; }.positive { color: #1677ff; background: #e8f3ff; }.gap { display: block; margin-top: 14rpx; color: #c2410c; font-size: 24rpx; }
 .score-list { padding: 12rpx 0; }.score-list text,.plan-section text { display: block; margin-top: 8rpx; color: #5f6f82; font-size: 22rpx; line-height: 1.5; }.risk { margin-top: 12rpx; padding: 14rpx; color: #8a5a00; background: #fffbe8; border-radius: 12rpx; font-size: 22rpx; line-height: 1.5; }.plan-section { margin-top: 16rpx; padding: 16rpx; background: #f8fafc; border-radius: 12rpx; }.plan-section text:first-child { margin-top: 0; color: #245b99; font-size: 25rpx; font-weight: 700; }
 button { margin-top: 20rpx; border-radius: 12rpx; font-size: 26rpx; }.primary { color: #fff; background: #1677ff; }.notice { padding: 4rpx 6rpx; font-size: 21rpx; }
+.comparison-card { animation: comparison-reveal .22s ease both; }.comparison-card:nth-of-type(2) { animation-delay: .04s; }.comparison-card:nth-of-type(3) { animation-delay: .08s; }.comparison-card:nth-of-type(4) { animation-delay: .12s; }
+@keyframes comparison-reveal { from { opacity: 0; transform: translateY(10rpx); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .comparison-card { animation: none; } }
 </style>

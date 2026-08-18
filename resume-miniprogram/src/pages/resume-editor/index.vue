@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue"
+import { computed, ref } from "vue"
 
 import ResumePreview from "../../components/ResumePreview.vue"
 import { requestPdfExport, requestWordExport } from "../../services/export-api"
@@ -8,9 +8,11 @@ import { useResumeStore } from "../../stores/resume"
 import { getClientId } from "../../stores/session"
 import { validateResume } from "../../utils/validators"
 import { downloadExport } from "../../utils/download-export"
+import { notify } from "../../utils/notifications"
 
 const store = useResumeStore()
 const resume = computed(() => store.draft.resume)
+const exporting = ref<"word" | "pdf" | "">("")
 
 function backToForm() {
   uni.navigateTo({ url: "/pages/resume-form/index" })
@@ -46,6 +48,12 @@ async function save(): Promise<boolean> {
 async function exportResume(kind: "word" | "pdf") {
   if (!store.draft.id && !(await save())) return
   if (!store.draft.id) return
+  exporting.value = kind
+  notify.loading(kind === "pdf" ? "Generating PDF" : "Preparing Word download")
+  const finish = () => {
+    notify.clearLoading()
+    exporting.value = ""
+  }
   try {
     const result = kind === "word"
       ? await requestWordExport(getClientId(), store.draft.id)
@@ -55,8 +63,11 @@ async function exportResume(kind: "word" | "pdf") {
       result.filename,
       process.env.UNI_PLATFORM === "mp-weixin" ? "mp-weixin" : "h5",
     )
+    notify.success("Export started")
+    finish()
   } catch (reason) {
-    uni.showToast({ title: reason instanceof Error ? reason.message : "导出失败，请稍后重试", icon: "none" })
+    finish()
+    notify.error(reason instanceof Error ? reason.message : "导出失败，请稍后重试")
   }
 }
 </script>
@@ -81,7 +92,7 @@ async function exportResume(kind: "word" | "pdf") {
 </template>
 
 <style scoped>
-.page { height: 100vh; padding: 28rpx; box-sizing: border-box; background: #f7f8fa; }
+.page { min-height: 100vh; padding: 28rpx; box-sizing: border-box; overflow-x: hidden; background: #f7f8fa; }
 .toolbar { display: flex; justify-content: space-between; gap: 24rpx; align-items: center; margin-bottom: 24rpx; }.title { display: block; color: #1f2329; font-size: 40rpx; font-weight: 700; }.subtitle { display: block; margin-top: 8rpx; color: #86909c; font-size: 23rpx; }
 .toolbar-actions { display: flex; gap: 12rpx; }.primary { color: #fff; background: #1677ff; }
 </style>

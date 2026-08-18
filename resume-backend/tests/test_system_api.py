@@ -11,6 +11,16 @@ def test_health_declares_current_dashboard_capabilities(api_client):
     assert {"job_plan", "job_match", "ai_setup"} <= set(response.json()["data"]["capabilities"])
 
 
+def test_health_detail_reports_database_and_storage_readiness(api_client):
+    response = api_client.get("/api/system/health-detail")
+
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["status"] == "healthy"
+    assert data["database"]["status"] == "connected"
+    assert data["storage"]["status"] == "ready"
+
+
 def test_ai_status_hides_secrets_and_declares_local_setup_availability(api_client):
     response = api_client.get("/api/system/ai-status")
 

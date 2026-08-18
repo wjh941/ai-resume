@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import sqlite3
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
 
 from app.config import Settings, load_settings
+from app.db import connect
 from app.schemas.common import success
 from app.services.ai_client import build_ai_client
 
@@ -63,6 +65,33 @@ def _ai_status(settings: Settings) -> dict[str, object]:
     }
 
 
+def health_detail(settings: Settings) -> dict[str, object]:
+    database = _database_health(settings)
+    storage = _storage_health(settings)
+    return {
+        "status": "healthy" if database["status"] == "connected" and storage["status"] == "ready" else "degraded",
+        "database": database,
+        "storage": storage,
+    }
+
+
+def _database_health(settings: Settings) -> dict[str, str]:
+    try:
+        with connect(settings.database_path) as connection:
+            connection.execute("SELECT 1").fetchone()
+    except sqlite3.Error:
+        return {"status": "unavailable"}
+    return {"status": "connected"}
+
+
+def _storage_health(settings: Settings) -> dict[str, str]:
+    try:
+        settings.temp_file_path.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        return {"status": "unavailable"}
+    return {"status": "ready" if settings.temp_file_path.is_dir() else "unavailable"}
+
+
 def _require_local_setup(request: Request) -> None:
     settings = request.app.state.settings
     if not _setup_allowed(settings):
@@ -92,6 +121,11 @@ def _write_managed_env_values(path: Path, values: dict[str, str]) -> None:
 @router.get("/ai-status")
 def ai_status(request: Request) -> dict[str, object]:
     return success(_ai_status(request.app.state.settings))
+
+
+@router.get("/health-detail")
+def system_health_detail(request: Request) -> dict[str, object]:
+    return success(health_detail(request.app.state.settings))
 
 
 @router.post("/ai-config")

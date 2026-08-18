@@ -28,6 +28,7 @@ class DownloadService:
         self._expire_minutes = expire_minutes
 
     def register(self, user_id: str, output_path: Path, filename: str) -> ExportResult:
+        output_path = output_path.resolve()
         now = datetime.now(timezone.utc)
         expires_at = now + timedelta(minutes=self._expire_minutes)
         token = uuid4().hex
@@ -37,7 +38,7 @@ class DownloadService:
                 INSERT INTO download_file (token, user_id, file_path, filename, expires_at, created_at)
                 VALUES (?, ?, ?, ?, ?, ?)
                 """,
-                (token, user_id, str(output_path.resolve()), filename, expires_at.isoformat(), now.isoformat()),
+                (token, user_id, str(output_path), filename, expires_at.isoformat(), now.isoformat()),
             )
         return ExportResult(
             filename=filename,
@@ -55,7 +56,12 @@ class DownloadService:
             raise DownloadNotFoundError
 
         expires_at = datetime.fromisoformat(row["expires_at"])
-        output_path = Path(row["file_path"])
+        output_path = Path(row["file_path"]).resolve()
+        try:
+            output_path.relative_to(self._temp_directory)
+        except ValueError:
+            self._delete_records([token])
+            raise DownloadNotFoundError
         if expires_at <= datetime.now(timezone.utc) or not output_path.is_file():
             self._delete_records([token])
             self._delete_file_if_owned(output_path)

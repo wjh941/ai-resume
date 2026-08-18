@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager, suppress
+import logging
+import sqlite3
 
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -28,6 +30,7 @@ from app.services.downloads import DownloadNotFoundError, DownloadService
 from app.services.job_catalog import JobCatalog
 from app.services.official_dataset_sync import OfficialDatasetSyncService
 from app.services.export_pdf import PdfRendererUnavailableError
+from app.api.exports import ExportEmptyError, ExportGenerationError
 from app.services.job_cache import JobCache
 from app.services.job_matching import JobMatcher
 from app.services.rewrite_guard import RewriteFactViolation
@@ -36,6 +39,10 @@ from app.services.auth import AuthService
 from app.services.auth import current_user_id
 from app.services.membership import MembershipPackageConflictError, MembershipService, PaymentChannelUnavailableError, PaymentDemoDisabledError, VipPermissionError, get_current_vip
 from app.services.web_search import build_web_search_client
+from pydantic import ValidationError
+
+
+logger = logging.getLogger("resume_api")
 
 
 @asynccontextmanager
@@ -132,8 +139,43 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
 
     @app.exception_handler(RequestValidationError)
-    def request_validation_error(_: Request, __: RequestValidationError):
+    def request_validation_error(request: Request, _: RequestValidationError):
+        logger.info("validation error: %s %s", request.method, request.url.path)
         return JSONResponse(status_code=422, content=error("validation_error", "Request validation failed"))
+
+    @app.exception_handler(ValidationError)
+    def model_validation_error(request: Request, _: ValidationError):
+        logger.info("validation error: %s %s", request.method, request.url.path)
+        return JSONResponse(status_code=422, content=error("validation_error", "Request validation failed"))
+
+    @app.exception_handler(sqlite3.Error)
+    def database_error(request: Request, exception: sqlite3.Error):
+        logger.error("database error: %s %s (%s)", request.method, request.url.path, type(exception).__name__)
+        return JSONResponse(status_code=503, content=error("database_error", "Database operation failed"))
+
+    @app.exception_handler(ExportEmptyError)
+    def export_empty(request: Request, _: ExportEmptyError):
+        logger.info("export error: %s %s (empty resume)", request.method, request.url.path)
+        return JSONResponse(status_code=422, content=error("export_empty", "Resume has no visible export content"))
+
+    @app.exception_handler(ExportGenerationError)
+    def export_generation_error(request: Request, exception: ExportGenerationError):
+        logger.error("export error: %s %s (%s)", request.method, request.url.path, type(exception).__name__)
+        return JSONResponse(status_code=503, content=error("export_error", "Export could not be generated"))
+
+    @app.exception_handler(HTTPException)
+    def http_error(request: Request, exception: HTTPException):
+        logger.info("request error: %s %s (%s)", request.method, request.url.path, exception.status_code)
+        code = {401: "unauthorized", 403: "forbidden", 404: "not_found", 422: "validation_error"}.get(
+            exception.status_code, "request_error"
+        )
+        message = exception.detail if isinstance(exception.detail, str) else "Request failed"
+        return JSONResponse(status_code=exception.status_code, content=error(code, message))
+
+    @app.exception_handler(Exception)
+    def unexpected_error(request: Request, exception: Exception):
+        logger.error("unexpected error: %s %s (%s)", request.method, request.url.path, type(exception).__name__)
+        return JSONResponse(status_code=500, content=error("internal_error", "Internal server error"))
 
     @app.exception_handler(RewriteFactViolation)
     def rewrite_fact_violation(_: Request, __: RewriteFactViolation):
@@ -193,6 +235,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def health():
         # Frontend reconnection verifies capabilities so an old process cannot masquerade as current code.
         return success({"status": "healthy", "capabilities": ["job_plan", "job_match", "ai_setup"]})
+
+    @app.get("/health/detail")
+    def health_detail():
+        return success(system.health_detail(settings))
 
     # 业务 Router 在组装处统一注入 JWT 依赖，新增端点不会遗漏鉴权边界。
     business_routers = (

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue"
+import { computed, onUnmounted, ref, watch } from "vue"
 
 import {
   generateCareerRecommendations,
@@ -52,6 +52,8 @@ const skillsText = ref(profile.value.skills.join("、"))
 const loading = ref(false)
 const resumeLoading = ref("")
 const error = ref("")
+const isTierTransitioning = ref(false)
+let tierTransitionTimer: ReturnType<typeof setTimeout> | undefined
 
 const selectedTier = computed({
   get: () => store.selectedTier,
@@ -60,6 +62,13 @@ const selectedTier = computed({
 const recommendations = computed(() => store.result?.tiers[selectedTier.value] ?? [])
 const majorReport = computed(() => store.result?.majorReport ?? null)
 const comparisonCount = computed(() => store.comparisonRoleNames.length)
+
+function chooseTier(tier: RecommendationTier) {
+  selectedTier.value = tier
+  isTierTransitioning.value = true
+  if (tierTransitionTimer) clearTimeout(tierTransitionTimer)
+  tierTransitionTimer = setTimeout(() => { isTierTransitioning.value = false }, 220)
+}
 
 watch(majorQuery, async (value) => {
   const query = value.trim()
@@ -191,6 +200,7 @@ async function useForResume(recommendation: RoleRecommendation) {
 
 store.restoreCheckpoint()
 void loadSavedProfile()
+onUnmounted(() => { if (tierTransitionTimer) clearTimeout(tierTransitionTimer) })
 </script>
 
 <template>
@@ -273,13 +283,18 @@ void loadSavedProfile()
           <view class="chip-row"><text v-for="item in majorReport?.recommendedCourses" :key="item" class="chip">{{ item }}</text></view>
         </view>
 
+        <view class="roadmap-track" aria-label="Career roadmap">
+          <view v-for="item in tierOptions" :key="item.key" class="roadmap-stage" :class="{ active: selectedTier === item.key }" @click="chooseTier(item.key)">
+            <text>{{ item.label }}</text><text>{{ item.hint }}</text>
+          </view>
+        </view>
         <view class="tier-tabs">
-          <view v-for="item in tierOptions" :key="item.key" class="tier-tab" :class="{ active: selectedTier === item.key }" @click="selectedTier = item.key">
+          <view v-for="item in tierOptions" :key="item.key" class="tier-tab" :class="{ active: selectedTier === item.key }" @click="chooseTier(item.key)">
             <text>{{ item.label }}</text><text>{{ item.hint }}</text>
           </view>
         </view>
 
-        <view v-for="recommendation in recommendations" :key="recommendation.role.roleName" class="card role-card">
+        <view v-for="recommendation in recommendations" :key="recommendation.role.roleName" class="card role-card" :class="{ 'tier-transitioning': isTierTransitioning }">
           <view class="role-top">
             <view><text class="role-name">{{ recommendation.role.roleName }}</text><text class="role-family">{{ recommendation.role.family }}</text></view>
             <view class="score"><text>{{ recommendation.totalScore }}</text><text>/100</text></view>
@@ -357,4 +372,11 @@ button { margin-top: 24rpx; border-radius: 12rpx; font-size: 28rpx; }
 .role-actions { display: flex; gap: 14rpx; margin-top: 20rpx; }.role-actions button { flex: 1; margin-top: 0; font-size: 23rpx; }
 .compare-button { color: #4e5969; background: #f2f3f5; border: 1rpx solid #dfe4ea; }.compare-button.selected { color: #1677ff; background: #e8f3ff; border-color: #91caff; }
 .notice { padding: 8rpx 8rpx 0; font-size: 21rpx; }
+.roadmap-track { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12rpx; margin-top: 22rpx; }
+.roadmap-stage { position: relative; min-width: 0; padding: 18rpx 16rpx; border: 1rpx solid #dfe7f1; border-radius: 16rpx; background: #fff; box-shadow: 0 6rpx 18rpx rgba(35, 78, 130, .05); transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease, background .22s ease; }
+.roadmap-stage::after { position: absolute; top: 50%; left: calc(100% + 2rpx); width: 10rpx; height: 1rpx; content: ""; background: #c7d9ec; }.roadmap-stage:last-child::after { display: none; }
+.roadmap-stage text { display: block; color: #61758a; font-size: 21rpx; line-height: 1.4; }.roadmap-stage text:first-child { margin-bottom: 7rpx; color: #35516f; font-size: 28rpx; font-weight: 700; }
+.roadmap-stage.active { border-color: #91caff; background: #edf6ff; box-shadow: 0 10rpx 24rpx rgba(22, 119, 255, .15); transform: translateY(-3rpx); }.roadmap-stage.active text:first-child { color: #1677ff; }
+.role-card { transition: opacity .22s ease, transform .22s ease, box-shadow .22s ease; }.role-card.tier-transitioning { opacity: .6; transform: translateY(6rpx); }
+@media (prefers-reduced-motion: reduce) { .roadmap-stage,.role-card { transition: none; } }
 </style>
