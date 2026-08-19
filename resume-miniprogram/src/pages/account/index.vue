@@ -2,16 +2,17 @@
 import { onMounted, ref } from "vue"
 
 import { getCurrentUser, logout } from "../../services/auth-api"
-import { requestAccountDataExport, requestAccountDeletion, requestAccountScope, type AccountDataScope } from "../../services/account-api"
-import { toUserMessage } from "../../services/http"
-import { clearAuthSession, getAuthUser } from "../../stores/session"
+import { recordPrivacyConsent, requestAccountDataExport, requestAccountDeletion, requestAccountPrivacyDetails, type AccountPrivacyDetails } from "../../services/account-api"
+import { apiUrl, toUserMessage } from "../../services/http"
+import { clearAuthSession, getAuthToken, getAuthUser } from "../../stores/session"
 import type { AuthUser } from "../../types/auth"
 
 const user = ref<AuthUser | null>(getAuthUser())
 const loading = ref(false)
 const error = ref("")
-const dataScope = ref<AccountDataScope | null>(null)
+const dataScope = ref<AccountPrivacyDetails | null>(null)
 const lifecycleMessage = ref("")
+const consentRecorded = ref(false)
 
 async function loadUser(): Promise<void> {
   if (!user.value) {
@@ -51,7 +52,7 @@ function open(path: string): void {
 
 async function loadScope(): Promise<void> {
   try {
-    dataScope.value = await requestAccountScope()
+    dataScope.value = await requestAccountPrivacyDetails()
   } catch (reason) {
     error.value = toUserMessage(reason, "Unable to load account privacy details.")
   }
@@ -59,16 +60,33 @@ async function loadScope(): Promise<void> {
 
 async function requestDataExport(): Promise<void> {
   try {
-    lifecycleMessage.value = (await requestAccountDataExport()).message
+    const result = await requestAccountDataExport()
+    lifecycleMessage.value = result.message
+    uni.downloadFile({
+      url: apiUrl(result.downloadUrl),
+      header: getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {},
+      success: () => { lifecycleMessage.value = "Your ZIP data export has been downloaded." },
+      fail: () => { lifecycleMessage.value = "Your export is ready, but this device could not download it. Please try again." },
+    })
   } catch (reason) {
     error.value = toUserMessage(reason, "Unable to request a data export.")
+  }
+}
+
+async function acknowledgePrivacyPolicy(): Promise<void> {
+  try {
+    await recordPrivacyConsent()
+    consentRecorded.value = true
+    lifecycleMessage.value = "Privacy policy acknowledgement recorded."
+  } catch (reason) {
+    error.value = toUserMessage(reason, "Unable to record your privacy preference.")
   }
 }
 
 function requestDeletion(): void {
   uni.showModal({
     title: "Request account deletion",
-    content: "This development version will only record an acknowledgement. No account data will be deleted.",
+    content: "This signs you out permanently, anonymizes resume and career data, and cannot be undone.",
     success: async (result) => {
       if (!result.confirm) return
       try {
@@ -106,6 +124,8 @@ onMounted(async () => {
       <text class="section-title">Account data scope</text>
       <text class="scope-copy">{{ dataScope?.categories.join(" · ") || "Loading data scope..." }}</text>
       <text class="scope-copy">{{ dataScope?.retentionNote }}</text>
+      <text class="policy-hint">{{ dataScope?.privacyPolicyHint }}</text>
+      <button :disabled="consentRecorded" @click="acknowledgePrivacyPolicy">{{ consentRecorded ? "Policy acknowledged" : "Acknowledge privacy policy" }}</button>
       <button @click="requestDataExport">Request data export</button>
       <button class="danger-inline" @click="requestDeletion">Request account deletion</button>
       <text v-if="lifecycleMessage" class="acknowledgement">{{ lifecycleMessage }}</text>
@@ -115,5 +135,5 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.page { min-height: 100vh; box-sizing: border-box; padding: 28rpx; background: #f4f7fb; }.profile-card,.section { padding: 26rpx; background: #fff; border: 1rpx solid #e1eaf4; border-radius: 18rpx; box-shadow: 0 8rpx 22rpx rgba(35, 78, 130, .06); }.eyebrow,.title,.meta,.section-title,.error,.scope-copy,.acknowledgement { display: block; }.eyebrow { color: #1677ff; font-size: 21rpx; font-weight: 700; }.title { margin-top: 10rpx; color: #1f2937; font-size: 38rpx; font-weight: 700; }.meta { margin-top: 10rpx; color: #718096; font-size: 23rpx; word-break: break-all; }.error { margin-top: 12rpx; color: #c2410c; font-size: 23rpx; }.section { margin-top: 20rpx; }.section-title { color: #334155; font-size: 29rpx; font-weight: 700; }.section button { margin-top: 14rpx; color: #245b99; background: #edf6ff; border: 1rpx solid #cfe4fb; text-align: left; font-size: 25rpx; }.scope-copy { margin-top: 10rpx; color: #64748b; font-size: 23rpx; line-height: 1.55; }.danger-inline { color: #c2410c !important; background: #fff7f0 !important; border-color: #ffccc7 !important; }.acknowledgement { margin-top: 14rpx; color: #26735c; font-size: 23rpx; }.danger { margin-top: 24rpx; color: #c2410c; background: #fff7f0; border: 1rpx solid #ffccc7; }
+.page { min-height: 100vh; box-sizing: border-box; padding: 28rpx; background: #f4f7fb; }.profile-card,.section { padding: 26rpx; background: #fff; border: 1rpx solid #e1eaf4; border-radius: 18rpx; box-shadow: 0 8rpx 22rpx rgba(35, 78, 130, .06); }.eyebrow,.title,.meta,.section-title,.error,.scope-copy,.policy-hint,.acknowledgement { display: block; }.eyebrow { color: #1677ff; font-size: 21rpx; font-weight: 700; }.title { margin-top: 10rpx; color: #1f2937; font-size: 38rpx; font-weight: 700; }.meta { margin-top: 10rpx; color: #718096; font-size: 23rpx; word-break: break-all; }.error { margin-top: 12rpx; color: #c2410c; font-size: 23rpx; }.section { margin-top: 20rpx; }.section-title { color: #334155; font-size: 29rpx; font-weight: 700; }.section button { margin-top: 14rpx; color: #245b99; background: #edf6ff; border: 1rpx solid #cfe4fb; text-align: left; font-size: 25rpx; }.scope-copy,.policy-hint { margin-top: 10rpx; color: #64748b; font-size: 23rpx; line-height: 1.55; }.policy-hint { color: #3b6389; overflow-wrap: anywhere; }.danger-inline { color: #c2410c !important; background: #fff7f0 !important; border-color: #ffccc7 !important; }.acknowledgement { margin-top: 14rpx; color: #26735c; font-size: 23rpx; }.danger { margin-top: 24rpx; color: #c2410c; background: #fff7f0; border: 1rpx solid #ffccc7; }
 </style>

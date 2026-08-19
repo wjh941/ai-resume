@@ -3,10 +3,10 @@ import { computed, onMounted, ref } from "vue"
 
 import {
   deleteFavoriteJob,
-  getJobMatchSubscription,
+  getJobMatchSubscriptionSettings,
   listFavoriteJobs,
   saveFavoriteJob,
-  setJobMatchSubscription,
+  setJobMatchSubscriptionSettings,
   type FavoriteJob,
 } from "../../services/job-collection-api"
 import { toUserMessage } from "../../services/http"
@@ -17,18 +17,23 @@ const roleName = ref(resumeStore.activeJob?.roleName || resumeStore.draft.resume
 const note = ref("")
 const favorites = ref<FavoriteJob[]>([])
 const enabled = ref(false)
+const matchFilter = ref("")
+const lastNotifyAt = ref<string | null>(null)
 const loading = ref(false)
 const saving = ref(false)
 const error = ref("")
 const selectedRole = computed(() => roleName.value.trim())
+const currentFavorite = computed(() => favorites.value.find((item) => item.roleName === selectedRole.value))
 
 async function load(): Promise<void> {
   loading.value = true
   error.value = ""
   try {
-    const [items, subscribed] = await Promise.all([listFavoriteJobs(), getJobMatchSubscription()])
+    const [items, subscribed] = await Promise.all([listFavoriteJobs(), getJobMatchSubscriptionSettings()])
     favorites.value = items
-    enabled.value = subscribed
+    enabled.value = subscribed.enabled
+    matchFilter.value = subscribed.matchFilter
+    lastNotifyAt.value = subscribed.lastNotifyAt
   } catch (reason) {
     error.value = toUserMessage(reason, "Unable to load saved jobs.")
   } finally {
@@ -36,7 +41,7 @@ async function load(): Promise<void> {
   }
 }
 
-async function saveFavorite(): Promise<void> {
+async function toggleFavorite(): Promise<void> {
   if (!selectedRole.value) {
     error.value = "Enter a job role to save it."
     return
@@ -44,6 +49,11 @@ async function saveFavorite(): Promise<void> {
   saving.value = true
   error.value = ""
   try {
+    if (currentFavorite.value) {
+      await deleteFavoriteJob(currentFavorite.value.id)
+      favorites.value = favorites.value.filter((item) => item.id !== currentFavorite.value?.id)
+      return
+    }
     const saved = await saveFavoriteJob(selectedRole.value, note.value)
     const index = favorites.value.findIndex((item) => item.id === saved.id)
     if (index >= 0) favorites.value.splice(index, 1, saved)
@@ -69,10 +79,22 @@ async function updateSubscription(event: Event): Promise<void> {
   const next = Boolean((event as unknown as { detail?: { value?: boolean } }).detail?.value)
   enabled.value = next
   try {
-    enabled.value = await setJobMatchSubscription(next)
+    const subscription = await setJobMatchSubscriptionSettings(next, matchFilter.value)
+    enabled.value = subscription.enabled
+    lastNotifyAt.value = subscription.lastNotifyAt
   } catch (reason) {
     enabled.value = !next
     error.value = toUserMessage(reason, "Unable to update the alert setting.")
+  }
+}
+
+async function saveSubscriptionFilter(): Promise<void> {
+  try {
+    const subscription = await setJobMatchSubscriptionSettings(enabled.value, matchFilter.value)
+    enabled.value = subscription.enabled
+    lastNotifyAt.value = subscription.lastNotifyAt
+  } catch (reason) {
+    error.value = toUserMessage(reason, "Unable to update the alert filter.")
   }
 }
 
@@ -86,9 +108,10 @@ onMounted(() => { void load() })
       <text class="section-title">Save a role</text>
       <input v-model="roleName" placeholder="Data Engineer" />
       <textarea v-model="note" placeholder="Optional review note" />
-      <button class="primary" :loading="saving" @click="saveFavorite">Save favorite</button>
+      <button class="primary" :loading="saving" @click="toggleFavorite">{{ currentFavorite ? "Remove favorite" : "Save favorite" }}</button>
     </view>
     <view class="card subscription"><view><text class="section-title">Job matching alert</text><text class="copy">Save this preference now; actual alert delivery remains a mock.</text></view><switch :checked="enabled" color="#1677ff" @change="updateSubscription" /></view>
+    <view class="card"><text class="section-title">Matching filter</text><input v-model="matchFilter" maxlength="200" placeholder="Shanghai, remote, data platform" /><button @click="saveSubscriptionFilter">Save filter</button><text v-if="lastNotifyAt" class="copy">Last alert: {{ lastNotifyAt }}</text></view>
     <text v-if="error" class="error">{{ error }}</text>
     <text v-if="loading" class="notice">Loading saved jobs...</text>
     <view v-for="item in favorites" :key="item.id" class="favorite-card"><view><text class="role">{{ item.roleName }}</text><text v-if="item.note" class="copy">{{ item.note }}</text></view><button size="mini" @click="removeFavorite(item.id)">Remove</button></view>

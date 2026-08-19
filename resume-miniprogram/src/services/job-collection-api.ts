@@ -14,6 +14,18 @@ type BackendFavoriteJob = {
   created_at: string
 }
 
+type BackendJobMatchSubscription = {
+  enabled: boolean
+  match_filter: string
+  last_notify_at: string | null
+}
+
+export type JobMatchSubscription = {
+  enabled: boolean
+  matchFilter: string
+  lastNotifyAt: string | null
+}
+
 function mapFavorite(item: BackendFavoriteJob): FavoriteJob {
   return { id: item.id, roleName: item.role_name, note: item.note, createdAt: item.created_at }
 }
@@ -35,9 +47,23 @@ export async function deleteFavoriteJob(id: string): Promise<void> {
 }
 
 export async function getJobMatchSubscription(): Promise<boolean> {
-  return (await request<{ enabled: boolean }>("/api/job-collection/subscription")).enabled
+  return (await getJobMatchSubscriptionSettings()).enabled
 }
 
 export async function setJobMatchSubscription(enabled: boolean): Promise<boolean> {
-  return (await request<{ enabled: boolean }>("/api/job-collection/subscription", "PUT", { enabled })).enabled
+  return (await setJobMatchSubscriptionSettings(enabled)).enabled
+}
+
+function mapSubscription(item: BackendJobMatchSubscription): JobMatchSubscription {
+  return { enabled: item.enabled, matchFilter: item.match_filter, lastNotifyAt: item.last_notify_at }
+}
+
+export async function getJobMatchSubscriptionSettings(): Promise<JobMatchSubscription> {
+  return mapSubscription(await request<BackendJobMatchSubscription>("/api/job-collection/subscription"))
+}
+
+export async function setJobMatchSubscriptionSettings(enabled: boolean, matchFilter?: string): Promise<JobMatchSubscription> {
+  const data: { enabled: boolean; match_filter?: string } = { enabled }
+  if (matchFilter !== undefined) data.match_filter = matchFilter
+  return mapSubscription(await request<BackendJobMatchSubscription>("/api/job-collection/subscription", "PUT", data))
 }
