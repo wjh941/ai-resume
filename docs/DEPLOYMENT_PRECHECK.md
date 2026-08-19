@@ -4,6 +4,35 @@ Complete every item before setting `APP_ENV=production`. Phase 7 retains
 SQLite for development only; database migration, backup automation, monitoring,
 and HTTPS server deployment are not included here.
 
+## Phase 8 Database and Backups
+
+- Keep `DATABASE_URL` empty for local SQLite development. Production PostgreSQL
+  uses `postgresql+psycopg://...`; run `alembic upgrade head` before FastAPI.
+- Back up before every migration and periodically afterward. Use
+  `scripts/backup-database.ps1` on Windows or `scripts/backup-database.sh` on
+  Linux, set `BACKUP_DIR` and `BACKUP_RETENTION_DAYS`, then prove a restore.
+- Follow [PostgreSQL migration](POSTGRESQL_MIGRATION.md) to move an existing
+  SQLite database. Temporary `download_file` records are intentionally not
+  copied because their referenced files are machine-local and expire.
+- Set exact HTTPS origins in `CORS_ORIGINS`; production requests from an
+  unlisted browser origin are rejected. Never use a wildcard with credentials.
+- Keep SMS, WeChat, payment, JWT, and database secrets outside source control.
+  Do not put them in frontend build variables or Docker image layers.
+- Compose serves HTTP only. Place Nginx or Caddy in front of it for HTTPS,
+  redirect HTTP to HTTPS, and configure forwarded headers at that proxy.
+
+## Troubleshooting
+
+- **Token rejected:** confirm the same `JWT_SECRET` is present on every
+  backend instance and that a soft-deleted account has not invalidated it.
+- **SMS failed:** verify the provider HTTPS endpoint, access credentials, sign
+  name, and template ID; development mode alone accepts code `123456`.
+- **Database lock:** SQLite supports local development only. Check the single
+  process, `SQLITE_TIMEOUT_SECONDS`, and move concurrent production traffic to
+  PostgreSQL.
+- **Export permission failure:** ensure `TEMP_FILE_PATH` exists, is writable by
+  the backend account, and is not a shared user-media directory.
+
 ## Authentication
 
 - Set a unique 32+ character `JWT_SECRET` outside source control.

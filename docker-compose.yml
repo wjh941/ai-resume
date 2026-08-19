@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ai_resume}
+      POSTGRES_USER: ${POSTGRES_USER:-ai_resume}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./resume-backend
+    env_file: ./resume-backend/.env
+    environment:
+      PRODUCTION: "true"
+      APP_HOST: 0.0.0.0
+      APP_PORT: "8000"
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-ai_resume}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ai_resume}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose: ["8000"]
+    volumes:
+      - export_data:/app/temp
+
+  frontend:
+    build: ./resume-miniprogram
+    depends_on: [backend]
+    ports: ["80:80"]
+
+volumes:
+  postgres_data:
+  export_data:
+
+# HTTPS is intentionally not configured here. Put Nginx or Caddy in front of port 80.
