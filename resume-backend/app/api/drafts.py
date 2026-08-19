@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from app.repositories.drafts import DraftLimitReachedError, DraftNotFoundError
 from app.schemas.common import success
-from app.schemas.draft import DraftCopyRequest, DraftSaveRequest
+from app.schemas.draft import DraftCopyRequest, DraftSaveRequest, DraftVersionCreateRequest
 from app.services.auth import current_user_id
 from app.services.membership import VipPermissionError, VipStatus, get_current_vip
 
@@ -28,6 +28,52 @@ def save_draft(
 @router.get("/list")
 def list_drafts(request: Request, user_id: str = Depends(current_user_id)):
     return success(request.app.state.draft_repository.list(user_id))
+
+
+@router.get("/{draft_id}/versions")
+def list_versions(draft_id: str, request: Request, user_id: str = Depends(current_user_id)):
+    return success({"items": request.app.state.draft_repository.list_versions(user_id, draft_id)})
+
+
+@router.post("/{draft_id}/versions")
+def create_version(
+    draft_id: str,
+    payload: DraftVersionCreateRequest,
+    request: Request,
+    user_id: str = Depends(current_user_id),
+):
+    return success(request.app.state.draft_repository.create_version(user_id, draft_id, payload.note))
+
+
+@router.get("/{draft_id}/versions/compare")
+def compare_versions(
+    draft_id: str,
+    request: Request,
+    left_id: str = Query(min_length=1, max_length=120),
+    right_id: str = Query(min_length=1, max_length=120),
+    user_id: str = Depends(current_user_id),
+):
+    return success(
+        request.app.state.draft_repository.compare_versions(user_id, draft_id, left_id, right_id)
+    )
+
+
+@router.post("/{draft_id}/versions/{version_id}/restore")
+def restore_version(
+    draft_id: str,
+    version_id: str,
+    request: Request,
+    user_id: str = Depends(current_user_id),
+):
+    return success(request.app.state.draft_repository.restore_version(user_id, draft_id, version_id))
+
+
+@router.post("/{draft_id}/import")
+def import_resume_document(draft_id: str):
+    raise HTTPException(
+        status_code=501,
+        detail="文档解析将在后续版本提供，请先手动补充简历内容。",
+    )
 
 
 @router.get("/{draft_id}")
