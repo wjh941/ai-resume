@@ -35,6 +35,11 @@ def test_word_export_returns_safe_filename_and_download(api_client):
     assert download.status_code == 200
     assert len(download.content) > 0
 
+    partial = api_client.get(export["download_url"], headers={"Range": "bytes=0-15"})
+    assert partial.status_code == 206
+    assert partial.headers["content-range"].startswith("bytes 0-15/")
+    assert len(partial.content) == 16
+
 
 def test_expired_download_returns_not_found(api_client):
     draft = save_draft(api_client)

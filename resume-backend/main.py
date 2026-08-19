@@ -4,6 +4,7 @@ import asyncio
 from contextlib import asynccontextmanager, suppress
 import logging
 import sqlite3
+from uuid import uuid4
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -38,6 +39,7 @@ from app.services.template_service import TemplateService
 from app.services.auth import AuthService
 from app.services.auth import current_user_id
 from app.services.membership import MembershipPackageConflictError, MembershipService, PaymentChannelUnavailableError, PaymentDemoDisabledError, VipPermissionError, get_current_vip
+from app.services.rate_limit import InMemoryRateLimiter
 from app.services.web_search import build_web_search_client
 from pydantic import ValidationError
 
@@ -65,7 +67,10 @@ async def _cleanup_downloads_periodically(download_service: DownloadService) -> 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or load_settings()
-    initialize_database(settings.database_path)
+    initialize_database(
+        settings.database_path,
+        timeout_seconds=settings.sqlite_timeout_seconds,
+    )
 
     app = FastAPI(title="Resume Demo API", lifespan=lifespan)
     if settings.cors_origins:
@@ -75,9 +80,34 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             allow_origins=list(settings.cors_origins),
             allow_credentials=True,
             allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-            allow_headers=["Authorization", "Content-Type"],
+            allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+            expose_headers=["X-Request-ID"],
         )
     app.state.settings = settings
+    app.state.auth_rate_limiter = InMemoryRateLimiter(
+        settings.auth_rate_limit_max_requests,
+        settings.auth_rate_limit_window_seconds,
+    )
+
+    @app.middleware("http")
+    async def add_request_id_and_limit_auth(request: Request, call_next):
+        request_id = uuid4().hex
+        if request.method == "POST" and request.url.path.startswith("/api/auth/"):
+            client_host = request.client.host if request.client else "unknown"
+            key = f"{request.method}:{request.url.path}:{client_host}"
+            decision = app.state.auth_rate_limiter.check(key)
+            if not decision.allowed:
+                response = JSONResponse(
+                    status_code=429,
+                    content=error("rate_limited", "Too many authentication attempts. Please try again later."),
+                    headers={"Retry-After": str(decision.retry_after_seconds)},
+                )
+                response.headers["X-Request-ID"] = request_id
+                return response
+
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        return response
     app.state.user_repository = UserRepository(settings.database_path)
     app.state.auth_service = AuthService(settings, app.state.user_repository)
     app.state.membership_repository = MembershipRepository(settings.database_path)

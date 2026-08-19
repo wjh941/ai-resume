@@ -114,17 +114,30 @@ JOB_CATALOG = (
 )
 
 
-def connect(database_path: Path) -> sqlite3.Connection:
-    connection = sqlite3.connect(database_path)
+_default_timeout_seconds = 3.0
+
+
+def configure_connection_timeout(timeout_seconds: float) -> None:
+    global _default_timeout_seconds
+    _default_timeout_seconds = max(0.1, timeout_seconds)
+
+
+def connect(database_path: Path, *, timeout_seconds: float | None = None) -> sqlite3.Connection:
+    timeout = _default_timeout_seconds if timeout_seconds is None else max(0.1, timeout_seconds)
+    connection = sqlite3.connect(database_path, timeout=timeout)
     connection.row_factory = sqlite3.Row
     # 本期 SQLite 必须逐连接启用外键；二期数据库迁移由同一仓储 user_id 接口承接。
     connection.execute("PRAGMA foreign_keys = ON")
+    connection.execute(f"PRAGMA busy_timeout = {int(timeout * 1000)}")
     return connection
 
 
-def initialize_database(database_path: Path) -> None:
+def initialize_database(database_path: Path, *, timeout_seconds: float | None = None) -> None:
     database_path.parent.mkdir(parents=True, exist_ok=True)
+    if timeout_seconds is not None:
+        configure_connection_timeout(timeout_seconds)
     with connect(database_path) as connection:
+        connection.execute("PRAGMA journal_mode = WAL")
         connection.executescript(
             """
             CREATE TABLE IF NOT EXISTS users (

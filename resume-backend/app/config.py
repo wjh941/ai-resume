@@ -59,6 +59,9 @@ class Settings:
     alipay_private_key: str = ""
     cors_origins: tuple[str, ...] = ()
     ai_config_ui_enabled: bool = True
+    sqlite_timeout_seconds: float = 3.0
+    auth_rate_limit_max_requests: int = 10
+    auth_rate_limit_window_seconds: int = 60
 
 
 def _read_bool(name: str, default: bool) -> bool:
@@ -90,6 +93,7 @@ def load_settings() -> Settings:
         cache_expire_day=int(os.getenv("CACHE_EXPIRE_DAY", "7")),
         temp_file_path=Path(os.getenv("TEMP_FILE_PATH", "./temp")).resolve(),
         export_file_expire_minutes=int(os.getenv("EXPORT_FILE_EXPIRE_MINUTES", "60")),
+        sqlite_timeout_seconds=float(os.getenv("SQLITE_TIMEOUT_SECONDS", "3")),
         pdf_renderer=os.getenv("PDF_RENDERER", "playwright"),
         playwright_browsers_path=os.getenv(
             "PLAYWRIGHT_BROWSERS_PATH", "D:/Projects/ai-resume-miniprogram/.cache/playwright"
@@ -119,4 +123,6 @@ def load_settings() -> Settings:
         alipay_app_id=os.getenv("ALIPAY_APP_ID", ""),
         alipay_private_key=os.getenv("ALIPAY_PRIVATE_KEY", ""),
         cors_origins=_read_csv("CORS_ORIGINS"),
+        auth_rate_limit_max_requests=int(os.getenv("AUTH_RATE_LIMIT_MAX_REQUESTS", "10")),
+        auth_rate_limit_window_seconds=int(os.getenv("AUTH_RATE_LIMIT_WINDOW_SECONDS", "60")),
     )
