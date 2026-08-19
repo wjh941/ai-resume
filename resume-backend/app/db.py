@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import sqlite3
+import re
+from typing import Any
 
 from app.services.career_catalog import ROLE_SEEDS, seed_career_catalog
 
@@ -115,6 +117,42 @@ JOB_CATALOG = (
 
 
 _default_timeout_seconds = 3.0
+DatabaseTarget = Path | str
+
+
+def database_kind(target: DatabaseTarget) -> str:
+    value = str(target)
+    return "postgresql" if value.startswith(("postgresql://", "postgresql+psycopg://")) else "sqlite"
+
+
+class PostgresConnection:
+    """Small compatibility adapter for the repository execute contract."""
+
+    def __init__(self, connection: Any) -> None:
+        self._connection = connection
+
+    def __enter__(self) -> "PostgresConnection":
+        self._connection.__enter__()
+        return self
+
+    def __exit__(self, *arguments: object) -> bool | None:
+        return self._connection.__exit__(*arguments)
+
+    def execute(self, statement: str, parameters: Any = ()) -> Any:
+        return self._connection.execute(_postgres_statement(statement), parameters)
+
+    def executemany(self, statement: str, parameters: Any) -> Any:
+        return self._connection.executemany(_postgres_statement(statement), parameters)
+
+
+def _postgres_statement(statement: str) -> str:
+    normalized = statement.replace("BEGIN IMMEDIATE", "BEGIN").replace("datetime('now')", "CURRENT_TIMESTAMP")
+    normalized = normalized.replace("?", "%s")
+    if re.match(r"^\s*INSERT\s+OR\s+IGNORE\s+INTO\s+", normalized, flags=re.IGNORECASE):
+        normalized = re.sub(r"INSERT\s+OR\s+IGNORE\s+INTO", "INSERT INTO", normalized, count=1, flags=re.IGNORECASE)
+        suffix = ";" if normalized.rstrip().endswith(";") else ""
+        normalized = normalized.rstrip().rstrip(";") + " ON CONFLICT DO NOTHING" + suffix
+    return normalized
 
 
 def configure_connection_timeout(timeout_seconds: float) -> None:
@@ -122,9 +160,11 @@ def configure_connection_timeout(timeout_seconds: float) -> None:
     _default_timeout_seconds = max(0.1, timeout_seconds)
 
 
-def connect(database_path: Path, *, timeout_seconds: float | None = None) -> sqlite3.Connection:
+def connect(database_path: DatabaseTarget, *, timeout_seconds: float | None = None) -> sqlite3.Connection | PostgresConnection:
+    if database_kind(database_path) == "postgresql":
+        return _connect_postgres(str(database_path))
     timeout = _default_timeout_seconds if timeout_seconds is None else max(0.1, timeout_seconds)
-    connection = sqlite3.connect(database_path, timeout=timeout)
+    connection = sqlite3.connect(_sqlite_path(database_path), timeout=timeout)
     connection.row_factory = sqlite3.Row
     # 本期 SQLite 必须逐连接启用外键；二期数据库迁移由同一仓储 user_id 接口承接。
     connection.execute("PRAGMA foreign_keys = ON")
@@ -132,7 +172,27 @@ def connect(database_path: Path, *, timeout_seconds: float | None = None) -> sql
     return connection
 
 
-def initialize_database(database_path: Path, *, timeout_seconds: float | None = None) -> None:
+def _sqlite_path(target: DatabaseTarget) -> Path | str:
+    value = str(target)
+    return value.removeprefix("sqlite:///") if value.startswith("sqlite:///") else target
+
+
+def _connect_postgres(url: str) -> PostgresConnection:
+    try:
+        from psycopg import connect as psycopg_connect
+        from psycopg.rows import dict_row
+    except ImportError as error:
+        raise RuntimeError("PostgreSQL support requires the psycopg package. Install resume-backend requirements.") from error
+    return PostgresConnection(
+        psycopg_connect(url.replace("postgresql+psycopg://", "postgresql://", 1), row_factory=dict_row)
+    )
+
+
+def initialize_database(database_path: DatabaseTarget, *, timeout_seconds: float | None = None) -> None:
+    if database_kind(database_path) == "postgresql":
+        _initialize_postgres(database_path)
+        return
+    database_path = Path(_sqlite_path(database_path))
     database_path.parent.mkdir(parents=True, exist_ok=True)
     if timeout_seconds is not None:
         configure_connection_timeout(timeout_seconds)
@@ -375,40 +435,50 @@ def initialize_database(database_path: Path, *, timeout_seconds: float | None = 
         _migrate_user_ownership(connection)
         _migrate_catalog_provenance(connection)
         _migrate_phase7_lifecycle(connection)
-        connection.executemany(
-            """
-            INSERT OR IGNORE INTO template_table (id, name, description, config_json)
-            VALUES (?, ?, ?, ?)
-            """,
-            [(template_id, name, description, json.dumps(config)) for template_id, name, description, config in TEMPLATES],
-        )
-        connection.executemany(
-            """
-            INSERT OR IGNORE INTO job_catalog (role_name, category, aliases_json, sort_order)
-            VALUES (?, ?, ?, ?)
-            """,
-            [
-                (role_name, category, json.dumps(aliases, ensure_ascii=False), sort_order)
-                for role_name, category, aliases, sort_order in JOB_CATALOG
-            ],
-        )
-        seed_career_catalog(connection)
-        connection.executemany(
-            """
-            INSERT OR IGNORE INTO job_catalog (role_name, category, aliases_json, sort_order)
-            VALUES (?, ?, ?, ?)
-            """,
-            [
-                (
-                    role.role_name,
-                    role.family,
-                    json.dumps(role.aliases, ensure_ascii=False),
-                    1_000 + index,
-                )
-                for index, role in enumerate(ROLE_SEEDS)
-            ],
-        )
+        _seed_initial_data(connection)
         _migrate_legacy_job_cache(connection)
+
+
+def _initialize_postgres(database_url: DatabaseTarget) -> None:
+    try:
+        with connect(database_url) as connection:
+            connection.execute("SELECT 1 FROM template_table LIMIT 1")
+            _seed_initial_data(connection)
+    except Exception as error:
+        raise RuntimeError(
+            "PostgreSQL schema is unavailable. Run 'alembic upgrade head' before starting the backend."
+        ) from error
+
+
+def _seed_initial_data(connection: Any) -> None:
+    connection.executemany(
+        """
+        INSERT OR IGNORE INTO template_table (id, name, description, config_json)
+        VALUES (?, ?, ?, ?)
+        """,
+        [(template_id, name, description, json.dumps(config)) for template_id, name, description, config in TEMPLATES],
+    )
+    connection.executemany(
+        """
+        INSERT OR IGNORE INTO job_catalog (role_name, category, aliases_json, sort_order)
+        VALUES (?, ?, ?, ?)
+        """,
+        [
+            (role_name, category, json.dumps(aliases, ensure_ascii=False), sort_order)
+            for role_name, category, aliases, sort_order in JOB_CATALOG
+        ],
+    )
+    seed_career_catalog(connection)
+    connection.executemany(
+        """
+        INSERT OR IGNORE INTO job_catalog (role_name, category, aliases_json, sort_order)
+        VALUES (?, ?, ?, ?)
+        """,
+        [
+            (role.role_name, role.family, json.dumps(role.aliases, ensure_ascii=False), 1_000 + index)
+            for index, role in enumerate(ROLE_SEEDS)
+        ],
+    )
 
 
 def _migrate_legacy_job_cache(connection: sqlite3.Connection) -> None:

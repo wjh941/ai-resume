@@ -70,8 +70,9 @@ async def _cleanup_downloads_periodically(download_service: DownloadService) -> 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or load_settings()
+    database_target = settings.database_target
     initialize_database(
-        settings.database_path,
+        database_target,
         timeout_seconds=settings.sqlite_timeout_seconds,
     )
 
@@ -111,34 +112,34 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         response = await call_next(request)
         response.headers["X-Request-ID"] = request_id
         return response
-    app.state.user_repository = UserRepository(settings.database_path)
-    app.state.account_privacy_repository = AccountPrivacyRepository(settings.database_path)
+    app.state.user_repository = UserRepository(database_target)
+    app.state.account_privacy_repository = AccountPrivacyRepository(database_target)
     app.state.auth_service = AuthService(settings, app.state.user_repository)
     app.state.sms_service = SmsService(settings)
-    app.state.membership_repository = MembershipRepository(settings.database_path)
+    app.state.membership_repository = MembershipRepository(database_target)
     app.state.membership_service = MembershipService(app.state.membership_repository, settings)
-    app.state.draft_repository = DraftRepository(settings.database_path)
-    app.state.application_repository = ApplicationRepository(settings.database_path)
-    app.state.job_collection_repository = JobCollectionRepository(settings.database_path)
-    app.state.evidence_repository = EvidenceRepository(settings.database_path)
-    app.state.assessment_repository = AssessmentRepository(settings.database_path)
-    app.state.template_service = TemplateService(TemplateRepository(settings.database_path))
+    app.state.draft_repository = DraftRepository(database_target)
+    app.state.application_repository = ApplicationRepository(database_target)
+    app.state.job_collection_repository = JobCollectionRepository(database_target)
+    app.state.evidence_repository = EvidenceRepository(database_target)
+    app.state.assessment_repository = AssessmentRepository(database_target)
+    app.state.template_service = TemplateService(TemplateRepository(database_target))
     app.state.ai_client = build_ai_client(settings)
-    app.state.job_cache = JobCache(settings.database_path, settings.cache_expire_day)
-    app.state.job_catalog = JobCatalog(settings.database_path)
+    app.state.job_cache = JobCache(database_target, settings.cache_expire_day)
+    app.state.job_catalog = JobCatalog(database_target)
     app.state.job_matcher = JobMatcher()
-    app.state.knowledgebase_repository = KnowledgebaseRepository(settings.database_path)
+    app.state.knowledgebase_repository = KnowledgebaseRepository(database_target)
     app.state.official_dataset_sync_service = OfficialDatasetSyncService(
         app.state.knowledgebase_repository
     )
-    app.state.career_catalog_repository = CareerCatalogRepository(settings.database_path)
-    app.state.career_profile_repository = CareerProfileRepository(settings.database_path)
+    app.state.career_catalog_repository = CareerCatalogRepository(database_target)
+    app.state.career_profile_repository = CareerProfileRepository(database_target)
     app.state.career_recommender = CareerRecommender(
         app.state.career_catalog_repository
     )
     app.state.web_search_client = build_web_search_client(settings)
     app.state.download_service = DownloadService(
-        settings.database_path,
+        database_target,
         settings.temp_file_path,
         settings.export_file_expire_minutes,
     )

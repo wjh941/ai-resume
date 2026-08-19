@@ -31,6 +31,7 @@ class Settings:
     export_file_expire_minutes: int
     pdf_renderer: str
     playwright_browsers_path: str
+    database_url: str = ""
     web_search_provider: str = "disabled"
     tavily_api_key: str = ""
     web_search_base_url: str = "https://api.tavily.com"
@@ -71,6 +72,18 @@ class Settings:
     auth_rate_limit_max_requests: int = 10
     auth_rate_limit_window_seconds: int = 60
 
+    @property
+    def database_target(self) -> Path | str:
+        return self.database_url or self.database_path
+
+    @property
+    def database_kind(self) -> str:
+        return "postgresql" if self.database_url.startswith(("postgresql://", "postgresql+psycopg://")) else "sqlite"
+
+    @property
+    def production(self) -> bool:
+        return _read_bool("PRODUCTION", self.app_env.strip().lower() == "production")
+
 
 def _read_bool(name: str, default: bool) -> bool:
     value = os.getenv(name)
@@ -92,6 +105,7 @@ def load_settings() -> Settings:
         app_host=os.getenv("APP_HOST", "127.0.0.1"),
         app_port=int(os.getenv("APP_PORT", "8000")),
         database_path=Path(os.getenv("DATABASE_PATH", "./data/resume_demo.db")).resolve(),
+        database_url=os.getenv("DATABASE_URL", "").strip(),
         ai_provider=os.getenv("AI_PROVIDER", "openai_compatible"),
         ai_api_key=os.getenv("AI_API_KEY", ""),
         ai_base_url=os.getenv("AI_BASE_URL", "https://ark.cn-beijing.volces.com/api/v1"),
