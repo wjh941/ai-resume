@@ -54,6 +54,8 @@ const resumeLoading = ref("")
 const error = ref("")
 const isTierTransitioning = ref(false)
 let tierTransitionTimer: ReturnType<typeof setTimeout> | undefined
+let tierUpdateTimer: ReturnType<typeof setTimeout> | undefined
+let pendingTier: RecommendationTier | undefined
 
 const selectedTier = computed({
   get: () => store.selectedTier,
@@ -64,10 +66,18 @@ const majorReport = computed(() => store.result?.majorReport ?? null)
 const comparisonCount = computed(() => store.comparisonRoleNames.length)
 
 function chooseTier(tier: RecommendationTier) {
-  selectedTier.value = tier
-  isTierTransitioning.value = true
-  if (tierTransitionTimer) clearTimeout(tierTransitionTimer)
-  tierTransitionTimer = setTimeout(() => { isTierTransitioning.value = false }, 220)
+  if (tier === selectedTier.value && !tierUpdateTimer) return
+  pendingTier = tier
+  if (tierUpdateTimer) return
+  tierUpdateTimer = setTimeout(() => {
+    tierUpdateTimer = undefined
+    if (!pendingTier) return
+    selectedTier.value = pendingTier
+    pendingTier = undefined
+    isTierTransitioning.value = true
+    if (tierTransitionTimer) clearTimeout(tierTransitionTimer)
+    tierTransitionTimer = setTimeout(() => { isTierTransitioning.value = false }, 220)
+  }, 0)
 }
 
 watch(majorQuery, async (value) => {
@@ -200,7 +210,10 @@ async function useForResume(recommendation: RoleRecommendation) {
 
 store.restoreCheckpoint()
 void loadSavedProfile()
-onUnmounted(() => { if (tierTransitionTimer) clearTimeout(tierTransitionTimer) })
+onUnmounted(() => {
+  if (tierTransitionTimer) clearTimeout(tierTransitionTimer)
+  if (tierUpdateTimer) clearTimeout(tierUpdateTimer)
+})
 </script>
 
 <template>
@@ -267,7 +280,14 @@ onUnmounted(() => { if (tierTransitionTimer) clearTimeout(tierTransitionTimer) }
         <button class="primary" :loading="loading" @click="generatePlan">生成我的三档求职方案</button>
       </view>
 
-      <template v-if="store.result">
+      <view v-if="loading" class="loading-skeletons" aria-live="polite">
+        <view v-for="item in 3" :key="item" class="card skeleton-card">
+          <view class="skeleton-line wide"></view>
+          <view class="skeleton-line"></view>
+          <view class="skeleton-line short"></view>
+        </view>
+      </view>
+      <template v-if="store.result && !loading">
         <view v-if="comparisonCount" class="comparison-bar">
           <view>
             <text class="comparison-title">岗位横向对比</text>
@@ -378,5 +398,6 @@ button { margin-top: 24rpx; border-radius: 12rpx; font-size: 28rpx; }
 .roadmap-stage text { display: block; color: #61758a; font-size: 21rpx; line-height: 1.4; }.roadmap-stage text:first-child { margin-bottom: 7rpx; color: #35516f; font-size: 28rpx; font-weight: 700; }
 .roadmap-stage.active { border-color: #91caff; background: #edf6ff; box-shadow: 0 10rpx 24rpx rgba(22, 119, 255, .15); transform: translateY(-3rpx); }.roadmap-stage.active text:first-child { color: #1677ff; }
 .role-card { transition: opacity .22s ease, transform .22s ease, box-shadow .22s ease; }.role-card.tier-transitioning { opacity: .6; transform: translateY(6rpx); }
+.loading-skeletons { margin-top: 20rpx; }.skeleton-card { overflow: hidden; }.skeleton-line { height: 22rpx; margin-top: 16rpx; border-radius: 8rpx; background: linear-gradient(90deg, #edf2f7 25%, #f8fafc 40%, #edf2f7 65%); background-size: 400% 100%; animation: shimmer 1.2s ease-in-out infinite; }.skeleton-line:first-child { margin-top: 0; }.skeleton-line.wide { width: 72%; height: 32rpx; }.skeleton-line.short { width: 42%; }@keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
 @media (prefers-reduced-motion: reduce) { .roadmap-stage,.role-card { transition: none; } }
 </style>

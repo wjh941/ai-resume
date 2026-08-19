@@ -48,6 +48,11 @@ describe("local client and resume checkpoint", () => {
     store.draft.resume.job.targetRole = "用户自定义目标岗位"
 
     store.setJobIntelligence(frontendJob)
+    const backup = store.exportBackup()
+    store.resetDraft(false)
+
+    expect(store.restoreBackup(backup)).toBe(true)
+    expect(storage.get("resume_demo_checkpoint")).toBeTruthy()
 
     expect(store.activeJob).toEqual(frontendJob)
     expect(store.draft.jobIntelligence).toEqual(frontendJob)

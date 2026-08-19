@@ -3,6 +3,7 @@ import { defineStore } from "pinia"
 import { createEmptyDraft, type JobIntelligence, type ResumeDraft } from "../types/resume"
 import type { EvidenceSuggestion } from "../types/evidence"
 import { applyEvidenceSuggestion as applyToDraft } from "../utils/evidence-suggestions"
+import type { ResumeBackupState } from "../utils/local-backup"
 
 const CHECKPOINT_KEY = "resume_demo_checkpoint"
 
@@ -34,6 +35,16 @@ export const useResumeStore = defineStore("resume", {
       const checkpoint = saved as { activeJob?: JobIntelligence | null; draft?: ResumeDraft }
       if (checkpoint.draft) this.draft = clone(checkpoint.draft)
       this.activeJob = checkpoint.activeJob ?? null
+    },
+    exportBackup(): ResumeBackupState {
+      return clone({ activeJob: this.activeJob, draft: this.draft })
+    },
+    restoreBackup(snapshot: ResumeBackupState): boolean {
+      if (!snapshot?.draft?.resume) return false
+      this.activeJob = snapshot.activeJob ?? null
+      this.draft = clone(snapshot.draft)
+      this.checkpoint()
+      return true
     },
     setJobIntelligence(job: JobIntelligence): void {
       this.activeJob = job

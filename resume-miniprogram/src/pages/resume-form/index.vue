@@ -12,18 +12,22 @@ import {
   createRoleBasedProjectDraft,
   prepareResumeForJob,
 } from "../../utils/resume-autofill"
-import { validateResume } from "../../utils/validators"
+import { toValidationErrorMap, validateResume } from "../../utils/validators"
 
 const store = useResumeStore()
 const resume = computed(() => store.draft.resume)
 const activeJob = computed(() => store.activeJob ?? store.draft.jobIntelligence)
 const evidenceSuggestions = ref<EvidenceSuggestion[]>([])
+const fieldErrors = ref<Record<string, string>>({})
 
 watch(() => store.draft, () => store.checkpoint(), { deep: true })
 watch(activeJob, (job) => {
   evidenceSuggestions.value = []
   if (job) void loadEvidenceSuggestions(job.roleName)
 }, { immediate: true })
+watch(resume, () => {
+  if (Object.keys(fieldErrors.value).length) fieldErrors.value = toValidationErrorMap(validateResume(resume.value))
+}, { deep: true })
 
 function addEducation() {
   resume.value.education.push({ school: "", major: "", degree: "", startDate: "", endDate: "", courses: "" })
@@ -76,6 +80,8 @@ function applyEvidenceSuggestion(suggestion: EvidenceSuggestion) {
 
 async function save() {
   const errors = validateResume(resume.value)
+  fieldErrors.value = toValidationErrorMap(errors)
+  if (errors.length) return
   if (errors.length) return uni.showToast({ title: errors[0].message, icon: "none" })
   try {
     const saved = await saveDraft(getClientId(), store.draft)
@@ -102,6 +108,9 @@ function prepareAndChooseTemplate() {
 
 <template>
   <scroll-view class="page" scroll-y>
+    <view v-if="Object.keys(fieldErrors).length" class="validation-summary">
+      <text v-for="(message, field) in fieldErrors" :key="field">{{ message }}</text>
+    </view>
     <view class="card">
       <text class="heading">个人信息</text>
       <FormField label="姓名" v-model="resume.basic.name" placeholder="请输入姓名" />
@@ -219,4 +228,5 @@ textarea { width: 100%; min-height: 130rpx; margin: 16rpx 0; padding: 16rpx; box
 .suggestion-list { margin-top: 16rpx; }.suggestion-card { margin-top: 12rpx; padding: 16rpx; background: #fff; border: 1rpx solid #d8e8f8; border-radius: 12rpx; }
 .suggestion-top { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; color: #245b99; font-size: 24rpx; font-weight: 700; }.suggestion-top text:last-child { color: #86909c; font-size: 20rpx; font-weight: 400; }
 .suggestion-description, .suggestion-risk { display: block; margin-top: 10rpx; color: #4e5969; font-size: 22rpx; line-height: 1.55; white-space: pre-line; }.suggestion-risk { color: #b26a00; }.suggestion-card button { margin-top: 12rpx; }
+.validation-summary { margin-bottom: 20rpx; padding: 16rpx 20rpx; color: #b42318; background: #fff7f0; border: 1rpx solid #ffccc7; border-radius: 12rpx; }.validation-summary text { display: block; font-size: 23rpx; line-height: 1.55; }
 </style>

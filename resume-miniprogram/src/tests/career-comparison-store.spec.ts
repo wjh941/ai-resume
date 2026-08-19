@@ -15,6 +15,17 @@ beforeEach(() => {
 })
 
 describe("career comparison state", () => {
+  it("restores an explicit career backup with its comparison selection", () => {
+    const store = useCareerStore()
+    store.toggleComparisonRole("Data Engineer")
+    const backup = store.exportBackup()
+    store.resetPlanner(false)
+
+    expect(store.restoreBackup(backup)).toBe(true)
+    expect(store.comparisonRoleNames).toEqual(["Data Engineer"])
+    expect(storage.get("resume_demo_career_planner")).toBeTruthy()
+  })
+
   it("limits comparison selection to four unique roles", () => {
     const store = useCareerStore()
 

@@ -7,6 +7,7 @@ import type {
   RoleRecommendation,
   WeeklyCareerTarget,
 } from "../types/career"
+import type { CareerBackupState } from "../utils/local-backup"
 
 const CHECKPOINT_KEY = "resume_demo_career_planner"
 
@@ -41,6 +42,29 @@ export const useCareerStore = defineStore("career", {
       this.selectedRole = saved.selectedRole ?? null
       this.comparisonRoleNames = saved.comparisonRoleNames ?? []
       this.weeklyTarget = saved.weeklyTarget ?? null
+    },
+    exportBackup(): CareerBackupState {
+      return clone({
+        profile: this.profile,
+        result: this.result,
+        selectedTier: this.selectedTier,
+        selectedRole: this.selectedRole,
+        comparisonRoleNames: this.comparisonRoleNames,
+        weeklyTarget: this.weeklyTarget,
+      })
+    },
+    restoreBackup(snapshot: CareerBackupState): boolean {
+      if (!snapshot || !Array.isArray(snapshot.comparisonRoleNames)) return false
+      this.profile = clone(snapshot.profile ?? null)
+      this.result = clone(snapshot.result ?? null)
+      this.selectedTier = ["stretch", "stable", "safe"].includes(snapshot.selectedTier)
+        ? snapshot.selectedTier
+        : "stable"
+      this.selectedRole = clone(snapshot.selectedRole ?? null)
+      this.comparisonRoleNames = clone(snapshot.comparisonRoleNames.slice(0, 4))
+      this.weeklyTarget = clone(snapshot.weeklyTarget ?? null)
+      this.checkpoint()
+      return true
     },
     setProfile(profile: CareerProfilePayload): void {
       this.profile = clone(profile)

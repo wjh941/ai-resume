@@ -87,7 +87,11 @@ onMounted(load)
     </view>
     <text v-if="loading" class="notice">Loading drafts...</text>
     <text v-else-if="error" class="error">{{ error }}</text>
-    <text v-else-if="!drafts.length" class="notice">No server drafts yet.</text>
+    <view v-else-if="!drafts.length" class="empty-state">
+      <view class="empty-illustration" aria-hidden="true"><view></view><view></view><view></view></view>
+      <text class="empty-title">No resume drafts yet</text>
+      <text class="notice">Your saved resume history will appear here.</text>
+    </view>
     <view v-for="item in drafts" :key="item.id" class="draft">
       <text class="draft-title">{{ item.jobTitle || item.resume.job.targetRole || "Untitled draft" }}</text>
       <text class="draft-meta">Updated {{ item.updatedAt }}</text>
@@ -105,5 +109,5 @@ onMounted(load)
 .page { min-height: 100vh; box-sizing: border-box; padding: 28rpx; background: #f7f8fa; color: #1f2329; }
 .heading-row { display: flex; align-items: center; justify-content: space-between; gap: 20rpx; }
 .title,.subtitle,.draft-title,.draft-meta,.notice,.error { display: block; }.title { font-size: 40rpx; font-weight: 700; }.subtitle,.draft-meta,.notice { margin-top: 8rpx; color: #86909c; font-size: 24rpx; }.notice,.error { margin-top: 32rpx; text-align: center; }.error { color: #d4380d; }
-.draft { margin-top: 20rpx; padding: 24rpx; background: #fff; border: 1rpx solid #e5e6eb; border-radius: 12rpx; }.draft-title { font-size: 30rpx; font-weight: 600; }.actions { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 20rpx; }.actions button { margin: 0; font-size: 23rpx; }.primary { color: #fff; background: #1677ff; }.danger { color: #d4380d; background: #fff1f0; }
+.draft { margin-top: 20rpx; padding: 24rpx; background: #fff; border: 1rpx solid #e5e6eb; border-radius: 12rpx; }.draft-title { font-size: 30rpx; font-weight: 600; }.actions { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 20rpx; }.actions button { margin: 0; font-size: 23rpx; }.primary { color: #fff; background: #1677ff; }.danger { color: #d4380d; background: #fff1f0; }.empty-state { margin-top: 42rpx; padding: 34rpx 24rpx; text-align: center; }.empty-illustration { display: flex; flex-direction: column; gap: 8rpx; width: 116rpx; margin: 0 auto 20rpx; padding: 20rpx; background: #eef6ff; border: 1rpx solid #d4e8ff; border-radius: 18rpx; }.empty-illustration view { height: 9rpx; background: #9fc8f7; border-radius: 999rpx; }.empty-illustration view:nth-child(2) { width: 76%; }.empty-illustration view:nth-child(3) { width: 54%; }.empty-title { display: block; color: #1f3e61; font-size: 29rpx; font-weight: 700; }
 </style>

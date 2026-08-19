@@ -432,6 +432,13 @@ function openKnowledgebase() {
         <text v-if="error" class="error">{{ error }}</text>
       </view>
 
+      <view v-if="loading" class="result loading-skeleton" aria-live="polite">
+        <view class="skeleton-title"></view>
+        <view class="skeleton-line"></view>
+        <view class="skeleton-line"></view>
+        <view class="skeleton-line short"></view>
+      </view>
+
       <view v-if="consultation.stage === 'identity-selection'" class="identity-card">
         <text class="card-eyebrow">身份定位</text>
         <text v-for="line in identityPromptLines" :key="line" class="identity-prompt">{{ line }}</text>
@@ -765,4 +772,5 @@ function openKnowledgebase() {
 }
 .hero-actions { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 18rpx; }
 .planner-entry { margin-top: 0; padding: 0 24rpx; line-height: 62rpx; border: 1rpx solid #9bc8ff; border-radius: 999rpx; background: rgba(255,255,255,.76); color: #1677ff; font-size: 24rpx; }
+.loading-skeleton { min-height: 250rpx; }.skeleton-title,.skeleton-line { height: 24rpx; margin-top: 20rpx; border-radius: 8rpx; background: linear-gradient(90deg, #edf2f7 25%, #f8fafc 40%, #edf2f7 65%); background-size: 400% 100%; animation: shimmer 1.2s ease-in-out infinite; }.skeleton-title { width: 52%; height: 36rpx; margin-top: 0; }.skeleton-line.short { width: 48%; }@keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
 </style>

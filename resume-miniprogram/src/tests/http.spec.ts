@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { resolveApiUrl } from "../services/http"
+import { resolveApiUrl, toUserMessage } from "../services/http"
 
 describe("resolveApiUrl", () => {
   it("uses the configured public API URL and normalizes its trailing slash", () => {
@@ -20,6 +20,12 @@ describe("resolveApiUrl", () => {
   it("requires an explicit public API URL for a mini-program build", () => {
     expect(() => resolveApiUrl("", "mp-weixin", "/api/job/query")).toThrow(
       "VITE_RESUME_API_URL",
+    )
+  })
+
+  it("hides raw server details from end users", () => {
+    expect(toUserMessage(new Error("Traceback (most recent call last): secret"))).toBe(
+      "The service is temporarily unavailable. Please try again later.",
     )
   })
 })

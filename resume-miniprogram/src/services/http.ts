@@ -2,6 +2,15 @@ import type { ApiEnvelope } from "../types/api"
 
 const API_BASE_URL = import.meta.env.VITE_RESUME_API_URL || ""
 
+const DEFAULT_ERROR_MESSAGE = "The service is temporarily unavailable. Please try again later."
+const RAW_ERROR_PATTERN = /traceback|stack trace|sqlite|sql error|internal server error|at \S+\.\w+ \(/i
+
+export function toUserMessage(reason: unknown, fallback = DEFAULT_ERROR_MESSAGE): string {
+  const message = reason instanceof Error ? reason.message : typeof reason === "string" ? reason : ""
+  if (!message || message.length > 180 || RAW_ERROR_PATTERN.test(message)) return fallback
+  return message
+}
+
 export function resolveApiUrl(
   configuredBaseUrl: string,
   platform: string | undefined,
@@ -32,6 +41,7 @@ export async function request<T>(path: string, method = "GET", data?: unknown): 
   if (!requestFn) throw new Error("当前运行环境不支持网络请求")
   const response = await requestFn({ url: apiUrl(path), method, data })
   const envelope = response.data as Partial<ApiEnvelope<T>>
+  envelope.message = toUserMessage(envelope.message)
   if (response.statusCode && response.statusCode >= 400) {
     throw new Error(envelope.message || `请求失败（${response.statusCode}）`)
   }

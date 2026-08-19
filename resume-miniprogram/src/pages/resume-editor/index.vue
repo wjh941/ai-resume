@@ -13,6 +13,13 @@ import { notify } from "../../utils/notifications"
 const store = useResumeStore()
 const resume = computed(() => store.draft.resume)
 const exporting = ref<"word" | "pdf" | "">("")
+const hasResumeContent = computed(() => Boolean(
+  resume.value.basic.name.trim()
+  || resume.value.job.targetRole.trim()
+  || resume.value.education.length
+  || resume.value.employment.length
+  || resume.value.projects.length,
+))
 
 function backToForm() {
   uni.navigateTo({ url: "/pages/resume-form/index" })
@@ -87,7 +94,19 @@ async function exportResume(kind: "word" | "pdf") {
         <button size="mini" @click="exportResume('pdf')">导出 PDF</button>
       </view>
     </view>
-    <ResumePreview :resume="resume" :template-id="store.draft.templateId" />
+    <view v-if="exporting" class="export-skeleton" aria-live="polite">
+      <view class="skeleton-heading"></view>
+      <view class="skeleton-line"></view>
+      <view class="skeleton-line"></view>
+      <view class="skeleton-line short"></view>
+    </view>
+    <view v-else-if="!hasResumeContent" class="empty-state">
+      <view class="empty-illustration" aria-hidden="true"><view></view><view></view><view></view></view>
+      <text class="empty-title">Start with your resume details</text>
+      <text class="empty-copy">Add your target role and experience before exporting.</text>
+      <button class="primary empty-action" @click="backToForm">Fill in resume</button>
+    </view>
+    <ResumePreview v-else :resume="resume" :template-id="store.draft.templateId" />
   </scroll-view>
 </template>
 
@@ -95,4 +114,6 @@ async function exportResume(kind: "word" | "pdf") {
 .page { min-height: 100vh; padding: 28rpx; box-sizing: border-box; overflow-x: hidden; background: #f7f8fa; }
 .toolbar { display: flex; justify-content: space-between; gap: 24rpx; align-items: center; margin-bottom: 24rpx; }.title { display: block; color: #1f2329; font-size: 40rpx; font-weight: 700; }.subtitle { display: block; margin-top: 8rpx; color: #86909c; font-size: 23rpx; }
 .toolbar-actions { display: flex; gap: 12rpx; }.primary { color: #fff; background: #1677ff; }
+.export-skeleton { min-height: 720rpx; padding: 48rpx; background: #fff; border: 1rpx solid #e7edf5; border-radius: 20rpx; }.skeleton-heading,.skeleton-line { height: 24rpx; margin-top: 24rpx; border-radius: 8rpx; background: linear-gradient(90deg, #edf2f7 25%, #f8fafc 40%, #edf2f7 65%); background-size: 400% 100%; animation: shimmer 1.2s ease-in-out infinite; }.skeleton-heading { width: 46%; height: 40rpx; margin-top: 0; }.skeleton-line { width: 100%; }.skeleton-line.short { width: 58%; }@keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+.empty-state { padding: 70rpx 32rpx; text-align: center; background: #fff; border: 1rpx solid #e7edf5; border-radius: 20rpx; }.empty-illustration { display: flex; flex-direction: column; gap: 9rpx; width: 126rpx; margin: 0 auto 24rpx; padding: 22rpx; background: #eef6ff; border: 1rpx solid #d4e8ff; border-radius: 18rpx; }.empty-illustration view { height: 10rpx; background: #9fc8f7; border-radius: 999rpx; }.empty-illustration view:nth-child(2) { width: 78%; }.empty-illustration view:nth-child(3) { width: 55%; }.empty-title,.empty-copy { display: block; }.empty-title { color: #1f3e61; font-size: 32rpx; font-weight: 700; }.empty-copy { margin-top: 12rpx; color: #728198; font-size: 24rpx; }.empty-action { margin-top: 26rpx; }
 </style>

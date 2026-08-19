@@ -5,6 +5,10 @@ export interface ValidationError {
   message: string
 }
 
+export function toValidationErrorMap(errors: ValidationError[]): Record<string, string> {
+  return Object.fromEntries(errors.map((error) => [error.field, error.message]))
+}
+
 const PHONE_PATTERN = /^1\d{10}$/
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
