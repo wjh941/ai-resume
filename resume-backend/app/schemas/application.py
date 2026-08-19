@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
@@ -38,6 +38,9 @@ class ApplicationSaveRequest(BaseModel):
     interview_notes: str = Field(default="", max_length=8_000)
     draft_id: str | None = Field(default=None, max_length=120)
     notes: str = Field(default="", max_length=4_000)
+    contact_info: str = Field(default="", max_length=1_000)
+    attachment_ref: str = Field(default="", max_length=1_000)
+    next_interview_at: datetime | None = None
 
     @field_validator(
         "id",
@@ -48,6 +51,8 @@ class ApplicationSaveRequest(BaseModel):
         "interview_notes",
         "draft_id",
         "notes",
+        "contact_info",
+        "attachment_ref",
     )
     @classmethod
     def normalize_fields(cls, value: str | None, info) -> str | None:
@@ -62,6 +67,8 @@ class ApplicationSaveRequest(BaseModel):
             "interview_notes": 8_000,
             "draft_id": 120,
             "notes": 4_000,
+            "contact_info": 1_000,
+            "attachment_ref": 1_000,
         }
         required = info.field_name == "role_name"
         normalized = _normalize(value, limits[info.field_name], required=required)
@@ -70,7 +77,27 @@ class ApplicationSaveRequest(BaseModel):
         return normalized
 
 
+class TimelineEventRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=240)
+    description: str = Field(default="", max_length=4_000)
+    occurred_at: datetime
+
+    @field_validator("title", "description")
+    @classmethod
+    def normalize_text(cls, value: str, info) -> str:
+        return _normalize(value, 240 if info.field_name == "title" else 4_000, required=info.field_name == "title")
+
+
+class TimelineEvent(TimelineEventRequest):
+    id: str
+
+
+class InterviewReminderRequest(BaseModel):
+    reminder_at: datetime
+
+
 class ApplicationRecord(ApplicationSaveRequest):
     id: str
+    timeline: list[TimelineEvent] = Field(default_factory=list)
     created_at: str
     updated_at: str
