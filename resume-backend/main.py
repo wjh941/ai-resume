@@ -19,6 +19,7 @@ from app.db import initialize_database
 from app.repositories.assessment import AssessmentNotFoundError, AssessmentRepository
 from app.repositories.career_catalog import CareerCatalogRepository
 from app.repositories.career_profiles import CareerProfileNotFoundError, CareerProfileRepository
+from app.repositories.career_tasks import CareerTaskNotFoundError, CareerTaskRepository
 from app.repositories.drafts import DraftNotFoundError, DraftRepository
 from app.repositories.evidence import EvidenceRepository
 from app.repositories.knowledgebase import KnowledgebaseRepository, KnowledgebaseRoleNotFoundError
@@ -161,6 +162,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.career_catalog_repository = CareerCatalogRepository(database_target)
     app.state.career_profile_repository = CareerProfileRepository(database_target)
+    app.state.career_task_repository = CareerTaskRepository(database_target)
     app.state.career_recommender = CareerRecommender(
         app.state.career_catalog_repository
     )
@@ -198,6 +200,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             status_code=404,
             content=error("not_found", "Career profile not found"),
         )
+
+    @app.exception_handler(CareerTaskNotFoundError)
+    def career_task_not_found(_: Request, __: CareerTaskNotFoundError):
+        return JSONResponse(status_code=404, content=error("not_found", "Career task not found"))
 
     @app.exception_handler(AssessmentNotFoundError)
     def assessment_not_found(_: Request, __: AssessmentNotFoundError):

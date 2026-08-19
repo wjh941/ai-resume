@@ -8,6 +8,9 @@ from app.repositories.drafts import DraftNotFoundError
 from app.schemas.career import (
     CareerComparisonRequest,
     CareerProfilePayload,
+    CareerTaskGenerateRequest,
+    CareerTaskSaveRequest,
+    CareerTaskUpdateRequest,
     ComparisonActionPlan,
     JobPlanRequest,
     JobPlanResponse,
@@ -137,6 +140,59 @@ async def save_career_profile(
 async def get_career_profile(request: Request, user_id: str = Depends(current_user_id)):
     profile = request.app.state.career_profile_repository.get(user_id)
     return success(profile.model_dump())
+
+
+@router.get("/api/career/tasks")
+async def list_career_tasks(
+    request: Request,
+    plan_id: str = Query(min_length=1, max_length=120),
+    user_id: str = Depends(current_user_id),
+):
+    items = request.app.state.career_task_repository.list(user_id, plan_id)
+    return success({"items": [item.model_dump(mode="json") for item in items]})
+
+
+@router.post("/api/career/tasks")
+async def save_career_task(
+    payload: CareerTaskSaveRequest,
+    request: Request,
+    user_id: str = Depends(current_user_id),
+):
+    task = request.app.state.career_task_repository.save(user_id, payload)
+    return success(task.model_dump(mode="json"))
+
+
+@router.patch("/api/career/tasks/{task_id}")
+async def update_career_task(
+    task_id: str,
+    payload: CareerTaskUpdateRequest,
+    request: Request,
+    user_id: str = Depends(current_user_id),
+):
+    task = request.app.state.career_task_repository.update(user_id, task_id, payload)
+    return success(task.model_dump(mode="json"))
+
+
+@router.delete("/api/career/tasks/{task_id}")
+async def delete_career_task(
+    task_id: str,
+    request: Request,
+    user_id: str = Depends(current_user_id),
+):
+    request.app.state.career_task_repository.delete(user_id, task_id)
+    return success({"id": task_id})
+
+
+@router.post("/api/career/tasks/generate")
+async def generate_career_tasks(
+    payload: CareerTaskGenerateRequest,
+    request: Request,
+    user_id: str = Depends(current_user_id),
+):
+    items = request.app.state.career_task_repository.generate_from_action_plan(
+        user_id, payload.plan_id, payload.action_plan
+    )
+    return success({"items": [item.model_dump(mode="json") for item in items]})
 
 
 @router.post("/api/career/recommend")

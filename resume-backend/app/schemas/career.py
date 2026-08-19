@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -208,6 +209,50 @@ class ComparisonActionPlan(BaseModel):
     seven_day: list[str]
     thirty_day: list[str]
     ninety_day: list[str]
+
+
+CareerTaskStatus = Literal["pending", "completed"]
+
+
+class CareerTaskSaveRequest(BaseModel):
+    id: str | None = Field(default=None, max_length=120)
+    plan_id: str = Field(min_length=1, max_length=120)
+    title: str = Field(min_length=1, max_length=240)
+    description: str = Field(default="", max_length=4_000)
+    due_date: date | None = None
+    status: CareerTaskStatus = "pending"
+    link_to_application_id: str | None = Field(default=None, max_length=120)
+    link_to_evidence_id: str | None = Field(default=None, max_length=120)
+
+    @field_validator("plan_id", "title")
+    @classmethod
+    def normalize_required_task_text(cls, value: str) -> str:
+        return _normalize_text(value, "task text")
+
+    @field_validator("description", "link_to_application_id", "link_to_evidence_id")
+    @classmethod
+    def normalize_optional_task_text(cls, value: str | None) -> str | None:
+        return " ".join(value.split()) if value is not None else None
+
+
+class CareerTaskUpdateRequest(BaseModel):
+    title: str | None = Field(default=None, max_length=240)
+    description: str | None = Field(default=None, max_length=4_000)
+    due_date: date | None = None
+    status: CareerTaskStatus | None = None
+    link_to_application_id: str | None = Field(default=None, max_length=120)
+    link_to_evidence_id: str | None = Field(default=None, max_length=120)
+
+
+class CareerTaskRecord(CareerTaskSaveRequest):
+    id: str
+    created_at: str
+    updated_at: str
+
+
+class CareerTaskGenerateRequest(BaseModel):
+    plan_id: str = Field(min_length=1, max_length=120)
+    action_plan: ComparisonActionPlan
 
 
 class JobPlanRequest(BaseModel):
