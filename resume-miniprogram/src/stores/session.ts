@@ -1,13 +1,25 @@
 const CLIENT_ID_KEY = "resume_demo_client_id"
+const AUTH_TOKEN_KEY = "resume_demo_auth_token"
+const AUTH_USER_KEY = "resume_demo_auth_user"
+
+export type AuthSessionUser = {
+  userId: string
+  phone: string
+}
 
 type UniStorage = {
   getStorageSync(key: string): unknown
   setStorageSync(key: string, value: unknown): void
+  removeStorageSync?(key: string): void
 }
 
 function storage(): UniStorage | null {
   const candidate = (globalThis as typeof globalThis & { uni?: UniStorage }).uni
-  return candidate ?? null
+  return candidate
+    && typeof candidate.getStorageSync === "function"
+    && typeof candidate.setStorageSync === "function"
+    ? candidate
+    : null
 }
 
 function generateId(): string {
@@ -38,4 +50,35 @@ export function getClientId(): string {
   const clientId = generateId()
   uniStorage.setStorageSync(CLIENT_ID_KEY, clientId)
   return clientId
+}
+
+export function getAuthToken(): string | null {
+  const token = storage()?.getStorageSync(AUTH_TOKEN_KEY)
+  return typeof token === "string" && token ? token : null
+}
+
+export function getAuthUser(): AuthSessionUser | null {
+  const user = storage()?.getStorageSync(AUTH_USER_KEY)
+  if (!user || typeof user !== "object") return null
+  const candidate = user as Partial<AuthSessionUser>
+  return typeof candidate.userId === "string" && typeof candidate.phone === "string"
+    ? { userId: candidate.userId, phone: candidate.phone }
+    : null
+}
+
+export function setAuthSession(token: string, user: AuthSessionUser): void {
+  const uniStorage = storage()
+  uniStorage?.setStorageSync(AUTH_TOKEN_KEY, token)
+  uniStorage?.setStorageSync(AUTH_USER_KEY, user)
+}
+
+export function clearAuthSession(): void {
+  const uniStorage = storage()
+  if (uniStorage?.removeStorageSync) {
+    uniStorage.removeStorageSync(AUTH_TOKEN_KEY)
+    uniStorage.removeStorageSync(AUTH_USER_KEY)
+    return
+  }
+  uniStorage?.setStorageSync(AUTH_TOKEN_KEY, "")
+  uniStorage?.setStorageSync(AUTH_USER_KEY, "")
 }
