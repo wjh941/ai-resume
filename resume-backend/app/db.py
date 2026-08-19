@@ -250,11 +250,68 @@ def initialize_database(database_path: DatabaseTarget, *, timeout_seconds: float
                 interview_notes TEXT NOT NULL,
                 draft_id TEXT,
                 notes TEXT NOT NULL,
+                contact_info TEXT NOT NULL DEFAULT '',
+                attachment_ref TEXT NOT NULL DEFAULT '',
+                timeline_json TEXT NOT NULL DEFAULT '[]',
+                next_interview_at TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
             CREATE INDEX IF NOT EXISTS idx_application_tracker_client_status
             ON application_tracker (client_id, status, next_action_at, updated_at DESC);
+            CREATE TABLE IF NOT EXISTS interview_reminder (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL REFERENCES users(user_id),
+                application_id TEXT NOT NULL REFERENCES application_tracker(id) ON DELETE CASCADE,
+                reminder_at TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_interview_reminder_owner_due
+            ON interview_reminder (user_id, status, reminder_at ASC);
+            CREATE TABLE IF NOT EXISTS resume_version (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL REFERENCES users(user_id),
+                draft_id TEXT NOT NULL REFERENCES user_draft(id) ON DELETE CASCADE,
+                note TEXT NOT NULL DEFAULT '',
+                payload_json TEXT NOT NULL,
+                is_active INTEGER NOT NULL DEFAULT 0 CHECK (is_active IN (0, 1)),
+                created_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_resume_version_owner_draft_created
+            ON resume_version (user_id, draft_id, created_at DESC, id DESC);
+            CREATE TABLE IF NOT EXISTS career_task (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL REFERENCES users(user_id),
+                plan_id TEXT NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT NOT NULL DEFAULT '',
+                due_date TEXT,
+                status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed')),
+                link_to_application_id TEXT,
+                link_to_evidence_id TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_career_task_owner_plan_due
+            ON career_task (user_id, plan_id, status, due_date ASC, updated_at DESC);
+            CREATE TABLE IF NOT EXISTS background_task_lock (
+                task_name TEXT PRIMARY KEY,
+                owner_id TEXT NOT NULL,
+                lease_expires_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS job_match_alert (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL REFERENCES users(user_id),
+                alert_key TEXT NOT NULL UNIQUE,
+                match_filter TEXT NOT NULL DEFAULT '',
+                status TEXT NOT NULL DEFAULT 'pending',
+                created_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_job_match_alert_owner_created
+            ON job_match_alert (user_id, created_at DESC, id DESC);
             CREATE TABLE IF NOT EXISTS template_table (
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
@@ -435,6 +492,7 @@ def initialize_database(database_path: DatabaseTarget, *, timeout_seconds: float
         _migrate_user_ownership(connection)
         _migrate_catalog_provenance(connection)
         _migrate_phase7_lifecycle(connection)
+        _migrate_phase9_lifecycle(connection)
         _seed_initial_data(connection)
         _migrate_legacy_job_cache(connection)
 
@@ -571,6 +629,70 @@ def _migrate_phase7_lifecycle(connection: sqlite3.Connection) -> None:
     _ensure_column(connection, "job_match_subscription", "last_notify_at", "TEXT")
     _ensure_column(connection, "order_record", "provider_transaction_id", "TEXT")
     _migrate_order_statuses(connection)
+
+
+def _migrate_phase9_lifecycle(connection: sqlite3.Connection) -> None:
+    _ensure_column(connection, "application_tracker", "contact_info", "TEXT NOT NULL DEFAULT ''")
+    _ensure_column(connection, "application_tracker", "attachment_ref", "TEXT NOT NULL DEFAULT ''")
+    _ensure_column(connection, "application_tracker", "timeline_json", "TEXT NOT NULL DEFAULT '[]'")
+    _ensure_column(connection, "application_tracker", "next_interview_at", "TEXT")
+    connection.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS interview_reminder (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL REFERENCES users(user_id),
+            application_id TEXT NOT NULL REFERENCES application_tracker(id) ON DELETE CASCADE,
+            reminder_at TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_interview_reminder_owner_due
+        ON interview_reminder (user_id, status, reminder_at ASC);
+        CREATE TABLE IF NOT EXISTS resume_version (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL REFERENCES users(user_id),
+            draft_id TEXT NOT NULL REFERENCES user_draft(id) ON DELETE CASCADE,
+            note TEXT NOT NULL DEFAULT '',
+            payload_json TEXT NOT NULL,
+            is_active INTEGER NOT NULL DEFAULT 0 CHECK (is_active IN (0, 1)),
+            created_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_resume_version_owner_draft_created
+        ON resume_version (user_id, draft_id, created_at DESC, id DESC);
+        CREATE TABLE IF NOT EXISTS career_task (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL REFERENCES users(user_id),
+            plan_id TEXT NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            due_date TEXT,
+            status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed')),
+            link_to_application_id TEXT,
+            link_to_evidence_id TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_career_task_owner_plan_due
+        ON career_task (user_id, plan_id, status, due_date ASC, updated_at DESC);
+        CREATE TABLE IF NOT EXISTS background_task_lock (
+            task_name TEXT PRIMARY KEY,
+            owner_id TEXT NOT NULL,
+            lease_expires_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS job_match_alert (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL REFERENCES users(user_id),
+            alert_key TEXT NOT NULL UNIQUE,
+            match_filter TEXT NOT NULL DEFAULT '',
+            status TEXT NOT NULL DEFAULT 'pending',
+            created_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_job_match_alert_owner_created
+        ON job_match_alert (user_id, created_at DESC, id DESC);
+        """
+    )
 
 
 def _ensure_column(connection: sqlite3.Connection, table: str, column: str, definition: str) -> None:

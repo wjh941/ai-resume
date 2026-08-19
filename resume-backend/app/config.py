@@ -71,6 +71,9 @@ class Settings:
     sqlite_timeout_seconds: float = 3.0
     auth_rate_limit_max_requests: int = 10
     auth_rate_limit_window_seconds: int = 60
+    worker_enabled: bool = False
+    worker_scan_interval_seconds: int = 300
+    worker_lock_ttl_seconds: int = 600
 
     @property
     def database_target(self) -> Path | str:
@@ -155,4 +158,7 @@ def load_settings() -> Settings:
         cors_origins=_read_csv("CORS_ORIGINS"),
         auth_rate_limit_max_requests=int(os.getenv("AUTH_RATE_LIMIT_MAX_REQUESTS", "10")),
         auth_rate_limit_window_seconds=int(os.getenv("AUTH_RATE_LIMIT_WINDOW_SECONDS", "60")),
+        worker_enabled=_read_bool("WORKER_ENABLED", False),
+        worker_scan_interval_seconds=max(15, int(os.getenv("TASK_SCAN_INTERVAL_SECONDS", "300"))),
+        worker_lock_ttl_seconds=max(30, int(os.getenv("WORKER_LOCK_TTL_SECONDS", "600"))),
     )
