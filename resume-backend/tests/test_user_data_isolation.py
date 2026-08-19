@@ -92,7 +92,8 @@ def test_assessment_and_download_records_are_bound_to_the_repository_user(api_cl
         answers={"interest": 5},
         result={"recommended_roles": ["Data Engineer"]},
     )
-    output_path = Path(tmp_path) / "resume.docx"
+    output_path = api_client.app.state.settings.temp_file_path / "resume.docx"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text("resume", encoding="utf-8")
     download = downloads.register(owner.user_id, output_path, "resume.docx")
 

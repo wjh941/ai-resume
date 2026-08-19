@@ -5,11 +5,17 @@ const API_BASE_URL = import.meta.env.VITE_RESUME_API_URL || ""
 
 const DEFAULT_ERROR_MESSAGE = "The service is temporarily unavailable. Please try again later."
 const RAW_ERROR_PATTERN = /traceback|stack trace|sqlite|sql error|internal server error|at \S+\.\w+ \(/i
+const CONFIGURATION_HINTS: Array<[RegExp, string]> = [
+  [/sms delivery is not configured/i, "SMS sign-in is not configured for this environment. Contact the service administrator."],
+  [/wechat.*not configured|https whitelisted redirect/i, "WeChat sign-in needs an approved HTTPS callback domain."],
+  [/payment channel.*not configured/i, "Payment is not configured for this environment. Choose another available option."],
+  [/export could not be generated|export output path/i, "Your export could not be saved. Please try again or contact support."],
+]
 
 export function toUserMessage(reason: unknown, fallback = DEFAULT_ERROR_MESSAGE): string {
   const message = reason instanceof Error ? reason.message : typeof reason === "string" ? reason : ""
   if (!message || message.length > 180 || RAW_ERROR_PATTERN.test(message)) return fallback
-  return message
+  return CONFIGURATION_HINTS.find(([pattern]) => pattern.test(message))?.[1] || message
 }
 
 export function resolveApiUrl(
