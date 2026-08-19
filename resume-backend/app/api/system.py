@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-import sqlite3
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request
@@ -66,22 +65,37 @@ def _ai_status(settings: Settings) -> dict[str, object]:
 
 
 def health_detail(settings: Settings) -> dict[str, object]:
+    summary = health_summary(settings)
+    return {**summary, "storage": _storage_health(settings)}
+
+
+def health_summary(settings: Settings) -> dict[str, object]:
     database = _database_health(settings)
-    storage = _storage_health(settings)
     return {
-        "status": "healthy" if database["status"] == "connected" and storage["status"] == "ready" else "degraded",
+        "status": "healthy" if database["status"] == "connected" else "degraded",
         "database": database,
-        "storage": storage,
+        "backup": {
+            "status": "manual",
+            "hint": "Run the platform backup script and validate a restore before production deployment.",
+        },
+        "critical_config": {
+            "production": settings.production,
+            "database_url_configured": bool(settings.database_url),
+            "cors_origin_count": len(settings.cors_origins),
+            "sms_configured": bool(settings.sms_http_endpoint and settings.sms_access_key and settings.sms_access_secret),
+            "wechat_oauth_configured": bool(settings.wechat_open_app_id and settings.wechat_open_app_secret and settings.wechat_open_redirect_uri),
+            "payment_callback_configured": bool(settings.payment_callback_secret),
+        },
     }
 
 
 def _database_health(settings: Settings) -> dict[str, str]:
     try:
-        with connect(settings.database_path) as connection:
+        with connect(settings.database_target) as connection:
             connection.execute("SELECT 1").fetchone()
-    except sqlite3.Error:
-        return {"status": "unavailable"}
-    return {"status": "connected"}
+    except Exception:
+        return {"status": "unavailable", "type": settings.database_kind}
+    return {"status": "connected", "type": settings.database_kind}
 
 
 def _storage_health(settings: Settings) -> dict[str, str]:

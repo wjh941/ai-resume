@@ -50,6 +50,15 @@ from pydantic import ValidationError
 logger = logging.getLogger("resume_api")
 
 
+def _add_security_headers(response: JSONResponse, production: bool) -> None:
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    if production:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.download_service.cleanup_expired()
@@ -76,7 +85,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         timeout_seconds=settings.sqlite_timeout_seconds,
     )
 
-    app = FastAPI(title="Resume Demo API", lifespan=lifespan)
+    app = FastAPI(
+        title="Resume Demo API",
+        debug=False,
+        docs_url=None if settings.production else "/docs",
+        redoc_url=None if settings.production else "/redoc",
+        openapi_url=None if settings.production else "/openapi.json",
+        lifespan=lifespan,
+    )
     if settings.cors_origins:
         # 一期前端/小程序跨域白名单；生产必须填写确切 HTTPS 域名，禁止使用通配符。
         app.add_middleware(
@@ -96,6 +112,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.middleware("http")
     async def add_request_id_and_limit_auth(request: Request, call_next):
         request_id = uuid4().hex
+        origin = request.headers.get("origin")
+        if settings.production and origin and origin not in settings.cors_origins:
+            response = JSONResponse(
+                status_code=403,
+                content=error("origin_forbidden", "Origin is not allowed."),
+            )
+            response.headers["X-Request-ID"] = request_id
+            _add_security_headers(response, settings.production)
+            return response
         if request.method == "POST" and request.url.path.startswith("/api/auth/"):
             client_host = request.client.host if request.client else "unknown"
             key = f"{request.method}:{request.url.path}:{client_host}"
@@ -107,10 +132,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     headers={"Retry-After": str(decision.retry_after_seconds)},
                 )
                 response.headers["X-Request-ID"] = request_id
+                _add_security_headers(response, settings.production)
                 return response
 
         response = await call_next(request)
         response.headers["X-Request-ID"] = request_id
+        _add_security_headers(response, settings.production)
         return response
     app.state.user_repository = UserRepository(database_target)
     app.state.account_privacy_repository = AccountPrivacyRepository(database_target)
@@ -286,8 +313,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/health")
     def health():
-        # Frontend reconnection verifies capabilities so an old process cannot masquerade as current code.
-        return success({"status": "healthy", "capabilities": ["job_plan", "job_match", "ai_setup"]})
+        summary = system.health_summary(settings)
+        return success({
+            "status": summary["status"],
+            "capabilities": ["job_plan", "job_match", "ai_setup"],
+            "database_type": summary["database"]["type"],
+            "backup": summary["backup"],
+            "critical_config": summary["critical_config"],
+        })
 
     @app.get("/health/detail")
     def health_detail():

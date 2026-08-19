@@ -13,6 +13,7 @@ from app.schemas.resume import ResumePayload
 from app.services.export_filenames import build_export_filename
 from app.services.export_pdf import PdfRendererUnavailableError, render_pdf_resume
 from app.services.export_word import render_word_resume
+from app.services.downloads import ExportPathError
 from app.services.auth import current_user_id
 from app.services.membership import VipStatus, get_current_vip
 
@@ -56,7 +57,7 @@ def export_word(
     try:
         render_word_resume(resume, output_path, access.vip.watermark_text)
         result = request.app.state.download_service.register(access.user_id, output_path, filename)
-    except OSError as error:
+    except (OSError, ExportPathError) as error:
         _discard_partial_output(output_path)
         raise ExportGenerationError("Word export failed") from error
     return success(result.model_dump(mode="json"))
@@ -84,7 +85,7 @@ async def export_pdf(
             access.vip.watermark_text,
         )
         result = request.app.state.download_service.register(access.user_id, output_path, filename)
-    except (OSError, PdfRendererUnavailableError) as error:
+    except (OSError, PdfRendererUnavailableError, ExportPathError) as error:
         _discard_partial_output(output_path)
         raise ExportGenerationError("PDF export failed") from error
     return success(result.model_dump(mode="json"))

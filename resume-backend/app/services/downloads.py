@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+import time
 from uuid import uuid4
 
 from app.db import connect
@@ -10,6 +11,10 @@ from app.schemas.exports import ExportResult
 
 
 class DownloadNotFoundError(Exception):
+    pass
+
+
+class ExportPathError(Exception):
     pass
 
 
@@ -22,6 +27,8 @@ class DownloadFile:
 
 
 class DownloadService:
+    _GENERATED_EXPORT_SUFFIXES = frozenset({".docx", ".pdf", ".xlsx", ".zip"})
+
     def __init__(self, database_path: Path, temp_directory: Path, expire_minutes: int) -> None:
         self._database_path = database_path
         self._temp_directory = temp_directory.resolve()
@@ -29,6 +36,10 @@ class DownloadService:
 
     def register(self, user_id: str, output_path: Path, filename: str) -> ExportResult:
         output_path = output_path.resolve()
+        try:
+            output_path.relative_to(self._temp_directory)
+        except ValueError as error:
+            raise ExportPathError("Export output path is outside controlled storage.") from error
         now = datetime.now(timezone.utc)
         expires_at = now + timedelta(minutes=self._expire_minutes)
         token = uuid4().hex
@@ -78,7 +89,23 @@ class DownloadService:
         self._delete_records([row["token"] for row in rows])
         for row in rows:
             self._delete_file_if_owned(Path(row["file_path"]))
-        return len(rows)
+        return len(rows) + self._cleanup_orphan_exports()
+
+    def _cleanup_orphan_exports(self) -> int:
+        if not self._temp_directory.is_dir():
+            return 0
+        cutoff = time.time() - self._expire_minutes * 60
+        removed = 0
+        for path in self._temp_directory.iterdir():
+            if path.suffix.lower() not in self._GENERATED_EXPORT_SUFFIXES:
+                continue
+            try:
+                if path.is_file() and path.stat().st_mtime <= cutoff:
+                    path.unlink()
+                    removed += 1
+            except OSError:
+                continue
+        return removed
 
     def _delete_records(self, tokens: list[str]) -> None:
         if not tokens:
