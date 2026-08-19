@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
+import hmac
 
 from fastapi import Depends, Request
 
@@ -26,6 +28,10 @@ class MembershipPackageConflictError(Exception):
 class PaymentChannelUnavailableError(Exception):
     """真实支付验签尚未接入时的明确服务端提示，不能伪装成会员权限不足。"""
 
+    pass
+
+
+class PaymentSignatureInvalidError(Exception):
     pass
 
 
@@ -116,6 +122,7 @@ class MembershipService:
         return [package.as_dict() for package in PACKAGES.values()]
 
     def create_order(self, user_id: str, package_type: str, auto_renew: bool) -> OrderRecord:
+        self._repository.expire_pending_orders(user_id, self._settings.order_payment_expire_minutes)
         package = PACKAGES[package_type]
         current = self.current_vip(user_id)
         if current.vip_level == "premium" and package.vip_level != "premium":
@@ -123,7 +130,14 @@ class MembershipService:
             raise MembershipPackageConflictError
         return self._repository.create_order(user_id, package_type, package.total_amount, auto_renew)
 
-    def fulfill_payment(self, user_id: str, order_id: str, payment_channel: str) -> tuple[OrderRecord, VipStatus]:
+    def fulfill_payment(
+        self,
+        user_id: str,
+        order_id: str,
+        payment_channel: str,
+        provider_transaction_id: str | None = None,
+        signature: str | None = None,
+    ) -> tuple[OrderRecord, VipStatus]:
         # 模拟回调在生产环境绝不允许由配置反向开启，避免任何登录用户自行完成订单。
         if payment_channel == "demo" and (
             self._settings.app_env.strip().lower() == "production"
@@ -131,17 +145,41 @@ class MembershipService:
         ):
             raise PaymentDemoDisabledError
         if payment_channel != "demo":
-            # 后续在这里校验微信支付/支付宝签名；未配置商户密钥时不允许伪造成功回调。
-            raise PaymentChannelUnavailableError
+            self._verify_provider_signature(order_id, payment_channel, provider_transaction_id, signature)
         order = self._repository.get_order(user_id, order_id)
         package = PACKAGES[order.package_type]
         completed, status = self._repository.fulfill_order(
-            user_id, order_id, payment_channel, package.vip_level, package.duration_days
+            user_id,
+            order_id,
+            payment_channel,
+            package.vip_level,
+            package.duration_days,
+            self._settings.order_payment_expire_minutes,
+            provider_transaction_id,
         )
         return completed, self._status_from_record(status)
 
     def list_orders(self, user_id: str) -> list[dict[str, object]]:
+        self._repository.expire_pending_orders(user_id, self._settings.order_payment_expire_minutes)
         return [order.as_dict() for order in self._repository.list_orders(user_id)]
+
+    def _verify_provider_signature(
+        self,
+        order_id: str,
+        payment_channel: str,
+        provider_transaction_id: str | None,
+        signature: str | None,
+    ) -> None:
+        secret = self._settings.payment_callback_secret
+        if not secret:
+            raise PaymentChannelUnavailableError
+        if not provider_transaction_id or not signature:
+            raise PaymentSignatureInvalidError
+        # TODO: Replace this gateway-neutral HMAC with the provider's canonical callback verification before go-live.
+        payload = f"{order_id}:{payment_channel}:paid:{provider_transaction_id}".encode("utf-8")
+        expected = hmac.new(secret.encode("utf-8"), payload, hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(expected, signature):
+            raise PaymentSignatureInvalidError
 
     @staticmethod
     def _status_from_record(record: VipRecord) -> VipStatus:

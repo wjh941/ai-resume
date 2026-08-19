@@ -145,7 +145,10 @@ def initialize_database(database_path: Path, *, timeout_seconds: float | None = 
                 phone TEXT NOT NULL UNIQUE,
                 token_version INTEGER NOT NULL DEFAULT 1 CHECK (token_version >= 1),
                 created_at TEXT NOT NULL,
-                last_login TEXT NOT NULL
+                last_login TEXT NOT NULL,
+                is_deleted INTEGER NOT NULL DEFAULT 0 CHECK (is_deleted IN (0, 1)),
+                deleted_at TEXT,
+                privacy_consent_at TEXT
             );
             CREATE TABLE IF NOT EXISTS user_draft (
                 id TEXT PRIMARY KEY,
@@ -230,9 +233,10 @@ def initialize_database(database_path: Path, *, timeout_seconds: float | None = 
                 user_id TEXT NOT NULL REFERENCES users(user_id),
                 package_type TEXT NOT NULL CHECK (package_type IN ('monthly', 'quarterly', 'annual')),
                 total_amount INTEGER NOT NULL CHECK (total_amount >= 0),
-                payment_status TEXT NOT NULL CHECK (payment_status IN ('pending', 'paid', 'closed')),
+                payment_status TEXT NOT NULL CHECK (payment_status IN ('pending', 'paid', 'closed', 'expired')),
                 create_time TEXT NOT NULL,
                 payment_channel TEXT,
+                provider_transaction_id TEXT,
                 entitlement_expire_time TEXT,
                 auto_renew INTEGER NOT NULL DEFAULT 0
             );
@@ -370,6 +374,7 @@ def initialize_database(database_path: Path, *, timeout_seconds: float | None = 
         )
         _migrate_user_ownership(connection)
         _migrate_catalog_provenance(connection)
+        _migrate_phase7_lifecycle(connection)
         connection.executemany(
             """
             INSERT OR IGNORE INTO template_table (id, name, description, config_json)
@@ -486,3 +491,54 @@ def _migrate_user_ownership(connection: sqlite3.Connection) -> None:
         ("download_file", "idx_download_file_owner", "user_id"),
     ):
         connection.execute(f"CREATE INDEX IF NOT EXISTS {index_name} ON {table} ({columns})")
+
+
+def _migrate_phase7_lifecycle(connection: sqlite3.Connection) -> None:
+    _ensure_column(connection, "users", "is_deleted", "INTEGER NOT NULL DEFAULT 0")
+    _ensure_column(connection, "users", "deleted_at", "TEXT")
+    _ensure_column(connection, "users", "privacy_consent_at", "TEXT")
+    _ensure_column(connection, "job_match_subscription", "match_filter", "TEXT NOT NULL DEFAULT ''")
+    _ensure_column(connection, "job_match_subscription", "last_notify_at", "TEXT")
+    _ensure_column(connection, "order_record", "provider_transaction_id", "TEXT")
+    _migrate_order_statuses(connection)
+
+
+def _ensure_column(connection: sqlite3.Connection, table: str, column: str, definition: str) -> None:
+    columns = {str(row["name"]) for row in connection.execute(f"PRAGMA table_info({table})")}
+    if column not in columns:
+        connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
+
+def _migrate_order_statuses(connection: sqlite3.Connection) -> None:
+    row = connection.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'order_record'"
+    ).fetchone()
+    if row is None or "'expired'" in str(row["sql"]):
+        return
+    connection.executescript(
+        """
+        ALTER TABLE order_record RENAME TO order_record_legacy;
+        CREATE TABLE order_record (
+            order_id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL REFERENCES users(user_id),
+            package_type TEXT NOT NULL CHECK (package_type IN ('monthly', 'quarterly', 'annual')),
+            total_amount INTEGER NOT NULL CHECK (total_amount >= 0),
+            payment_status TEXT NOT NULL CHECK (payment_status IN ('pending', 'paid', 'closed', 'expired')),
+            create_time TEXT NOT NULL,
+            payment_channel TEXT,
+            provider_transaction_id TEXT,
+            entitlement_expire_time TEXT,
+            auto_renew INTEGER NOT NULL DEFAULT 0
+        );
+        INSERT INTO order_record (
+            order_id, user_id, package_type, total_amount, payment_status, create_time,
+            payment_channel, entitlement_expire_time, auto_renew
+        ) SELECT
+            order_id, user_id, package_type, total_amount, payment_status, create_time,
+            payment_channel, entitlement_expire_time, auto_renew
+        FROM order_record_legacy;
+        DROP TABLE order_record_legacy;
+        CREATE INDEX IF NOT EXISTS idx_order_record_owner_created
+        ON order_record (user_id, create_time DESC, order_id DESC);
+        """
+    )

@@ -29,11 +29,13 @@ def delete_favorite(favorite_id: str, request: Request, user_id: str = Depends(c
 
 @router.get("/subscription")
 def get_subscription(request: Request, user_id: str = Depends(current_user_id)):
-    return success({"enabled": request.app.state.job_collection_repository.subscription_enabled(user_id)})
+    return success(request.app.state.job_collection_repository.subscription(user_id).as_dict())
 
 
 @router.put("/subscription")
 def update_subscription(payload: JobSubscriptionUpdate, request: Request, user_id: str = Depends(current_user_id)):
     # TODO: Connect an approved external source and notification channel in a later phase.
-    enabled = request.app.state.job_collection_repository.set_subscription_enabled(user_id, payload.enabled)
-    return success({"enabled": enabled})
+    subscription = request.app.state.job_collection_repository.set_subscription(
+        user_id, payload.enabled, payload.match_filter
+    )
+    return success(subscription.as_dict())

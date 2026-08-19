@@ -3,7 +3,7 @@ from __future__ import annotations
 from conftest import make_draft_payload
 
 
-def test_account_lifecycle_skeleton_is_authenticated_and_non_destructive(api_client):
+def test_account_lifecycle_is_authenticated_and_invalidates_deleted_session(api_client):
     draft = api_client.post("/api/draft/save", json=make_draft_payload())
     assert draft.status_code == 200
     draft_id = draft.json()["data"]["id"]
@@ -12,15 +12,14 @@ def test_account_lifecycle_skeleton_is_authenticated_and_non_destructive(api_cli
     assert scope.status_code == 200
     assert "resume_drafts" in scope.json()["data"]["categories"]
 
-    deletion = api_client.post("/api/account/deletion-request")
     export = api_client.post("/api/account/data-export")
-    assert deletion.status_code == 200
-    assert deletion.json()["data"]["status"] == "requested"
     assert export.status_code == 200
-    assert export.json()["data"]["status"] == "not_started"
+    assert export.json()["data"]["status"] == "ready"
 
-    preserved = api_client.get(f"/api/draft/{draft_id}")
-    assert preserved.status_code == 200
+    deletion = api_client.post("/api/account/deletion-request")
+    assert deletion.status_code == 200
+    assert deletion.json()["data"]["status"] == "deleted"
+    assert api_client.get(f"/api/draft/{draft_id}").status_code == 401
 
 
 def test_job_favorites_are_owned_by_the_authenticated_user_and_subscription_persists(api_client, auth_headers):

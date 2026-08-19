@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api import account, ai, applications, assessment, auth, career, consultation, drafts, evidence, exports, job_collections, knowledgebase, membership, system, templates
+from app.repositories.account_privacy import AccountPrivacyRepository
 from app.repositories.applications import ApplicationNotFoundError, ApplicationRepository
 from app.config import Settings, load_settings
 from app.db import initialize_database
@@ -22,7 +23,7 @@ from app.repositories.drafts import DraftNotFoundError, DraftRepository
 from app.repositories.evidence import EvidenceRepository
 from app.repositories.knowledgebase import KnowledgebaseRepository, KnowledgebaseRoleNotFoundError
 from app.repositories.job_collections import FavoriteJobNotFoundError, JobCollectionRepository
-from app.repositories.membership import MembershipRepository, OrderNotFoundError
+from app.repositories.membership import MembershipRepository, OrderExpiredError, OrderNotFoundError, PaymentCallbackConflictError
 from app.repositories.templates import TemplateRepository
 from app.repositories.users import UserRepository
 from app.schemas.common import error, success
@@ -38,8 +39,9 @@ from app.services.job_matching import JobMatcher
 from app.services.rewrite_guard import RewriteFactViolation
 from app.services.template_service import TemplateService
 from app.services.auth import AuthService
+from app.services.sms import SmsService
 from app.services.auth import current_user_id
-from app.services.membership import MembershipPackageConflictError, MembershipService, PaymentChannelUnavailableError, PaymentDemoDisabledError, VipPermissionError, get_current_vip
+from app.services.membership import MembershipPackageConflictError, MembershipService, PaymentChannelUnavailableError, PaymentDemoDisabledError, PaymentSignatureInvalidError, VipPermissionError, get_current_vip
 from app.services.rate_limit import InMemoryRateLimiter
 from app.services.web_search import build_web_search_client
 from pydantic import ValidationError
@@ -110,7 +112,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         response.headers["X-Request-ID"] = request_id
         return response
     app.state.user_repository = UserRepository(settings.database_path)
+    app.state.account_privacy_repository = AccountPrivacyRepository(settings.database_path)
     app.state.auth_service = AuthService(settings, app.state.user_repository)
+    app.state.sms_service = SmsService(settings)
     app.state.membership_repository = MembershipRepository(settings.database_path)
     app.state.membership_service = MembershipService(app.state.membership_repository, settings)
     app.state.draft_repository = DraftRepository(settings.database_path)
@@ -227,6 +231,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.exception_handler(OrderNotFoundError)
     def order_not_found(_: Request, __: OrderNotFoundError):
         return JSONResponse(status_code=404, content=error("not_found", "Order not found"))
+
+    @app.exception_handler(OrderExpiredError)
+    def order_expired(_: Request, __: OrderExpiredError):
+        return JSONResponse(status_code=409, content=error("order_expired", "This unpaid order has expired."))
+
+    @app.exception_handler(PaymentCallbackConflictError)
+    def payment_callback_conflict(_: Request, __: PaymentCallbackConflictError):
+        return JSONResponse(status_code=409, content=error("payment_callback_conflict", "Payment callback conflicts with the recorded transaction."))
+
+    @app.exception_handler(PaymentSignatureInvalidError)
+    def payment_signature_invalid(_: Request, __: PaymentSignatureInvalidError):
+        return JSONResponse(status_code=403, content=error("payment_signature_invalid", "Payment callback signature is invalid."))
 
     @app.exception_handler(VipPermissionError)
     def vip_permission_denied(_: Request, exception: VipPermissionError):

@@ -42,7 +42,11 @@ def payment_callback(
     user_id: str = Depends(current_user_id),
 ):
     order, vip = request.app.state.membership_service.fulfill_payment(
-        user_id, payload.order_id, payload.payment_channel
+        user_id,
+        payload.order_id,
+        payload.payment_channel,
+        payload.provider_transaction_id,
+        payload.signature,
     )
     return success({"order": order.as_dict(), "vip": vip.as_dict()})
 

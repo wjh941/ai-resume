@@ -28,12 +28,7 @@ class AuthService:
         self._settings = settings
         self._users = users
 
-    def issue_phone_login(self, phone: str, code: str) -> tuple[str, UserRecord]:
-        if not self._settings.auth_demo_mode:
-            # 真实短信接入点：阿里云、腾讯云或自定义 HTTP 网关校验回执后再放行登录。
-            raise DemoAuthenticationDisabledError
-        if code != "123456":
-            raise AuthenticationError
+    def issue_phone_login(self, phone: str) -> tuple[str, UserRecord]:
         user = self._users.find_or_create_by_phone(phone)
         return self.issue_token(user), user
 

@@ -18,3 +18,5 @@ class PaymentCallbackPayload(BaseModel):
     order_id: str = Field(min_length=1, max_length=80)
     payment_channel: PaymentChannel
     payment_status: Literal["paid"] = "paid"
+    provider_transaction_id: str | None = Field(default=None, max_length=160)
+    signature: str | None = Field(default=None, max_length=256)

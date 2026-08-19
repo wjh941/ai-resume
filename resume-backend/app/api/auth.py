@@ -6,10 +6,10 @@ from app.schemas.auth import AuthUser, PhoneCodeRequest, PhoneLoginRequest
 from app.schemas.common import success
 from app.services.auth import (
     AuthenticationError,
-    DemoAuthenticationDisabledError,
     current_user_id,
     optional_bearer_token,
 )
+from app.services.sms import SmsConfigurationError, SmsDeliveryError, SmsRateLimitError, VerificationCodeError
 
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -17,22 +17,22 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 @router.post("/send-code")
 def send_code(payload: PhoneCodeRequest, request: Request):
-    settings = request.app.state.settings
-    if settings.auth_demo_mode:
-        # 本期过渡代码：仅开发演示返回固定验证码，严禁在线上生产环境开启。
-        return success({"phone": payload.phone, "demo_code": "123456", "message": "演示验证码已生成"})
-    # 待完善点位：根据 SMS_PROVIDER 分支接入阿里云、腾讯云或自定义 HTTP 短信网关。
-    raise HTTPException(status_code=503, detail="短信服务未配置，当前禁止模拟验证码登录")
+    try:
+        result = request.app.state.sms_service.send_code(payload.phone)
+    except SmsRateLimitError as error:
+        raise HTTPException(status_code=429, detail="Please wait before requesting another verification code.") from error
+    except (SmsConfigurationError, SmsDeliveryError) as error:
+        raise HTTPException(status_code=503, detail="SMS delivery is not configured or temporarily unavailable.") from error
+    return success({"phone": payload.phone, "demo_code": result.demo_code, "message": result.message})
 
 
 @router.post("/login-phone")
 def login_phone(payload: PhoneLoginRequest, request: Request):
     try:
-        token, user = request.app.state.auth_service.issue_phone_login(payload.phone, payload.code)
-    except DemoAuthenticationDisabledError as error:
-        raise HTTPException(status_code=503, detail="真实短信登录尚未配置") from error
-    except AuthenticationError as error:
-        raise HTTPException(status_code=401, detail="手机号或验证码错误") from error
+        request.app.state.sms_service.verify_code(payload.phone, payload.code)
+        token, user = request.app.state.auth_service.issue_phone_login(payload.phone)
+    except (VerificationCodeError, AuthenticationError) as error:
+        raise HTTPException(status_code=401, detail="Mobile number or verification code is invalid.") from error
     return success({"token": token, "user": AuthUser(user_id=user.user_id, phone=user.phone).model_dump()})
 
 
@@ -43,6 +43,15 @@ def wechat_login(request: Request):
     if not (settings.wechat_open_app_id and settings.wechat_open_app_secret and settings.wechat_open_redirect_uri):
         raise HTTPException(status_code=503, detail="微信开放平台参数未配置，扫码登录暂不可用")
     raise HTTPException(status_code=501, detail="微信扫码授权回调尚未启用")
+
+
+@router.get("/wechat/callback")
+def wechat_callback(request: Request, code: str | None = None, state: str | None = None):
+    settings = request.app.state.settings
+    if not (settings.wechat_open_app_id and settings.wechat_open_app_secret and settings.wechat_open_redirect_uri):
+        raise HTTPException(status_code=503, detail="WeChat Open Platform is not configured.")
+    # TODO: Exchange the callback code only after the HTTPS redirect domain is whitelisted in WeChat Open Platform.
+    raise HTTPException(status_code=501, detail="WeChat OAuth callback deployment requires an HTTPS whitelisted redirect domain.")
 
 
 @router.post("/logout")

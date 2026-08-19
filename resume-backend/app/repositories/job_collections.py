@@ -24,6 +24,20 @@ class FavoriteJobRecord:
         return {"id": self.id, "role_name": self.role_name, "note": self.note, "created_at": self.created_at}
 
 
+@dataclass(frozen=True)
+class JobSubscriptionRecord:
+    enabled: bool
+    match_filter: str
+    last_notify_at: str | None
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "enabled": self.enabled,
+            "match_filter": self.match_filter,
+            "last_notify_at": self.last_notify_at,
+        }
+
+
 class JobCollectionRepository:
     def __init__(self, database_path: Path) -> None:
         self._database_path = database_path
@@ -65,26 +79,42 @@ class JobCollectionRepository:
         if cursor.rowcount == 0:
             raise FavoriteJobNotFoundError
 
-    def subscription_enabled(self, user_id: str) -> bool:
+    def subscription(self, user_id: str) -> JobSubscriptionRecord:
         with connect(self._database_path) as connection:
             row = connection.execute(
-                "SELECT enabled FROM job_match_subscription WHERE user_id = ?",
+                "SELECT enabled, match_filter, last_notify_at FROM job_match_subscription WHERE user_id = ?",
                 (user_id,),
             ).fetchone()
-        return bool(row["enabled"]) if row else False
+        if row is None:
+            return JobSubscriptionRecord(False, "", None)
+        return JobSubscriptionRecord(
+            bool(row["enabled"]),
+            str(row["match_filter"]),
+            str(row["last_notify_at"]) if row["last_notify_at"] else None,
+        )
 
-    def set_subscription_enabled(self, user_id: str, enabled: bool) -> bool:
+    def set_subscription(self, user_id: str, enabled: bool, match_filter: str | None) -> JobSubscriptionRecord:
         now = datetime.now(timezone.utc).isoformat()
         with connect(self._database_path) as connection:
             connection.execute(
                 """
-                INSERT INTO job_match_subscription (user_id, enabled, updated_at)
-                VALUES (?, ?, ?)
-                ON CONFLICT(user_id) DO UPDATE SET enabled = excluded.enabled, updated_at = excluded.updated_at
+                INSERT INTO job_match_subscription (user_id, enabled, match_filter, updated_at)
+                VALUES (?, ?, COALESCE(?, ''), ?)
+                ON CONFLICT(user_id) DO UPDATE SET
+                    enabled = excluded.enabled,
+                    match_filter = CASE WHEN ? IS NULL THEN job_match_subscription.match_filter ELSE excluded.match_filter END,
+                    updated_at = excluded.updated_at
                 """,
-                (user_id, int(enabled), now),
+                (user_id, int(enabled), match_filter, now, match_filter),
             )
-        return enabled
+        # TODO: A future notification worker sets last_notify_at after a successful alert delivery.
+        return self.subscription(user_id)
+
+    def subscription_enabled(self, user_id: str) -> bool:
+        return self.subscription(user_id).enabled
+
+    def set_subscription_enabled(self, user_id: str, enabled: bool) -> bool:
+        return self.set_subscription(user_id, enabled, None).enabled
 
     @staticmethod
     def _favorite_from_row(row) -> FavoriteJobRecord:

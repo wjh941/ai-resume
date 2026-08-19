@@ -19,6 +19,9 @@ class UserRecord:
     token_version: int
     created_at: str
     last_login: str
+    is_deleted: bool = False
+    deleted_at: str | None = None
+    privacy_consent_at: str | None = None
 
 
 class UserRepository:
@@ -59,7 +62,7 @@ class UserRepository:
     def get(self, user_id: str) -> UserRecord:
         with connect(self._database_path) as connection:
             row = connection.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
-        if row is None:
+        if row is None or bool(row["is_deleted"]):
             raise UserNotFoundError(user_id)
         return self._from_row(row)
 
@@ -79,4 +82,9 @@ class UserRepository:
             token_version=int(row["token_version"]),
             created_at=str(row["created_at"]),
             last_login=str(row["last_login"]),
+            is_deleted=bool(row["is_deleted"]),
+            deleted_at=str(row["deleted_at"]) if row["deleted_at"] else None,
+            privacy_consent_at=(
+                str(row["privacy_consent_at"]) if row["privacy_consent_at"] else None
+            ),
         )

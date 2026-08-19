@@ -12,6 +12,14 @@ class OrderNotFoundError(Exception):
     pass
 
 
+class OrderExpiredError(Exception):
+    pass
+
+
+class PaymentCallbackConflictError(Exception):
+    pass
+
+
 @dataclass(frozen=True)
 class VipRecord:
     vip_level: str
@@ -26,6 +34,7 @@ class OrderRecord:
     total_amount: int
     payment_status: str
     payment_channel: str | None
+    provider_transaction_id: str | None
     create_time: str
     entitlement_expire_time: str | None
 
@@ -36,6 +45,7 @@ class OrderRecord:
             "total_amount": self.total_amount,
             "payment_status": self.payment_status,
             "payment_channel": self.payment_channel,
+            "provider_transaction_id": self.provider_transaction_id,
             "create_time": self.create_time,
             "entitlement_expire_time": self.entitlement_expire_time,
         }
@@ -108,6 +118,18 @@ class MembershipRepository:
             raise OrderNotFoundError(order_id)
         return self._order_from_row(row)
 
+    def expire_pending_orders(self, user_id: str, expire_minutes: int) -> None:
+        cutoff = (datetime.now(timezone.utc) - timedelta(minutes=expire_minutes)).isoformat()
+        with connect(self._database_path) as connection:
+            connection.execute(
+                """
+                UPDATE order_record
+                SET payment_status = 'expired'
+                WHERE user_id = ? AND payment_status = 'pending' AND create_time <= ?
+                """,
+                (user_id, cutoff),
+            )
+
     def list_orders(self, user_id: str) -> list[OrderRecord]:
         with connect(self._database_path) as connection:
             rows = connection.execute(
@@ -123,9 +145,19 @@ class MembershipRepository:
         payment_channel: str,
         target_level: str,
         duration_days: int,
+        expire_minutes: int,
+        provider_transaction_id: str | None = None,
     ) -> tuple[OrderRecord, VipRecord]:
         now = datetime.now(timezone.utc)
         with connect(self._database_path) as connection:
+            connection.execute(
+                """
+                UPDATE order_record
+                SET payment_status = 'expired'
+                WHERE user_id = ? AND payment_status = 'pending' AND create_time <= ?
+                """,
+                (user_id, (now - timedelta(minutes=expire_minutes)).isoformat()),
+            )
             row = connection.execute(
                 "SELECT * FROM order_record WHERE order_id = ? AND user_id = ?",
                 (order_id, user_id),
@@ -133,8 +165,14 @@ class MembershipRepository:
             if row is None:
                 raise OrderNotFoundError(order_id)
 
+            if str(row["payment_status"]) == "expired":
+                raise OrderExpiredError(order_id)
+
             current = self._current_vip_in_connection(connection, user_id, now)
             if str(row["payment_status"]) == "paid":
+                existing_transaction = row["provider_transaction_id"]
+                if existing_transaction and provider_transaction_id and existing_transaction != provider_transaction_id:
+                    raise PaymentCallbackConflictError(order_id)
                 return self._order_from_row(row), current
 
             base_time = _future_or_now(current.expire_time, now)
@@ -151,10 +189,10 @@ class MembershipRepository:
             connection.execute(
                 """
                 UPDATE order_record
-                SET payment_status = 'paid', payment_channel = ?, entitlement_expire_time = ?
+                SET payment_status = 'paid', payment_channel = ?, provider_transaction_id = ?, entitlement_expire_time = ?
                 WHERE order_id = ? AND user_id = ?
                 """,
-                (payment_channel, expire_time, order_id, user_id),
+                (payment_channel, provider_transaction_id, expire_time, order_id, user_id),
             )
             completed = connection.execute(
                 "SELECT * FROM order_record WHERE order_id = ? AND user_id = ?",
@@ -194,6 +232,11 @@ class MembershipRepository:
             total_amount=int(row["total_amount"]),
             payment_status=str(row["payment_status"]),
             payment_channel=str(row["payment_channel"]) if row["payment_channel"] else None,
+            provider_transaction_id=(
+                str(row["provider_transaction_id"])
+                if row["provider_transaction_id"]
+                else None
+            ),
             create_time=str(row["create_time"]),
             entitlement_expire_time=(
                 str(row["entitlement_expire_time"])

@@ -29,3 +29,9 @@ class FavoriteJobCreate(BaseModel):
 
 class JobSubscriptionUpdate(BaseModel):
     enabled: bool
+    match_filter: str | None = Field(default=None, max_length=200)
+
+    @field_validator("match_filter")
+    @classmethod
+    def normalize_match_filter(cls, value: str | None) -> str | None:
+        return _normalize(value, 200) if value is not None else None

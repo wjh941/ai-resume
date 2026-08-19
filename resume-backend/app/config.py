@@ -40,12 +40,18 @@ class Settings:
     jwt_expire_hours: int = 24
     auth_demo_mode: bool = True
     sms_provider: str = "disabled"
+    sms_access_key: str = ""
+    sms_access_secret: str = ""
+    sms_sign_name: str = ""
+    sms_template_id: str = ""
     sms_aliyun_access_key_id: str = ""
     sms_aliyun_access_key_secret: str = ""
     sms_tencent_secret_id: str = ""
     sms_tencent_secret_key: str = ""
     sms_http_endpoint: str = ""
     sms_http_token: str = ""
+    sms_code_ttl_seconds: int = 300
+    sms_code_cooldown_seconds: int = 60
     wechat_open_app_id: str = ""
     wechat_open_app_secret: str = ""
     wechat_open_redirect_uri: str = ""
@@ -57,6 +63,8 @@ class Settings:
     wechat_pay_app_id: str = ""
     alipay_app_id: str = ""
     alipay_private_key: str = ""
+    payment_callback_secret: str = ""
+    order_payment_expire_minutes: int = 30
     cors_origins: tuple[str, ...] = ()
     ai_config_ui_enabled: bool = True
     sqlite_timeout_seconds: float = 3.0
@@ -106,12 +114,18 @@ def load_settings() -> Settings:
         jwt_expire_hours=int(os.getenv("JWT_EXPIRE_HOURS", "24")),
         auth_demo_mode=_read_bool("AUTH_DEMO_MODE", app_env != "production"),
         sms_provider=os.getenv("SMS_PROVIDER", "disabled").strip().lower(),
+        sms_access_key=os.getenv("SMS_ACCESS_KEY", os.getenv("SMS_ALIYUN_ACCESS_KEY_ID", "")),
+        sms_access_secret=os.getenv("SMS_ACCESS_SECRET", os.getenv("SMS_ALIYUN_ACCESS_KEY_SECRET", "")),
+        sms_sign_name=os.getenv("SMS_SIGN_NAME", ""),
+        sms_template_id=os.getenv("SMS_TEMPLATE_ID", ""),
         sms_aliyun_access_key_id=os.getenv("SMS_ALIYUN_ACCESS_KEY_ID", ""),
         sms_aliyun_access_key_secret=os.getenv("SMS_ALIYUN_ACCESS_KEY_SECRET", ""),
         sms_tencent_secret_id=os.getenv("SMS_TENCENT_SECRET_ID", ""),
         sms_tencent_secret_key=os.getenv("SMS_TENCENT_SECRET_KEY", ""),
         sms_http_endpoint=os.getenv("SMS_HTTP_ENDPOINT", ""),
         sms_http_token=os.getenv("SMS_HTTP_TOKEN", ""),
+        sms_code_ttl_seconds=int(os.getenv("SMS_CODE_TTL_SECONDS", "300")),
+        sms_code_cooldown_seconds=int(os.getenv("SMS_CODE_COOLDOWN_SECONDS", "60")),
         wechat_open_app_id=os.getenv("WECHAT_OPEN_APP_ID", ""),
         wechat_open_app_secret=os.getenv("WECHAT_OPEN_APP_SECRET", ""),
         wechat_open_redirect_uri=os.getenv("WECHAT_OPEN_REDIRECT_URI", ""),
@@ -122,6 +136,8 @@ def load_settings() -> Settings:
         wechat_pay_app_id=os.getenv("WECHAT_PAY_APP_ID", ""),
         alipay_app_id=os.getenv("ALIPAY_APP_ID", ""),
         alipay_private_key=os.getenv("ALIPAY_PRIVATE_KEY", ""),
+        payment_callback_secret=os.getenv("PAYMENT_CALLBACK_SECRET", ""),
+        order_payment_expire_minutes=int(os.getenv("ORDER_PAYMENT_EXPIRE_MINUTES", "30")),
         cors_origins=_read_csv("CORS_ORIGINS"),
         auth_rate_limit_max_requests=int(os.getenv("AUTH_RATE_LIMIT_MAX_REQUESTS", "10")),
         auth_rate_limit_window_seconds=int(os.getenv("AUTH_RATE_LIMIT_WINDOW_SECONDS", "60")),
