@@ -11,7 +11,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import ai, applications, assessment, auth, career, consultation, drafts, evidence, exports, knowledgebase, membership, system, templates
+from app.api import account, ai, applications, assessment, auth, career, consultation, drafts, evidence, exports, job_collections, knowledgebase, membership, system, templates
 from app.repositories.applications import ApplicationNotFoundError, ApplicationRepository
 from app.config import Settings, load_settings
 from app.db import initialize_database
@@ -21,6 +21,7 @@ from app.repositories.career_profiles import CareerProfileNotFoundError, CareerP
 from app.repositories.drafts import DraftNotFoundError, DraftRepository
 from app.repositories.evidence import EvidenceRepository
 from app.repositories.knowledgebase import KnowledgebaseRepository, KnowledgebaseRoleNotFoundError
+from app.repositories.job_collections import FavoriteJobNotFoundError, JobCollectionRepository
 from app.repositories.membership import MembershipRepository, OrderNotFoundError
 from app.repositories.templates import TemplateRepository
 from app.repositories.users import UserRepository
@@ -114,6 +115,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.membership_service = MembershipService(app.state.membership_repository, settings)
     app.state.draft_repository = DraftRepository(settings.database_path)
     app.state.application_repository = ApplicationRepository(settings.database_path)
+    app.state.job_collection_repository = JobCollectionRepository(settings.database_path)
     app.state.evidence_repository = EvidenceRepository(settings.database_path)
     app.state.assessment_repository = AssessmentRepository(settings.database_path)
     app.state.template_service = TemplateService(TemplateRepository(settings.database_path))
@@ -147,6 +149,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             status_code=404,
             content=error("not_found", "Application not found"),
         )
+
+    @app.exception_handler(FavoriteJobNotFoundError)
+    def favorite_job_not_found(_: Request, __: FavoriteJobNotFoundError):
+        return JSONResponse(status_code=404, content=error("not_found", "Favorite job not found"))
 
     @app.exception_handler(KnowledgebaseRoleNotFoundError)
     def knowledgebase_role_not_found(_: Request, __: KnowledgebaseRoleNotFoundError):
@@ -272,6 +278,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     # 业务 Router 在组装处统一注入 JWT 依赖，新增端点不会遗漏鉴权边界。
     business_routers = (
+        account.router,
         ai.router,
         applications.router,
         assessment.router,
@@ -280,6 +287,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         drafts.router,
         evidence.router,
         exports.router,
+        job_collections.router,
         knowledgebase.router,
         membership.router,
         system.router,

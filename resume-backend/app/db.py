@@ -238,6 +238,36 @@ def initialize_database(database_path: Path, *, timeout_seconds: float | None = 
             );
             CREATE INDEX IF NOT EXISTS idx_order_record_owner_created
             ON order_record (user_id, create_time DESC, order_id DESC);
+            CREATE TABLE IF NOT EXISTS job_favorite (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL REFERENCES users(user_id),
+                role_name TEXT NOT NULL,
+                note TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL,
+                UNIQUE (user_id, role_name)
+            );
+            CREATE INDEX IF NOT EXISTS idx_job_favorite_owner_created
+            ON job_favorite (user_id, created_at DESC, id DESC);
+            CREATE TABLE IF NOT EXISTS job_match_subscription (
+                user_id TEXT PRIMARY KEY REFERENCES users(user_id),
+                enabled INTEGER NOT NULL DEFAULT 0 CHECK (enabled IN (0, 1)),
+                updated_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS job_favorite (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL REFERENCES users(user_id),
+                role_name TEXT NOT NULL,
+                note TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL,
+                UNIQUE (user_id, role_name)
+            );
+            CREATE INDEX IF NOT EXISTS idx_job_favorite_owner_created
+            ON job_favorite (user_id, created_at DESC, id DESC);
+            CREATE TABLE IF NOT EXISTS job_match_subscription (
+                user_id TEXT PRIMARY KEY REFERENCES users(user_id),
+                enabled INTEGER NOT NULL DEFAULT 0 CHECK (enabled IN (0, 1)),
+                updated_at TEXT NOT NULL
+            );
             CREATE TABLE IF NOT EXISTS job_catalog (
                 role_name TEXT PRIMARY KEY,
                 category TEXT NOT NULL,

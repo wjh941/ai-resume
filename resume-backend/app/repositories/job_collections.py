@@ -1,0 +1,96 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+from uuid import uuid4
+
+from app.db import connect
+from app.schemas.job_collections import FavoriteJobCreate
+
+
+class FavoriteJobNotFoundError(Exception):
+    pass
+
+
+@dataclass(frozen=True)
+class FavoriteJobRecord:
+    id: str
+    role_name: str
+    note: str
+    created_at: str
+
+    def as_dict(self) -> dict[str, str]:
+        return {"id": self.id, "role_name": self.role_name, "note": self.note, "created_at": self.created_at}
+
+
+class JobCollectionRepository:
+    def __init__(self, database_path: Path) -> None:
+        self._database_path = database_path
+
+    def list_favorites(self, user_id: str) -> list[FavoriteJobRecord]:
+        with connect(self._database_path) as connection:
+            rows = connection.execute(
+                "SELECT id, role_name, note, created_at FROM job_favorite WHERE user_id = ? ORDER BY created_at DESC, id DESC",
+                (user_id,),
+            ).fetchall()
+        return [self._favorite_from_row(row) for row in rows]
+
+    def save_favorite(self, user_id: str, payload: FavoriteJobCreate) -> FavoriteJobRecord:
+        now = datetime.now(timezone.utc).isoformat()
+        favorite_id = str(uuid4())
+        with connect(self._database_path) as connection:
+            connection.execute(
+                """
+                INSERT INTO job_favorite (id, user_id, role_name, note, created_at)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(user_id, role_name) DO UPDATE SET note = excluded.note
+                """,
+                (favorite_id, user_id, payload.role_name, payload.note, now),
+            )
+            row = connection.execute(
+                "SELECT id, role_name, note, created_at FROM job_favorite WHERE user_id = ? AND role_name = ?",
+                (user_id, payload.role_name),
+            ).fetchone()
+        if row is None:
+            raise FavoriteJobNotFoundError
+        return self._favorite_from_row(row)
+
+    def delete_favorite(self, user_id: str, favorite_id: str) -> None:
+        with connect(self._database_path) as connection:
+            cursor = connection.execute(
+                "DELETE FROM job_favorite WHERE id = ? AND user_id = ?",
+                (favorite_id, user_id),
+            )
+        if cursor.rowcount == 0:
+            raise FavoriteJobNotFoundError
+
+    def subscription_enabled(self, user_id: str) -> bool:
+        with connect(self._database_path) as connection:
+            row = connection.execute(
+                "SELECT enabled FROM job_match_subscription WHERE user_id = ?",
+                (user_id,),
+            ).fetchone()
+        return bool(row["enabled"]) if row else False
+
+    def set_subscription_enabled(self, user_id: str, enabled: bool) -> bool:
+        now = datetime.now(timezone.utc).isoformat()
+        with connect(self._database_path) as connection:
+            connection.execute(
+                """
+                INSERT INTO job_match_subscription (user_id, enabled, updated_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT(user_id) DO UPDATE SET enabled = excluded.enabled, updated_at = excluded.updated_at
+                """,
+                (user_id, int(enabled), now),
+            )
+        return enabled
+
+    @staticmethod
+    def _favorite_from_row(row) -> FavoriteJobRecord:
+        return FavoriteJobRecord(
+            id=str(row["id"]),
+            role_name=str(row["role_name"]),
+            note=str(row["note"]),
+            created_at=str(row["created_at"]),
+        )
