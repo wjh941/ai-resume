@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from datetime import datetime, timedelta, timezone
 
 from app.config import load_settings
@@ -49,6 +50,14 @@ def test_task_lease_rejects_second_owner_until_first_lease_expires(tmp_path) -> 
 def test_worker_cycle_generates_one_alert_and_expires_pending_order(monkeypatch, tmp_path) -> None:
     database_path = tmp_path / "worker.db"
     temp_path = tmp_path / "exports"
+    temp_path.mkdir()
+    expired_export = temp_path / "expired-export.pdf"
+    unrelated_file = temp_path / "notes.txt"
+    expired_export.write_bytes(b"expired export")
+    unrelated_file.write_text("keep me", encoding="utf-8")
+    expired_at = (datetime.now(timezone.utc) - timedelta(minutes=2)).timestamp()
+    os.utime(expired_export, (expired_at, expired_at))
+    os.utime(unrelated_file, (expired_at, expired_at))
     initialize_database(database_path)
     _create_user(database_path, "worker-user")
     JobCollectionRepository(database_path).set_subscription(
@@ -70,6 +79,7 @@ def test_worker_cycle_generates_one_alert_and_expires_pending_order(monkeypatch,
     second_result = worker.run_all_once()
 
     assert first_result["job_match_alerts"] == 1
+    assert first_result["expired_exports"] == 1
     assert first_result["expired_orders"] == 1
     assert second_result["job_match_alerts"] == 0
     with connect(database_path) as connection:
@@ -79,3 +89,5 @@ def test_worker_cycle_generates_one_alert_and_expires_pending_order(monkeypatch,
         ).fetchone()[0]
     assert alert_count == 1
     assert payment_status == "expired"
+    assert not expired_export.exists()
+    assert unrelated_file.exists()

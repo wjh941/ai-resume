@@ -32,19 +32,21 @@ def test_database_url_selects_postgresql_without_changing_sqlite_path(monkeypatc
     assert settings.database_path == sqlite_path.resolve()
 
 
-def test_alembic_creates_phase7_schema_on_fresh_sqlite_database(tmp_path):
-    database_path = tmp_path / "phase8.db"
+def test_alembic_creates_phase9_schema_on_fresh_sqlite_database(tmp_path):
+    database_path = tmp_path / "phase9.db"
 
     _upgrade(f"sqlite:///{database_path.as_posix()}")
 
     with sqlite3.connect(database_path) as connection:
         users = {row[1] for row in connection.execute("PRAGMA table_info(users)")}
         subscriptions = {row[1] for row in connection.execute("PRAGMA table_info(job_match_subscription)")}
+        tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
         revision = connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
 
     assert {"is_deleted", "deleted_at", "privacy_consent_at"} <= users
     assert {"match_filter", "last_notify_at"} <= subscriptions
-    assert revision == "20260819_phase8"
+    assert {"background_task_lock", "career_task", "interview_reminder", "resume_version"} <= tables
+    assert revision == "20260819_phase9"
 
 
 def test_postgres_connection_translates_existing_sqlite_insert_idioms():
