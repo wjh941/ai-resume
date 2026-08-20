@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File
 
 from app.repositories.drafts import DraftLimitReachedError, DraftNotFoundError
 from app.schemas.common import success
 from app.schemas.draft import DraftCopyRequest, DraftSaveRequest, DraftVersionCreateRequest
 from app.services.auth import current_user_id
 from app.services.membership import VipPermissionError, VipStatus, get_current_vip
+from app.services.resume_imports import ResumeImportValidationError
 
 
 router = APIRouter(prefix="/api/draft", tags=["drafts"])
@@ -74,6 +75,20 @@ def import_resume_document(draft_id: str):
         status_code=501,
         detail="文档解析将在后续版本提供，请先手动补充简历内容。",
     )
+
+
+@router.post("/{draft_id}/imports")
+async def upload_resume_import(
+    draft_id: str,
+    request: Request,
+    file: UploadFile = File(...),
+    user_id: str = Depends(current_user_id),
+):
+    try:
+        record = await request.app.state.resume_import_service.accept_upload(user_id, draft_id, file)
+    except ResumeImportValidationError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return success(record.as_dict())
 
 
 @router.get("/{draft_id}")

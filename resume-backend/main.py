@@ -26,6 +26,7 @@ from app.repositories.knowledgebase import KnowledgebaseRepository, Knowledgebas
 from app.repositories.job_collections import FavoriteJobNotFoundError, JobCollectionRepository
 from app.repositories.membership import MembershipRepository, OrderExpiredError, OrderNotFoundError, PaymentCallbackConflictError
 from app.repositories.push_logs import PushLogRepository
+from app.repositories.resume_imports import ResumeImportRepository
 from app.repositories.templates import TemplateRepository
 from app.repositories.users import UserRepository
 from app.schemas.common import error, success
@@ -46,6 +47,7 @@ from app.services.auth import current_user_id
 from app.services.membership import MembershipPackageConflictError, MembershipService, PaymentChannelUnavailableError, PaymentDemoDisabledError, PaymentSignatureInvalidError, VipPermissionError, get_current_vip
 from app.services.rate_limit import InMemoryRateLimiter
 from app.services.push import PushDispatcher
+from app.services.resume_imports import ResumeImportService
 from app.services.web_search import build_web_search_client
 from pydantic import ValidationError
 
@@ -151,6 +153,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.push_dispatcher = PushDispatcher(settings, app.state.push_log_repository)
     app.state.membership_service = MembershipService(app.state.membership_repository, settings)
     app.state.draft_repository = DraftRepository(database_target)
+    app.state.resume_import_repository = ResumeImportRepository(database_target)
+    app.state.resume_import_service = ResumeImportService(
+        settings,
+        app.state.draft_repository,
+        app.state.resume_import_repository,
+    )
     app.state.application_repository = ApplicationRepository(database_target)
     app.state.job_collection_repository = JobCollectionRepository(database_target)
     app.state.evidence_repository = EvidenceRepository(database_target)

@@ -33,8 +33,21 @@ def upgrade() -> None:
         "CREATE INDEX IF NOT EXISTS idx_push_send_log_owner_created "
         "ON push_send_log (user_id, created_at DESC, id DESC)"
     )
+    op.execute(
+        "CREATE TABLE IF NOT EXISTS resume_import ("
+        "id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(user_id), "
+        "draft_id TEXT NOT NULL REFERENCES user_draft(id) ON DELETE CASCADE, "
+        "stored_filename TEXT NOT NULL, original_filename TEXT NOT NULL, "
+        "content_type TEXT NOT NULL, byte_size INTEGER NOT NULL, status TEXT NOT NULL, "
+        "parsed_resume_json TEXT NOT NULL, created_at TEXT NOT NULL)"
+    )
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_resume_import_owner_draft_created "
+        "ON resume_import (user_id, draft_id, created_at DESC, id DESC)"
+    )
 
 
 def downgrade() -> None:
+    op.drop_table("resume_import")
     op.drop_table("push_send_log")
     op.drop_column("users", "role")
