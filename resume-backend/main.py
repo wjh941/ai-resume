@@ -11,7 +11,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import account, ai, applications, assessment, auth, career, consultation, drafts, evidence, exports, job_collections, knowledgebase, membership, system, templates
+from app.api import account, ai, applications, assessment, auth, career, consultation, drafts, evidence, exports, job_collections, knowledgebase, membership, operator, system, templates
 from app.repositories.account_privacy import AccountPrivacyRepository
 from app.repositories.applications import ApplicationNotFoundError, ApplicationRepository
 from app.config import Settings, load_settings
@@ -25,6 +25,7 @@ from app.repositories.evidence import EvidenceRepository
 from app.repositories.knowledgebase import KnowledgebaseRepository, KnowledgebaseRoleNotFoundError
 from app.repositories.job_collections import FavoriteJobNotFoundError, JobCollectionRepository
 from app.repositories.membership import MembershipRepository, OrderExpiredError, OrderNotFoundError, PaymentCallbackConflictError
+from app.repositories.operator_knowledge import OperatorKnowledgeNotFoundError, OperatorKnowledgeRepository
 from app.repositories.push_logs import PushLogRepository
 from app.repositories.resume_imports import ResumeImportRepository
 from app.repositories.templates import TemplateRepository
@@ -169,6 +170,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.job_catalog = JobCatalog(database_target)
     app.state.job_matcher = JobMatcher()
     app.state.knowledgebase_repository = KnowledgebaseRepository(database_target)
+    app.state.operator_knowledge_repository = OperatorKnowledgeRepository(database_target)
     app.state.official_dataset_sync_service = OfficialDatasetSyncService(
         app.state.knowledgebase_repository
     )
@@ -205,6 +207,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return JSONResponse(
             status_code=404, content=error('not_found', 'Knowledgebase role not found')
         )
+
+    @app.exception_handler(OperatorKnowledgeNotFoundError)
+    def operator_knowledge_not_found(_: Request, __: OperatorKnowledgeNotFoundError):
+        return JSONResponse(status_code=404, content=error("not_found", "Knowledge item not found"))
 
     @app.exception_handler(CareerProfileNotFoundError)
     def career_profile_not_found(_: Request, __: CareerProfileNotFoundError):
@@ -358,6 +364,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         job_collections.router,
         knowledgebase.router,
         membership.router,
+        operator.router,
         system.router,
         templates.router,
     )

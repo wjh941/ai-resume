@@ -730,6 +730,31 @@ def _migrate_phase10_operations(connection: sqlite3.Connection) -> None:
         );
         CREATE INDEX IF NOT EXISTS idx_resume_import_owner_draft_created
         ON resume_import (user_id, draft_id, created_at DESC, id DESC);
+        CREATE TABLE IF NOT EXISTS knowledge_item (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'active',
+            current_version INTEGER NOT NULL DEFAULT 1,
+            created_by TEXT NOT NULL REFERENCES users(user_id),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_knowledge_item_status_updated
+        ON knowledge_item (status, updated_at DESC, id DESC);
+        CREATE TABLE IF NOT EXISTS knowledge_item_version (
+            id TEXT PRIMARY KEY,
+            item_id TEXT NOT NULL REFERENCES knowledge_item(id) ON DELETE CASCADE,
+            version INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            status TEXT NOT NULL,
+            created_by TEXT NOT NULL REFERENCES users(user_id),
+            created_at TEXT NOT NULL,
+            UNIQUE (item_id, version)
+        );
+        CREATE INDEX IF NOT EXISTS idx_knowledge_item_version_item
+        ON knowledge_item_version (item_id, version DESC);
         """
     )
 

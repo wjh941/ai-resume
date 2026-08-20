@@ -1,6 +1,23 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
+
+
+OperatorKnowledgeStatus = Literal["active", "offline", "invalid"]
+
+
+class OperatorKnowledgeCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    content: str = Field(min_length=1, max_length=20_000)
+    status: OperatorKnowledgeStatus = "active"
+
+
+class OperatorKnowledgeUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    content: str | None = Field(default=None, min_length=1, max_length=20_000)
+    status: OperatorKnowledgeStatus | None = None
 
 
 class KnowledgebaseRoleInput(BaseModel):
