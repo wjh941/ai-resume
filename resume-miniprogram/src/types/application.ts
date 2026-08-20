@@ -20,10 +20,21 @@ export type ApplicationInput = {
   interviewNotes: string
   draftId: string | null
   notes: string
+  contactInfo?: string
+  attachmentRef?: string
+  nextInterviewAt?: string | null
+}
+
+export type ApplicationTimelineEvent = {
+  id: string
+  title: string
+  description: string
+  occurredAt: string
 }
 
 export type ApplicationRecord = ApplicationInput & {
   id: string
+  timeline?: ApplicationTimelineEvent[]
   createdAt: string
   updatedAt: string
 }

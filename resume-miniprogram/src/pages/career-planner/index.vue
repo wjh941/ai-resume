@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from "vue"
+import { computed, onMounted, onUnmounted, ref, watch } from "vue"
 
 import {
   generateCareerRecommendations,
@@ -7,6 +7,13 @@ import {
   queryMajorSuggestions,
   saveCareerProfile,
 } from "../../services/career-api"
+import {
+  createCareerTask,
+  generateCareerTasks,
+  listCareerTasks,
+  updateCareerTask,
+  type CareerTask,
+} from "../../services/career-task-api"
 import { queryJob } from "../../services/resume-api"
 import { useCareerStore } from "../../stores/career"
 import { useResumeStore } from "../../stores/resume"
@@ -52,6 +59,9 @@ const skillsText = ref(profile.value.skills.join("、"))
 const loading = ref(false)
 const resumeLoading = ref("")
 const error = ref("")
+const careerTasks = ref<CareerTask[]>([])
+const taskSaving = ref(false)
+const taskForm = ref({ title: "", dueDate: "", applicationId: "", evidenceId: "" })
 const isTierTransitioning = ref(false)
 let tierTransitionTimer: ReturnType<typeof setTimeout> | undefined
 let tierUpdateTimer: ReturnType<typeof setTimeout> | undefined
@@ -208,8 +218,70 @@ async function useForResume(recommendation: RoleRecommendation) {
   }
 }
 
+async function loadCareerTasks() {
+  try {
+    careerTasks.value = await listCareerTasks("current")
+  } catch {
+    careerTasks.value = []
+  }
+}
+
+async function generateTasks() {
+  const actions = recommendations.value.flatMap((item) => item.actionPlan).filter(Boolean)
+  if (!actions.length) {
+    uni.showToast({ title: "请先生成职业建议", icon: "none" })
+    return
+  }
+  taskSaving.value = true
+  try {
+    await generateCareerTasks("current", { sevenDay: actions, thirtyDay: [], ninetyDay: [] })
+    await loadCareerTasks()
+    uni.showToast({ title: "已生成职业任务", icon: "success" })
+  } catch (reason) {
+    uni.showToast({ title: reason instanceof Error ? reason.message : "职业任务生成失败，请稍后重试", icon: "none" })
+  } finally {
+    taskSaving.value = false
+  }
+}
+
+async function createTask() {
+  if (!taskForm.value.title.trim()) {
+    uni.showToast({ title: "请填写任务内容", icon: "none" })
+    return
+  }
+  taskSaving.value = true
+  try {
+    await createCareerTask({
+      planId: "current",
+      title: taskForm.value.title,
+      description: "手动创建的职业任务",
+      dueDate: taskForm.value.dueDate || null,
+      status: "pending",
+      linkToApplicationId: taskForm.value.applicationId || null,
+      linkToEvidenceId: taskForm.value.evidenceId || null,
+    })
+    taskForm.value = { title: "", dueDate: "", applicationId: "", evidenceId: "" }
+    await loadCareerTasks()
+    uni.showToast({ title: "职业任务已添加", icon: "success" })
+  } catch (reason) {
+    uni.showToast({ title: reason instanceof Error ? reason.message : "职业任务保存失败，请稍后重试", icon: "none" })
+  } finally {
+    taskSaving.value = false
+  }
+}
+
+async function toggleTask(task: CareerTask) {
+  try {
+    await updateCareerTask(task.id, { status: task.status === "completed" ? "pending" : "completed" })
+    await loadCareerTasks()
+  } catch (reason) {
+    uni.showToast({ title: reason instanceof Error ? reason.message : "任务状态更新失败，请稍后重试", icon: "none" })
+  }
+}
+
 store.restoreCheckpoint()
 void loadSavedProfile()
+onMounted(loadCareerTasks)
 onUnmounted(() => {
   if (tierTransitionTimer) clearTimeout(tierTransitionTimer)
   if (tierUpdateTimer) clearTimeout(tierUpdateTimer)
@@ -220,7 +292,6 @@ onUnmounted(() => {
   <scroll-view class="page" scroll-y>
     <view class="content">
       <view class="hero">
-        <text class="eyebrow">CAREER VOLUNTEER PLANNER</text>
         <text class="title">求职志愿规划</text>
         <text class="subtitle">用专业、技能和偏好比较冲刺、稳妥、保底方向，不承诺录用结果。</text>
       </view>
@@ -238,6 +309,28 @@ onUnmounted(() => {
           <text class="weekly-target-text">将方向转成手动确认的投递计划与复盘记录。</text>
         </view>
         <button class="assessment-entry" @click="openApplicationTracker">创建计划</button>
+      </view>
+      <view class="task-panel">
+        <view class="task-heading"><view><text>职业任务</text><text>把当前建议转成可完成的行动记录。</text></view><button size="mini" class="task-generate" :loading="taskSaving" @click="generateTasks">生成任务</button></view>
+        <view class="task-create">
+          <input v-model="taskForm.title" placeholder="新增任务，例如：整理作品集" />
+          <input v-model="taskForm.dueDate" placeholder="截止日期 YYYY-MM-DD（可空）" />
+          <input v-model="taskForm.applicationId" placeholder="关联投递 ID（可空）" />
+          <input v-model="taskForm.evidenceId" placeholder="关联证据 ID（可空）" />
+          <button size="mini" class="secondary" :loading="taskSaving" @click="createTask">添加任务</button>
+        </view>
+        <view v-if="careerTasks.length" class="task-list">
+          <view v-for="task in careerTasks" :key="task.id" class="task-row" :class="{ completed: task.status === 'completed' }">
+            <checkbox
+              class="task-check"
+              :checked="task.status === 'completed'"
+              color="#2c8b70"
+              @click.stop="toggleTask(task)"
+            />
+            <view><text class="task-title">{{ task.title }}</text><text v-if="task.dueDate" class="task-detail">截止：{{ task.dueDate }}</text><text v-if="task.linkToApplicationId || task.linkToEvidenceId" class="task-detail">关联：{{ [task.linkToApplicationId, task.linkToEvidenceId].filter(Boolean).join(" · ") }}</text></view>
+          </view>
+        </view>
+        <text v-else class="task-empty">暂时没有职业任务，可手动添加或在生成建议后自动创建。</text>
       </view>
       <view class="card profile-card">
         <view class="section-heading">
@@ -303,7 +396,7 @@ onUnmounted(() => {
           <view class="chip-row"><text v-for="item in majorReport?.recommendedCourses" :key="item" class="chip">{{ item }}</text></view>
         </view>
 
-        <view class="roadmap-track" aria-label="Career roadmap">
+        <view class="roadmap-track" aria-label="职业发展路径">
           <view v-for="item in tierOptions" :key="item.key" class="roadmap-stage" :class="{ active: selectedTier === item.key }" @click="chooseTier(item.key)">
             <text>{{ item.label }}</text><text>{{ item.hint }}</text>
           </view>
@@ -347,14 +440,14 @@ onUnmounted(() => {
 .page { min-height: 100vh; background: #f4f7fb; color: #1f2937; }
 .content { padding: 24rpx 24rpx 52rpx; }
 .hero { padding: 34rpx 20rpx 28rpx; background: linear-gradient(145deg, #e7f1ff, #f7fbff); border-radius: 24rpx; margin-bottom: 20rpx; }
-.eyebrow { display: block; color: #1677ff; font-size: 21rpx; font-weight: 700; letter-spacing: 1rpx; }
-.title { display: block; font-size: 44rpx; font-weight: 700; margin-top: 10rpx; }
+.title { display: block; font-size: 44rpx; font-weight: 700; }
 .subtitle { display: block; color: #6b7280; line-height: 1.6; margin-top: 12rpx; font-size: 25rpx; }
 .assessment-brief { display: flex; align-items: center; justify-content: space-between; gap: 20rpx; margin-top: 20rpx; padding: 20rpx 22rpx; background: #f0f7ff; border: 1rpx solid #cfe4fb; border-radius: 16rpx; }
 .weekly-target { display: flex; align-items: center; justify-content: space-between; gap: 20rpx; margin-top: 14rpx; padding: 20rpx 22rpx; background: #f2fbf8; border: 1rpx solid #cfeee4; border-radius: 16rpx; }
 .weekly-target-title,.weekly-target-text { display: block; }.weekly-target-title { color: #26735c; font-size: 27rpx; font-weight: 700; }.weekly-target-text { margin-top: 6rpx; color: #598575; font-size: 22rpx; line-height: 1.5; }
 .assessment-brief > view { min-width: 0; }.assessment-brief-title,.assessment-brief-text { display: block; }.assessment-brief-title { color: #245b99; font-size: 27rpx; font-weight: 700; }.assessment-brief-text { margin-top: 6rpx; color: #59728d; font-size: 22rpx; line-height: 1.5; }
 .assessment-entry { flex-shrink: 0; margin: 0; padding: 0 22rpx; color: #1677ff; background: rgba(255,255,255,.82); border: 1rpx solid #a9d1ff; border-radius: 999rpx; font-size: 24rpx; line-height: 62rpx; }
+.task-panel { margin-top: 20rpx; padding: 22rpx; background: #f2fbf8; border: 1rpx solid #cfeee4; border-radius: 16rpx; }.task-heading,.task-row { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }.task-heading > view { min-width: 0; }.task-heading text { display: block; }.task-heading text:first-child { color: #26735c; font-size: 29rpx; font-weight: 700; }.task-heading text:last-child { margin-top: 6rpx; color: #598575; font-size: 22rpx; line-height: 1.5; }.task-generate { flex-shrink: 0; margin: 0; color: #fff; background: #2c8b70; font-size: 22rpx; }.task-create { display: grid; grid-template-columns: 1fr 1fr; gap: 12rpx; margin-top: 16rpx; }.task-create input { box-sizing: border-box; min-height: 68rpx; width: 100%; padding: 0 16rpx; color: #1f3e36; background: #fff; border: 1rpx solid #cfeee4; border-radius: 10rpx; font-size: 23rpx; }.task-create button { justify-self: start; margin: 0; font-size: 22rpx; }.task-list { margin-top: 14rpx; }.task-row { padding: 14rpx 0; border-top: 1rpx solid #d8efe5; }.task-row.completed { opacity: .62; }.task-check { flex-shrink: 0; width: 34rpx; height: 34rpx; margin: 0; }.task-title,.task-detail,.task-empty { display: block; }.task-title { color: #244a3e; font-size: 25rpx; font-weight: 600; }.task-detail,.task-empty { margin-top: 5rpx; color: #598575; font-size: 21rpx; line-height: 1.45; }.task-empty { margin-top: 14rpx; }
 .comparison-bar { display: flex; align-items: center; justify-content: space-between; gap: 18rpx; margin-top: 20rpx; padding: 20rpx 22rpx; background: #eef8ff; border: 1rpx solid #c7e5ff; border-radius: 16rpx; }
 .comparison-title,.comparison-hint { display: block; }.comparison-title { color: #245b99; font-size: 27rpx; font-weight: 700; }.comparison-hint { margin-top: 6rpx; color: #59728d; font-size: 22rpx; line-height: 1.45; }.comparison-button { flex-shrink: 0; margin: 0; color: #fff; background: #1677ff; font-size: 23rpx; }
 .card { background: #fff; border: 1rpx solid #e7edf5; border-radius: 20rpx; padding: 24rpx; margin-top: 20rpx; box-shadow: 0 8rpx 24rpx rgba(35, 78, 130, 0.06); }
