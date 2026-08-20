@@ -99,6 +99,7 @@ def test_phase10_migration_head_and_legacy_sqlite_upgrade(monkeypatch, tmp_path)
     _upgrade(f"sqlite:///{fresh_path.as_posix()}")
     with sqlite3.connect(fresh_path) as connection:
         fresh_columns = {row[1] for row in connection.execute("PRAGMA table_info(users)")}
+        fresh_tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
         fresh_revision = connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
 
     legacy_path = tmp_path / "legacy.db"
@@ -111,9 +112,10 @@ def test_phase10_migration_head_and_legacy_sqlite_upgrade(monkeypatch, tmp_path)
     monkeypatch.delenv("OPERATOR_PHONE_ALLOWLIST", raising=False)
     settings = load_settings()
     assert settings.operator_phone_allowlist == ()
-    assert settings.push_dispatcher_mode == "disabled"
+    assert settings.push_dispatcher_mode == "mock"
     assert settings.log_level == "INFO"
     assert settings.resume_import_max_file_bytes == 10 * 1024 * 1024
     assert {"role"} <= fresh_columns
+    assert "push_send_log" in fresh_tables
     assert fresh_revision == "20260820_phase10"
     assert {"role"} <= legacy_columns

@@ -143,6 +143,25 @@ class MembershipRepository:
             )
         return int(cursor.rowcount)
 
+    def list_expired_orders(self) -> list[dict[str, str]]:
+        with connect(self._database_path) as connection:
+            rows = connection.execute(
+                """
+                SELECT order_id, user_id, package_type
+                FROM order_record
+                WHERE payment_status = 'expired'
+                ORDER BY create_time ASC, order_id ASC
+                """
+            ).fetchall()
+        return [
+            {
+                "order_id": str(row["order_id"]),
+                "user_id": str(row["user_id"]),
+                "package_type": str(row["package_type"]),
+            }
+            for row in rows
+        ]
+
     def expire_all_pending_orders(self, expire_minutes: int) -> int:
         cutoff = (datetime.now(timezone.utc) - timedelta(minutes=expire_minutes)).isoformat()
         with connect(self._database_path) as connection:

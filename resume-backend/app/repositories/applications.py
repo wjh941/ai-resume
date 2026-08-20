@@ -160,6 +160,35 @@ class ApplicationRepository:
             "status": "pending",
         }
 
+    def list_due_pending_reminders(self) -> list[dict[str, str]]:
+        now = datetime.now(timezone.utc).isoformat()
+        with connect(self._database_path) as connection:
+            rows = connection.execute(
+                """
+                SELECT id, user_id, application_id, reminder_at
+                FROM interview_reminder
+                WHERE status = 'pending' AND reminder_at <= ?
+                ORDER BY reminder_at ASC, id ASC
+                """,
+                (now,),
+            ).fetchall()
+        return [
+            {
+                "id": str(row["id"]),
+                "user_id": str(row["user_id"]),
+                "application_id": str(row["application_id"]),
+                "reminder_at": str(row["reminder_at"]),
+            }
+            for row in rows
+        ]
+
+    def mark_reminder_delivered(self, reminder_id: str) -> None:
+        with connect(self._database_path) as connection:
+            connection.execute(
+                "UPDATE interview_reminder SET status = 'delivered', updated_at = ? WHERE id = ?",
+                (datetime.now(timezone.utc).isoformat(), reminder_id),
+            )
+
     def delete(self, user_id: str, application_id: str) -> None:
         with connect(self._database_path) as connection:
             cursor = connection.execute(

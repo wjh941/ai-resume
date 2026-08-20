@@ -155,6 +155,26 @@ class JobCollectionRepository:
                     created += 1
         return created
 
+    def list_pending_alerts(self) -> list[dict[str, str]]:
+        with connect(self._database_path) as connection:
+            rows = connection.execute(
+                """
+                SELECT id, user_id, alert_key, match_filter
+                FROM job_match_alert
+                WHERE status = 'pending'
+                ORDER BY created_at ASC, id ASC
+                """
+            ).fetchall()
+        return [
+            {
+                "id": str(row["id"]),
+                "user_id": str(row["user_id"]),
+                "alert_key": str(row["alert_key"]),
+                "match_filter": str(row["match_filter"]),
+            }
+            for row in rows
+        ]
+
     def create_pending_alerts(self) -> int:
         now = datetime.now(timezone.utc)
         alert_date = now.date().isoformat()

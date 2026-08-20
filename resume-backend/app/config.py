@@ -170,7 +170,11 @@ def load_settings() -> Settings:
         worker_scan_interval_seconds=max(15, int(os.getenv("TASK_SCAN_INTERVAL_SECONDS", "300"))),
         worker_lock_ttl_seconds=max(30, int(os.getenv("WORKER_LOCK_TTL_SECONDS", "600"))),
         operator_phone_allowlist=_read_phone_allowlist("OPERATOR_PHONE_ALLOWLIST"),
-        push_dispatcher_mode=os.getenv("PUSH_DISPATCHER_MODE", "disabled").strip().lower(),
+        push_dispatcher_mode=(
+            os.getenv("PUSH_DISPATCHER_MODE", "mock").strip().lower()
+            if os.getenv("PUSH_DISPATCHER_MODE", "mock").strip().lower() in {"mock", "real"}
+            else "mock"
+        ),
         log_level=os.getenv("LOG_LEVEL", "INFO").strip().upper(),
         resume_import_max_file_bytes=max(1, int(os.getenv("RESUME_IMPORT_MAX_FILE_BYTES", str(10 * 1024 * 1024)))),
     )

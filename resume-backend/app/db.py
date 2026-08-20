@@ -699,6 +699,25 @@ def _migrate_phase9_lifecycle(connection: sqlite3.Connection) -> None:
 
 def _migrate_phase10_operations(connection: sqlite3.Connection) -> None:
     _ensure_column(connection, "users", "role", "TEXT NOT NULL DEFAULT 'user'")
+    connection.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS push_send_log (
+            id TEXT PRIMARY KEY,
+            event_type TEXT NOT NULL,
+            user_id TEXT NOT NULL REFERENCES users(user_id),
+            source_ref TEXT NOT NULL,
+            target_type TEXT NOT NULL,
+            dispatcher_mode TEXT NOT NULL,
+            status TEXT NOT NULL,
+            payload_summary TEXT NOT NULL DEFAULT '{}',
+            error_trace TEXT,
+            created_at TEXT NOT NULL,
+            UNIQUE (event_type, target_type, source_ref)
+        );
+        CREATE INDEX IF NOT EXISTS idx_push_send_log_owner_created
+        ON push_send_log (user_id, created_at DESC, id DESC);
+        """
+    )
 
 
 def _ensure_column(connection: sqlite3.Connection, table: str, column: str, definition: str) -> None:

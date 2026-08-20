@@ -21,7 +21,20 @@ def upgrade() -> None:
     columns = {column["name"] for column in inspect(op.get_bind()).get_columns("users")}
     if "role" not in columns:
         op.execute("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'")
+    op.execute(
+        "CREATE TABLE IF NOT EXISTS push_send_log ("
+        "id TEXT PRIMARY KEY, event_type TEXT NOT NULL, "
+        "user_id TEXT NOT NULL REFERENCES users(user_id), source_ref TEXT NOT NULL, "
+        "target_type TEXT NOT NULL, dispatcher_mode TEXT NOT NULL, status TEXT NOT NULL, "
+        "payload_summary TEXT NOT NULL DEFAULT '{}', error_trace TEXT, created_at TEXT NOT NULL, "
+        "UNIQUE (event_type, target_type, source_ref))"
+    )
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS idx_push_send_log_owner_created "
+        "ON push_send_log (user_id, created_at DESC, id DESC)"
+    )
 
 
 def downgrade() -> None:
+    op.drop_table("push_send_log")
     op.drop_column("users", "role")

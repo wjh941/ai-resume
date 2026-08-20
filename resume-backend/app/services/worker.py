@@ -6,9 +6,12 @@ from uuid import uuid4
 
 from app.config import Settings
 from app.db import DatabaseTarget, connect
+from app.repositories.applications import ApplicationRepository
 from app.repositories.job_collections import JobCollectionRepository
 from app.repositories.membership import MembershipRepository
+from app.repositories.push_logs import PushLogRepository
 from app.services.downloads import DownloadService
+from app.services.push import PushDispatcher
 
 
 class TaskLeaseRepository:
@@ -50,6 +53,7 @@ class TaskLeaseRepository:
 class BackgroundWorker:
     def __init__(
         self,
+        settings: Settings,
         database_target: DatabaseTarget,
         temp_directory: Path,
         export_expire_minutes: int,
@@ -59,7 +63,9 @@ class BackgroundWorker:
     ) -> None:
         self._leases = TaskLeaseRepository(database_target)
         self._jobs = JobCollectionRepository(database_target)
+        self._applications = ApplicationRepository(database_target)
         self._membership = MembershipRepository(database_target)
+        self._push = PushDispatcher(settings, PushLogRepository(database_target))
         self._downloads = DownloadService(database_target, temp_directory, export_expire_minutes)
         self._order_expire_minutes = order_expire_minutes
         self._lock_ttl_seconds = lock_ttl_seconds
@@ -68,6 +74,7 @@ class BackgroundWorker:
     @classmethod
     def from_settings(cls, settings: Settings, owner_id: str | None = None) -> "BackgroundWorker":
         return cls(
+            settings,
             settings.database_target,
             settings.temp_file_path,
             settings.export_file_expire_minutes,
@@ -90,7 +97,56 @@ class BackgroundWorker:
                     self._order_expire_minutes
                 ),
             ),
+            "push_job_alerts": self._run_with_lease(
+                "push_job_alerts", self._push_job_alerts
+            ),
+            "push_interview_reminders": self._run_with_lease(
+                "push_interview_reminders", self._push_interview_reminders
+            ),
+            "push_order_changes": self._run_with_lease(
+                "push_order_changes", self._push_order_changes
+            ),
         }
+
+    def _push_job_alerts(self) -> int:
+        return sum(
+            len(
+                self._push.dispatch(
+                    "job_subscription_alert",
+                    alert["user_id"],
+                    alert["id"],
+                    {"alert_id": alert["id"], "match_filter": alert["match_filter"]},
+                )
+            )
+            for alert in self._jobs.list_pending_alerts()
+        )
+
+    def _push_interview_reminders(self) -> int:
+        delivered = 0
+        for reminder in self._applications.list_due_pending_reminders():
+            logs = self._push.dispatch(
+                "interview_reminder",
+                reminder["user_id"],
+                reminder["id"],
+                {"application_id": reminder["application_id"], "reminder_at": reminder["reminder_at"]},
+            )
+            delivered += len(logs)
+            if logs and self._push.mode == "mock":
+                self._applications.mark_reminder_delivered(reminder["id"])
+        return delivered
+
+    def _push_order_changes(self) -> int:
+        return sum(
+            len(
+                self._push.dispatch(
+                    "order_change",
+                    order["user_id"],
+                    order["order_id"],
+                    {"order_id": order["order_id"], "package_type": order["package_type"]},
+                )
+            )
+            for order in self._membership.list_expired_orders()
+        )
 
     def _run_with_lease(self, task_name: str, operation) -> int:
         if not self._leases.acquire(task_name, self._owner_id, self._lock_ttl_seconds):
