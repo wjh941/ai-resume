@@ -7,7 +7,8 @@ Create Date: 2026-08-20
 
 from __future__ import annotations
 
-from alembic import op
+from alembic import context, op
+import sqlalchemy as sa
 from sqlalchemy import inspect
 
 
@@ -18,9 +19,15 @@ depends_on = None
 
 
 def upgrade() -> None:
-    columns = {column["name"] for column in inspect(op.get_bind()).get_columns("users")}
-    if "role" not in columns:
-        op.execute("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'")
+    has_role = False
+    if not context.is_offline_mode():
+        columns = {column["name"] for column in inspect(op.get_bind()).get_columns("users")}
+        has_role = "role" in columns
+    if not has_role:
+        op.add_column(
+            "users",
+            sa.Column("role", sa.Text(), nullable=False, server_default=sa.text("'user'")),
+        )
     op.execute(
         "CREATE TABLE IF NOT EXISTS push_send_log ("
         "id TEXT PRIMARY KEY, event_type TEXT NOT NULL, "

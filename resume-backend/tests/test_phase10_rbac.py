@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+from io import StringIO
 from pathlib import Path
 
 import jwt
@@ -119,3 +120,16 @@ def test_phase10_migration_head_and_legacy_sqlite_upgrade(monkeypatch, tmp_path)
     assert {"push_send_log", "resume_import", "knowledge_item", "knowledge_item_version", "background_task_run"} <= fresh_tables
     assert fresh_revision == "20260820_phase10"
     assert {"role"} <= legacy_columns
+
+
+def test_phase10_migration_renders_postgresql_offline_sql():
+    config = Config(str(BACKEND_ROOT / "alembic.ini"))
+    config.set_main_option("sqlalchemy.url", "postgresql+psycopg://resume:secret@db.example/resume")
+    output = StringIO()
+    config.output_buffer = output
+
+    command.upgrade(config, "head", sql=True)
+
+    rendered = output.getvalue()
+    assert "ALTER TABLE users ADD COLUMN role" in rendered
+    assert "CREATE TABLE IF NOT EXISTS push_send_log" in rendered
