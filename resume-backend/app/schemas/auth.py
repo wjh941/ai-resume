@@ -35,6 +35,7 @@ class PhoneLoginRequest(PhoneCodeRequest):
 class AuthUser(BaseModel):
     user_id: str
     phone: str
+    role: str
 
 
 class PhoneLoginResult(BaseModel):

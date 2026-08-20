@@ -16,6 +16,7 @@ class UserNotFoundError(Exception):
 class UserRecord:
     user_id: str
     phone: str
+    role: str
     token_version: int
     created_at: str
     last_login: str
@@ -30,7 +31,7 @@ class UserRepository:
     def __init__(self, database_path: Path) -> None:
         self._database_path = database_path
 
-    def find_or_create_by_phone(self, phone: str) -> UserRecord:
+    def find_or_create_by_phone(self, phone: str, *, role: str = "user") -> UserRecord:
         now = datetime.now(timezone.utc).isoformat()
         with connect(self._database_path) as connection:
             row = connection.execute(
@@ -40,17 +41,17 @@ class UserRepository:
                 user_id = str(uuid4())
                 connection.execute(
                     """
-                    INSERT INTO users (user_id, phone, token_version, created_at, last_login)
-                    VALUES (?, ?, 1, ?, ?)
+                    INSERT INTO users (user_id, phone, role, token_version, created_at, last_login)
+                    VALUES (?, ?, ?, 1, ?, ?)
                     """,
-                    (user_id, phone, now, now),
+                    (user_id, phone, role, now, now),
                 )
                 row = connection.execute(
                     "SELECT * FROM users WHERE user_id = ?", (user_id,)
                 ).fetchone()
             else:
                 connection.execute(
-                    "UPDATE users SET last_login = ? WHERE user_id = ?", (now, row["user_id"])
+                    "UPDATE users SET last_login = ?, role = ? WHERE user_id = ?", (now, role, row["user_id"])
                 )
                 row = connection.execute(
                     "SELECT * FROM users WHERE user_id = ?", (row["user_id"],)
@@ -79,6 +80,7 @@ class UserRepository:
         return UserRecord(
             user_id=str(row["user_id"]),
             phone=str(row["phone"]),
+            role=str(row["role"]),
             token_version=int(row["token_version"]),
             created_at=str(row["created_at"]),
             last_login=str(row["last_login"]),

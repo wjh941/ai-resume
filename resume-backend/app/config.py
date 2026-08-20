@@ -74,6 +74,10 @@ class Settings:
     worker_enabled: bool = False
     worker_scan_interval_seconds: int = 300
     worker_lock_ttl_seconds: int = 600
+    operator_phone_allowlist: tuple[str, ...] = ()
+    push_dispatcher_mode: str = "disabled"
+    log_level: str = "INFO"
+    resume_import_max_file_bytes: int = 10 * 1024 * 1024
 
     @property
     def database_target(self) -> Path | str:
@@ -97,6 +101,10 @@ def _read_bool(name: str, default: bool) -> bool:
 
 def _read_csv(name: str) -> tuple[str, ...]:
     return tuple(item.strip() for item in os.getenv(name, "").split(",") if item.strip())
+
+
+def _read_phone_allowlist(name: str) -> tuple[str, ...]:
+    return tuple("".join(item.split()) for item in _read_csv(name))
 
 
 def load_settings() -> Settings:
@@ -161,4 +169,8 @@ def load_settings() -> Settings:
         worker_enabled=_read_bool("WORKER_ENABLED", False),
         worker_scan_interval_seconds=max(15, int(os.getenv("TASK_SCAN_INTERVAL_SECONDS", "300"))),
         worker_lock_ttl_seconds=max(30, int(os.getenv("WORKER_LOCK_TTL_SECONDS", "600"))),
+        operator_phone_allowlist=_read_phone_allowlist("OPERATOR_PHONE_ALLOWLIST"),
+        push_dispatcher_mode=os.getenv("PUSH_DISPATCHER_MODE", "disabled").strip().lower(),
+        log_level=os.getenv("LOG_LEVEL", "INFO").strip().upper(),
+        resume_import_max_file_bytes=max(1, int(os.getenv("RESUME_IMPORT_MAX_FILE_BYTES", str(10 * 1024 * 1024)))),
     )

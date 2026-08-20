@@ -33,7 +33,7 @@ def login_phone(payload: PhoneLoginRequest, request: Request):
         token, user = request.app.state.auth_service.issue_phone_login(payload.phone)
     except (VerificationCodeError, AuthenticationError) as error:
         raise HTTPException(status_code=401, detail="Mobile number or verification code is invalid.") from error
-    return success({"token": token, "user": AuthUser(user_id=user.user_id, phone=user.phone).model_dump()})
+    return success({"token": token, "user": AuthUser(user_id=user.user_id, phone=user.phone, role=user.role).model_dump()})
 
 
 @router.post("/wx-login")
@@ -67,4 +67,4 @@ def logout(request: Request, token: str | None = Depends(optional_bearer_token))
 @router.get("/me")
 def current_user(request: Request, user_id: str = Depends(current_user_id)):
     user = request.app.state.auth_service.get_user(user_id)
-    return success(AuthUser(user_id=user.user_id, phone=user.phone).model_dump())
+    return success(AuthUser(user_id=user.user_id, phone=user.phone, role=user.role).model_dump())

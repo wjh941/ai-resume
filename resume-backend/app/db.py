@@ -203,6 +203,7 @@ def initialize_database(database_path: DatabaseTarget, *, timeout_seconds: float
             CREATE TABLE IF NOT EXISTS users (
                 user_id TEXT PRIMARY KEY,
                 phone TEXT NOT NULL UNIQUE,
+                role TEXT NOT NULL DEFAULT 'user',
                 token_version INTEGER NOT NULL DEFAULT 1 CHECK (token_version >= 1),
                 created_at TEXT NOT NULL,
                 last_login TEXT NOT NULL,
@@ -493,6 +494,7 @@ def initialize_database(database_path: DatabaseTarget, *, timeout_seconds: float
         _migrate_catalog_provenance(connection)
         _migrate_phase7_lifecycle(connection)
         _migrate_phase9_lifecycle(connection)
+        _migrate_phase10_operations(connection)
         _seed_initial_data(connection)
         _migrate_legacy_job_cache(connection)
 
@@ -693,6 +695,10 @@ def _migrate_phase9_lifecycle(connection: sqlite3.Connection) -> None:
         ON job_match_alert (user_id, created_at DESC, id DESC);
         """
     )
+
+
+def _migrate_phase10_operations(connection: sqlite3.Connection) -> None:
+    _ensure_column(connection, "users", "role", "TEXT NOT NULL DEFAULT 'user'")
 
 
 def _ensure_column(connection: sqlite3.Connection, table: str, column: str, definition: str) -> None:
