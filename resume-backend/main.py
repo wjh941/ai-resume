@@ -26,6 +26,7 @@ from app.repositories.knowledgebase import KnowledgebaseRepository, Knowledgebas
 from app.repositories.job_collections import FavoriteJobNotFoundError, JobCollectionRepository
 from app.repositories.membership import MembershipRepository, OrderExpiredError, OrderNotFoundError, PaymentCallbackConflictError
 from app.repositories.operator_knowledge import OperatorKnowledgeNotFoundError, OperatorKnowledgeRepository
+from app.repositories.password_accounts import PasswordAccountRepository
 from app.repositories.push_logs import PushLogRepository
 from app.repositories.resume_imports import ResumeImportRepository
 from app.repositories.templates import TemplateRepository
@@ -149,8 +150,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         _add_security_headers(response, settings.production)
         return response
     app.state.user_repository = UserRepository(database_target)
+    app.state.password_account_repository = PasswordAccountRepository(database_target)
     app.state.account_privacy_repository = AccountPrivacyRepository(database_target)
-    app.state.auth_service = AuthService(settings, app.state.user_repository)
+    app.state.auth_service = AuthService(
+        settings,
+        app.state.user_repository,
+        app.state.password_account_repository,
+    )
     app.state.sms_service = SmsService(settings)
     app.state.membership_repository = MembershipRepository(database_target)
     app.state.push_log_repository = PushLogRepository(database_target)

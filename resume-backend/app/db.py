@@ -495,6 +495,7 @@ def initialize_database(database_path: DatabaseTarget, *, timeout_seconds: float
         _migrate_phase7_lifecycle(connection)
         _migrate_phase9_lifecycle(connection)
         _migrate_phase10_operations(connection)
+        _migrate_phase11_password_accounts(connection)
         _seed_initial_data(connection)
         _migrate_legacy_job_cache(connection)
 
@@ -760,6 +761,20 @@ def _migrate_phase10_operations(connection: sqlite3.Connection) -> None:
             status TEXT NOT NULL,
             processed_count INTEGER NOT NULL DEFAULT 0,
             completed_at TEXT NOT NULL
+        );
+        """
+    )
+
+
+def _migrate_phase11_password_accounts(connection: sqlite3.Connection) -> None:
+    connection.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS password_account (
+            account TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL UNIQUE REFERENCES users(user_id),
+            password_hash TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            last_login TEXT NOT NULL
         );
         """
     )

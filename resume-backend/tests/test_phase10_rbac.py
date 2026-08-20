@@ -116,9 +116,10 @@ def test_phase10_migration_head_and_legacy_sqlite_upgrade(monkeypatch, tmp_path)
     assert settings.push_dispatcher_mode == "mock"
     assert settings.log_level == "INFO"
     assert settings.resume_import_max_file_bytes == 10 * 1024 * 1024
+    assert settings.password_bcrypt_rounds == 12
     assert {"role"} <= fresh_columns
-    assert {"push_send_log", "resume_import", "knowledge_item", "knowledge_item_version", "background_task_run"} <= fresh_tables
-    assert fresh_revision == "20260820_phase10"
+    assert {"push_send_log", "resume_import", "knowledge_item", "knowledge_item_version", "background_task_run", "password_account"} <= fresh_tables
+    assert fresh_revision == "20260821_phase11"
     assert {"role"} <= legacy_columns
 
 

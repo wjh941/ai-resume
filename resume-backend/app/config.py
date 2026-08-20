@@ -78,6 +78,7 @@ class Settings:
     push_dispatcher_mode: str = "mock"
     log_level: str = "INFO"
     resume_import_max_file_bytes: int = 10 * 1024 * 1024
+    password_bcrypt_rounds: int = 12
 
     @property
     def database_target(self) -> Path | str:
@@ -177,4 +178,5 @@ def load_settings() -> Settings:
         ),
         log_level=os.getenv("LOG_LEVEL", "INFO").strip().upper(),
         resume_import_max_file_bytes=max(1, int(os.getenv("RESUME_IMPORT_MAX_FILE_BYTES", str(10 * 1024 * 1024)))),
+        password_bcrypt_rounds=min(31, max(4, int(os.getenv("PASSWORD_BCRYPT_ROUNDS", "12")))),
     )

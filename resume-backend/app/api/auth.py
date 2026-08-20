@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from app.schemas.auth import AuthUser, PhoneCodeRequest, PhoneLoginRequest
+from app.repositories.password_accounts import PasswordAccountExistsError
+from app.schemas.auth import AuthUser, PasswordCredentialsRequest, PhoneCodeRequest, PhoneLoginRequest
 from app.schemas.common import success
 from app.services.auth import (
     AuthenticationError,
@@ -13,6 +14,18 @@ from app.services.sms import SmsConfigurationError, SmsDeliveryError, SmsRateLim
 
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+
+def _auth_response(token: str, user, account: str | None = None):
+    return success({
+        "token": token,
+        "user": AuthUser(
+            user_id=user.user_id,
+            phone=user.phone,
+            role=user.role,
+            account=account,
+        ).model_dump(exclude_none=True),
+    })
 
 
 @router.post("/send-code")
@@ -33,7 +46,29 @@ def login_phone(payload: PhoneLoginRequest, request: Request):
         token, user = request.app.state.auth_service.issue_phone_login(payload.phone)
     except (VerificationCodeError, AuthenticationError) as error:
         raise HTTPException(status_code=401, detail="Mobile number or verification code is invalid.") from error
-    return success({"token": token, "user": AuthUser(user_id=user.user_id, phone=user.phone, role=user.role).model_dump()})
+    return _auth_response(token, user)
+
+
+@router.post("/register-password")
+def register_password(payload: PasswordCredentialsRequest, request: Request):
+    try:
+        token, user = request.app.state.auth_service.register_password_account(
+            payload.account, payload.password
+        )
+    except PasswordAccountExistsError as error:
+        raise HTTPException(status_code=409, detail="账号已存在，请直接登录。") from error
+    return _auth_response(token, user, payload.account)
+
+
+@router.post("/login-password")
+def login_password(payload: PasswordCredentialsRequest, request: Request):
+    try:
+        token, user = request.app.state.auth_service.login_password_account(
+            payload.account, payload.password
+        )
+    except AuthenticationError as error:
+        raise HTTPException(status_code=401, detail="账号或密码错误。") from error
+    return _auth_response(token, user, payload.account)
 
 
 @router.post("/wx-login")
@@ -67,4 +102,11 @@ def logout(request: Request, token: str | None = Depends(optional_bearer_token))
 @router.get("/me")
 def current_user(request: Request, user_id: str = Depends(current_user_id)):
     user = request.app.state.auth_service.get_user(user_id)
-    return success(AuthUser(user_id=user.user_id, phone=user.phone, role=user.role).model_dump())
+    return success(
+        AuthUser(
+            user_id=user.user_id,
+            phone=user.phone,
+            role=user.role,
+            account=request.app.state.auth_service.get_password_account(user_id),
+        ).model_dump(exclude_none=True)
+    )

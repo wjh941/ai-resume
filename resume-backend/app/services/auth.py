@@ -3,11 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
+import bcrypt
 import jwt
 from fastapi import Depends, HTTPException, Request, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.config import Settings
+from app.repositories.password_accounts import PasswordAccountExistsError, PasswordAccountRepository
 from app.repositories.users import UserNotFoundError, UserRecord, UserRepository
 
 
@@ -31,14 +33,48 @@ class AuthPrincipal:
 class AuthService:
     """本期 JWT 服务；Token 只承载用户主键、版本号和过期时间。"""
 
-    def __init__(self, settings: Settings, users: UserRepository) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        users: UserRepository,
+        password_accounts: PasswordAccountRepository,
+    ) -> None:
         self._settings = settings
         self._users = users
+        self._password_accounts = password_accounts
 
     def issue_phone_login(self, phone: str) -> tuple[str, UserRecord]:
         phone = "".join(phone.split())
         role = "operator" if phone in self._settings.operator_phone_allowlist else "user"
         user = self._users.find_or_create_by_phone(phone, role=role)
+        return self.issue_token(user), user
+
+    def register_password_account(self, account: str, password: str) -> tuple[str, UserRecord]:
+        if self._password_accounts.exists(account):
+            raise PasswordAccountExistsError(account)
+        user = self._users.create_local_user()
+        password_hash = bcrypt.hashpw(
+            password.encode("utf-8"),
+            bcrypt.gensalt(rounds=self._settings.password_bcrypt_rounds),
+        ).decode("utf-8")
+        try:
+            self._password_accounts.create(account, user.user_id, password_hash)
+        except PasswordAccountExistsError:
+            self._users.delete_unowned_user(user.user_id)
+            raise
+        return self.issue_token(user), user
+
+    def login_password_account(self, account: str, password: str) -> tuple[str, UserRecord]:
+        record = self._password_accounts.get(account)
+        if record is None or not bcrypt.checkpw(
+            password.encode("utf-8"), record.password_hash.encode("utf-8")
+        ):
+            raise AuthenticationError
+        try:
+            user = self._users.get(record.user_id)
+        except UserNotFoundError as error:
+            raise AuthenticationError from error
+        self._password_accounts.update_last_login(record.account)
         return self.issue_token(user), user
 
     def issue_token(self, user: UserRecord) -> str:
@@ -83,6 +119,10 @@ class AuthService:
             return self._users.get(user_id)
         except UserNotFoundError as error:
             raise AuthenticationError from error
+
+    def get_password_account(self, user_id: str) -> str | None:
+        record = self._password_accounts.get_by_user_id(user_id)
+        return record.account if record is not None else None
 
 
 def current_user_id(

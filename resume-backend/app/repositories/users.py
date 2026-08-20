@@ -60,6 +60,28 @@ class UserRepository:
             raise UserNotFoundError
         return self._from_row(row)
 
+    def create_local_user(self) -> UserRecord:
+        now = datetime.now(timezone.utc).isoformat()
+        user_id = str(uuid4())
+        with connect(self._database_path) as connection:
+            connection.execute(
+                """
+                INSERT INTO users (user_id, phone, role, token_version, created_at, last_login)
+                VALUES (?, ?, 'user', 1, ?, ?)
+                """,
+                (user_id, f"local:{user_id}", now, now),
+            )
+            row = connection.execute(
+                "SELECT * FROM users WHERE user_id = ?", (user_id,)
+            ).fetchone()
+        if row is None:
+            raise UserNotFoundError(user_id)
+        return self._from_row(row)
+
+    def delete_unowned_user(self, user_id: str) -> None:
+        with connect(self._database_path) as connection:
+            connection.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
+
     def get(self, user_id: str) -> UserRecord:
         with connect(self._database_path) as connection:
             row = connection.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()

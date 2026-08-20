@@ -45,8 +45,8 @@ def test_alembic_creates_current_schema_on_fresh_sqlite_database(tmp_path):
 
     assert {"is_deleted", "deleted_at", "privacy_consent_at"} <= users
     assert {"match_filter", "last_notify_at"} <= subscriptions
-    assert {"background_task_lock", "career_task", "interview_reminder", "resume_version"} <= tables
-    assert revision == "20260820_phase10"
+    assert {"background_task_lock", "career_task", "interview_reminder", "resume_version", "password_account"} <= tables
+    assert revision == "20260821_phase11"
 
 
 def test_postgres_connection_translates_existing_sqlite_insert_idioms():
