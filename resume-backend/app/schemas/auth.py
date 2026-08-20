@@ -42,14 +42,14 @@ class PasswordCredentialsRequest(BaseModel):
     def validate_account(cls, value: str) -> str:
         normalized = value.strip().lower()
         if not _ACCOUNT_PATTERN.fullmatch(normalized):
-            raise ValueError("account must be 3-32 lowercase ASCII characters")
+            raise ValueError("账号需为 3-32 位小写英文字母、数字或 ._-")
         return normalized
 
     @field_validator("password")
     @classmethod
     def validate_password(cls, value: str) -> str:
         if not 10 <= len(value.encode("utf-8")) <= 72:
-            raise ValueError("password must be 10-72 bytes")
+            raise ValueError("密码长度需为 10-72 个字节")
         return value
 
 

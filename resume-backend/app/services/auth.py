@@ -22,6 +22,7 @@ class DemoAuthenticationDisabledError(Exception):
 
 
 _bearer = HTTPBearer(auto_error=False)
+_DUMMY_PASSWORD_HASH = b"$2b$12$nMIUujgpbmkO5uW2hmts1.yPk85mUw9MDjDN5SKcsso4DGSyup3ji"
 
 
 @dataclass(frozen=True)
@@ -66,9 +67,8 @@ class AuthService:
 
     def login_password_account(self, account: str, password: str) -> tuple[str, UserRecord]:
         record = self._password_accounts.get(account)
-        if record is None or not bcrypt.checkpw(
-            password.encode("utf-8"), record.password_hash.encode("utf-8")
-        ):
+        password_hash = record.password_hash.encode("utf-8") if record is not None else _DUMMY_PASSWORD_HASH
+        if not bcrypt.checkpw(password.encode("utf-8"), password_hash) or record is None:
             raise AuthenticationError
         try:
             user = self._users.get(record.user_id)
