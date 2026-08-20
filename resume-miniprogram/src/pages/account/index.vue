@@ -109,7 +109,7 @@ onMounted(async () => {
   <scroll-view class="page" scroll-y>
     <view class="profile-card">
       <text class="title">账户中心</text>
-      <text class="meta">{{ user?.phone || "需要登录后查看" }}</text>
+      <text class="meta">{{ user?.account || user?.phone || "需要登录后查看" }}</text>
       <text class="meta">{{ loading ? "正在刷新账户信息…" : user ? `账户标识：${user.userId}` : "当前登录状态不可用。" }}</text>
       <text v-if="error" class="error">{{ error }}</text>
     </view>

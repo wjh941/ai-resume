@@ -6,6 +6,7 @@ export type AuthSessionUser = {
   userId: string
   phone: string
   role: "user" | "operator"
+  account?: string
 }
 
 type UniStorage = {
@@ -63,7 +64,12 @@ export function getAuthUser(): AuthSessionUser | null {
   if (!user || typeof user !== "object") return null
   const candidate = user as Partial<AuthSessionUser>
   return typeof candidate.userId === "string" && typeof candidate.phone === "string"
-    ? { userId: candidate.userId, phone: candidate.phone, role: candidate.role === "operator" ? "operator" : "user" }
+    ? {
+        userId: candidate.userId,
+        phone: candidate.phone,
+        role: candidate.role === "operator" ? "operator" : "user",
+        account: typeof candidate.account === "string" ? candidate.account : undefined,
+      }
     : null
 }
 
