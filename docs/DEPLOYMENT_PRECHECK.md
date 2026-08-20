@@ -4,6 +4,37 @@ Complete every item before setting `PRODUCTION=true`. SQLite remains for
 development only; production needs PostgreSQL, backup validation, a worker
 deployment decision, and an external HTTPS reverse proxy.
 
+## Public VPS Safety Baseline
+
+- Public deployment must set `PRODUCTION=true`. This disables FastAPI debug
+  tracebacks and OpenAPI documentation endpoints; do not expose development
+  configuration, `/docs`, or a wildcard CORS policy on the public internet.
+- The supplied Compose file uses `unless-stopped` restart policies and health
+  checks for the API and worker. It starts the worker only after the API health
+  endpoint is ready. Monitor restart loops; automatic restart is not a
+  substitute for fixing a failed migration or missing secret.
+- Compose explicitly sets `AUTH_DEMO_MODE=false`, `SMS_PROVIDER=disabled`,
+  `PAYMENT_DEMO_MODE=false`, `PUSH_DISPATCHER_MODE=mock`, and
+  `WEB_SEARCH_PROVIDER=disabled`. It does not connect SMS, payment, push, or
+  job-search third parties.
+- For a personal deployment without an SMS provider, use the 账号密码 tab to
+  register a local account. Passwords are stored only as bcrypt hashes; set a
+  strong `JWT_SECRET` and retain `PASSWORD_BCRYPT_ROUNDS=12` or higher after
+  measuring the server capacity.
+
+## External Service Qualifications
+
+No external service is enabled by this release. Before changing the mock or
+disabled settings, obtain and verify the platform requirements for the exact
+legal entity, region, and account type. This checklist is operational guidance,
+not legal advice.
+
+| 功能 | 上线前的资质与配置确认 |
+| --- | --- |
+| 商业短信 | 短信供应商通常会校验主体、签名和模板。以阿里云为例，资质申请和中国大陆短信签名有对应的主体材料要求；先完成[阿里云短信资质申请](https://help.aliyun.com/zh/sms/user-guide/qualification-application-description)，再配置密钥。 |
+| 微信支付 | 微信支付商户入驻需要按主体类型提交材料；官方指引列出了营业执照、经营者或法人证件等常见材料。完成[微信支付商户入驻](https://pay.weixin.qq.com/static/help_guide/business_registration.shtml)及回调验签后，才可接入真实支付。 |
+| 微信订阅消息 | 订阅消息需要已获用户授权、可用模板 ID 和符合平台规则的小程序主体能力。按[微信订阅消息文档](https://developers.weixin.qq.com/miniprogram/dev/framework/open-ability/subscribe-message.html)完成账号资质、模板和用户授权核验后，才可启用发送。 |
+
 ## Phase 8 Database and Backups
 
 - Keep `DATABASE_URL` empty for local SQLite development. Production PostgreSQL
