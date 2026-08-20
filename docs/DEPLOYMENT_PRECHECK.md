@@ -39,6 +39,37 @@ deployment decision, and an external HTTPS reverse proxy.
 - Subscription alerts are stored as in-app pending records only. SMS, WeChat,
   and other push delivery remain intentionally unimplemented.
 
+## Phase 10 Final Launch Checklist
+
+- Keep the established port contract: H5 development runs on
+  `127.0.0.1:5186`; FastAPI runs on `127.0.0.1:8000`. Production H5 assets
+  must call the HTTPS API domain through the reverse proxy, not a browser-side
+  loopback address.
+- Set `OPERATOR_PHONE_ALLOWLIST` to a minimal, reviewed comma-separated list.
+  A listed phone receives the persistent `operator` role at login; operator
+  APIs are protected by the backend JWT role check, not just by hidden H5
+  navigation.
+- Leave `PUSH_DISPATCHER_MODE=mock` until a provider integration has passed
+  security review. `real` currently records dispatch intent and failures only:
+  it does not make a WeChat subscription-message or SMS HTTP request.
+- Store all SMS, WeChat Open Platform, payment, push, PostgreSQL, and JWT
+  secrets in the deployment secret manager. Rotate leaked secrets immediately;
+  do not place them in `.env` files committed to the repository or H5 build
+  variables.
+- Confirm the external HTTPS reverse proxy, WeChat domain whitelist, SMS sign
+  name/template, payment callback verification, and push provider account are
+  ready before enabling their respective production integrations.
+- Set a writable, private `TEMP_FILE_PATH`, a suitable
+  `RESUME_IMPORT_MAX_FILE_BYTES`, and retention rules. Resume upload accepts
+  only PDF/Word by extension and MIME type. Malware scanning and real document
+  parsing are still integration points, not enabled protection.
+- Verify `/health` after release for the database kind, worker status, and
+  push dispatcher mode. The endpoint masks secrets and is a hint, not a full
+  monitoring system.
+- Run migrations, restore-test a backup, and execute one worker cycle before
+  accepting traffic. Keep one active worker unless the shared task lease and
+  clocks have been operationally validated for multiple instances.
+
 ## Troubleshooting
 
 - **Token rejected:** confirm the same `JWT_SECRET` is present on every
@@ -50,6 +81,14 @@ deployment decision, and an external HTTPS reverse proxy.
   PostgreSQL.
 - **Export permission failure:** ensure `TEMP_FILE_PATH` exists, is writable by
   the backend account, and is not a shared user-media directory.
+- **Operator page unavailable:** log out and back in after adding the phone to
+  `OPERATOR_PHONE_ALLOWLIST`; existing tokens retain the role captured at
+  login and the backend will reject a stale role claim.
+- **Resume import rejected:** use a PDF, `.doc`, or `.docx` file within
+  `RESUME_IMPORT_MAX_FILE_BYTES`; retry after checking the backend account can
+  create the private temporary directory.
+- **Push log is skipped:** this is expected with the default mock mode. Real
+  provider calls are deliberately not implemented in this release.
 
 ## Authentication
 
