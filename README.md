@@ -20,6 +20,7 @@
 - 简历版本快照、投递时间线、面试提醒记录与职业任务清单
 - PDF/Word 简历上传与结构化预览草稿；用户确认后才会覆盖当前填写内容
 - 模拟推送分发与发送日志、运营知识库管理入口；运营权限由后端 JWT 角色校验
+- 手机验证码与独立账号密码双登录；账号密码仅保存 bcrypt 哈希，适合不接入 SMS 的个人部署
 
 ## 目录
 
@@ -82,9 +83,11 @@ VITE_RESUME_API_URL=https://api.example.com
 
 `premium-dashboard.html` 也通过相同代理运行在 `/premium-dashboard.html`。线上静态部署时，可在页面加载前设置 `window.__RESUME_API_BASE_URL__` 为 HTTPS API 域名。
 
-### 3. 演示登录
+### 3. 登录方式
 
-所有业务接口和工作台编辑操作均需登录。初次本地启动时，`.env.example` 的 `AUTH_DEMO_MODE=true` 会启用演示验证码：任意合法中国大陆手机号配合 `123456` 即可登录。生产环境必须关闭该开关并配置真实短信服务；微信入口目前仅为开放平台授权占位。
+所有业务接口和工作台编辑操作均需登录。初次本地启动时，`.env.example` 的 `AUTH_DEMO_MODE=true` 会启用演示验证码：任意合法中国大陆手机号配合 `123456` 即可登录。
+
+登录页同时提供“账号密码”入口，可注册 3-32 位账号和 10-72 字节密码；密码只以 bcrypt 哈希存入独立 `password_account` 表。个人部署不需要 SMS 服务：设置 `AUTH_DEMO_MODE=false`、`SMS_PROVIDER=disabled` 后，直接使用账号密码登录。公开生产环境必须关闭演示验证码；若启用真实短信，再单独完成供应商资质、签名、模板和密钥配置。微信入口目前仍为开放平台授权占位。
 
 登录成功后，后端签发带有 `sub`、`token_version`、`role`、`exp` 的 JWT。后端只使用 JWT 内的用户 ID 查询数据，前端不会提交 `user_id` 或旧版 `client_id`。浏览器临时业务缓存的键名为 `resume-dashboard:{user_id}:{业务键名}`，不同账号不会互相读取。运营人员需由服务端 `OPERATOR_PHONE_ALLOWLIST` 配置并重新登录；隐藏入口不是权限控制手段。
 
@@ -181,6 +184,7 @@ npm run build:mp-weixin
 
 - 本地开发默认使用 SQLite；生产环境通过 `DATABASE_URL` 使用 PostgreSQL，迁移与备份步骤见 [PostgreSQL 迁移说明](docs/POSTGRESQL_MIGRATION.md)。
 - Docker Compose 只提供服务编排，HTTPS 必须由外部 Nginx 或 Caddy 终止；完整上线检查见 [部署前检查](docs/DEPLOYMENT_PRECHECK.md)。
+- 公共 VPS 的 Compose 配置为 API 与 worker 提供健康检查和 `unless-stopped` 自动重启，并强制关闭 SMS 演示、真实支付和岗位搜索，将推送保持为 `mock`。上线前必须设置 `PRODUCTION=true`，避免向公网暴露调试信息或 OpenAPI 文档。
 - `WORKER_ENABLED=true` 时应单独运行 APScheduler worker。默认推送模式为 `mock`，仅记录日志，当前不会真实调用 SMS 或 WeChat。
 - 生产配置、密钥、运营手机号白名单和导入文件限制都必须在后端环境变量或密钥管理器中设置，绝不能暴露到 H5。
 
