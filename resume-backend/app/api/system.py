@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import os
 from pathlib import Path
 from typing import Literal
@@ -11,6 +12,7 @@ from app.config import Settings, load_settings
 from app.db import connect
 from app.schemas.common import success
 from app.services.ai_client import build_ai_client
+from app.services.observability import log_event
 
 
 router = APIRouter(prefix="/api/system", tags=["system"])
@@ -39,6 +41,11 @@ class AIConfigPayload(BaseModel):
         if not normalized:
             raise ValueError("value must not be blank")
         return normalized
+
+
+class ClientErrorPayload(BaseModel):
+    message: str = Field(min_length=1, max_length=500)
+    component: str = Field(default="", max_length=300)
 
 
 def _setup_allowed(settings: Settings) -> bool:
@@ -74,6 +81,8 @@ def health_summary(settings: Settings) -> dict[str, object]:
     return {
         "status": "healthy" if database["status"] == "connected" else "degraded",
         "database": database,
+        "push_dispatcher_mode": settings.push_dispatcher_mode,
+        "worker": _worker_health(settings),
         "backup": {
             "status": "manual",
             "hint": "Run the platform backup script and validate a restore before production deployment.",
@@ -87,6 +96,27 @@ def health_summary(settings: Settings) -> dict[str, object]:
             "payment_callback_configured": bool(settings.payment_callback_secret),
         },
     }
+
+
+def _worker_health(settings: Settings) -> dict[str, str | None]:
+    if not settings.worker_enabled:
+        return {"status": "disabled", "last_completed_at": None}
+    try:
+        with connect(settings.database_target) as connection:
+            row = connection.execute(
+                "SELECT MAX(completed_at) AS completed_at FROM background_task_run"
+            ).fetchone()
+    except Exception:
+        return {"status": "unknown", "last_completed_at": None}
+    completed_at = row["completed_at"] if row else None
+    if not completed_at:
+        return {"status": "unknown", "last_completed_at": None}
+    try:
+        elapsed = datetime.now(timezone.utc) - datetime.fromisoformat(str(completed_at)).astimezone(timezone.utc)
+        status = "stale" if elapsed.total_seconds() > settings.worker_scan_interval_seconds * 2 else "healthy"
+    except ValueError:
+        status = "unknown"
+    return {"status": status, "last_completed_at": str(completed_at)}
 
 
 def _database_health(settings: Settings) -> dict[str, str]:
@@ -140,6 +170,30 @@ def ai_status(request: Request) -> dict[str, object]:
 @router.get("/health-detail")
 def system_health_detail(request: Request) -> dict[str, object]:
     return success(health_detail(request.app.state.settings))
+
+
+@router.post("/client-errors")
+def report_client_error(payload: ClientErrorPayload, request: Request) -> dict[str, object]:
+    log_event(
+        request,
+        40,
+        "client_error",
+        client_message=payload.message,
+        component=payload.component,
+    )
+    return success({"recorded": True})
+
+
+@router.post("/client-errors")
+def report_client_error(payload: ClientErrorPayload, request: Request) -> dict[str, object]:
+    log_event(
+        request,
+        40,
+        "client_error",
+        client_message=payload.message,
+        component=payload.component,
+    )
+    return success({"recorded": True})
 
 
 @router.post("/ai-config")

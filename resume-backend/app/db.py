@@ -755,6 +755,12 @@ def _migrate_phase10_operations(connection: sqlite3.Connection) -> None:
         );
         CREATE INDEX IF NOT EXISTS idx_knowledge_item_version_item
         ON knowledge_item_version (item_id, version DESC);
+        CREATE TABLE IF NOT EXISTS background_task_run (
+            task_name TEXT PRIMARY KEY,
+            status TEXT NOT NULL,
+            processed_count INTEGER NOT NULL DEFAULT 0,
+            completed_at TEXT NOT NULL
+        );
         """
     )
 

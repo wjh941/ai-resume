@@ -50,6 +50,25 @@ class TaskLeaseRepository:
             )
 
 
+class TaskRunRepository:
+    def __init__(self, database_target: DatabaseTarget) -> None:
+        self._database_target = database_target
+
+    def record(self, task_name: str, processed_count: int) -> None:
+        with connect(self._database_target) as connection:
+            connection.execute(
+                """
+                INSERT INTO background_task_run (task_name, status, processed_count, completed_at)
+                VALUES (?, 'completed', ?, ?)
+                ON CONFLICT(task_name) DO UPDATE SET
+                    status = excluded.status,
+                    processed_count = excluded.processed_count,
+                    completed_at = excluded.completed_at
+                """,
+                (task_name, processed_count, datetime.now(timezone.utc).isoformat()),
+            )
+
+
 class BackgroundWorker:
     def __init__(
         self,
@@ -62,6 +81,7 @@ class BackgroundWorker:
         owner_id: str | None = None,
     ) -> None:
         self._leases = TaskLeaseRepository(database_target)
+        self._runs = TaskRunRepository(database_target)
         self._jobs = JobCollectionRepository(database_target)
         self._applications = ApplicationRepository(database_target)
         self._membership = MembershipRepository(database_target)
@@ -152,6 +172,8 @@ class BackgroundWorker:
         if not self._leases.acquire(task_name, self._owner_id, self._lock_ttl_seconds):
             return 0
         try:
-            return int(operation())
+            processed_count = int(operation())
+            self._runs.record(task_name, processed_count)
+            return processed_count
         finally:
             self._leases.release(task_name, self._owner_id)

@@ -100,9 +100,11 @@ def current_user_principal(
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise HTTPException(status_code=401, detail="Authentication is required")
     try:
-        return request.app.state.auth_service.verify_principal(credentials.credentials)
+        principal = request.app.state.auth_service.verify_principal(credentials.credentials)
     except AuthenticationError as error:
         raise HTTPException(status_code=401, detail="Authentication is invalid or expired") from error
+    request.state.user_id = principal.user_id
+    return principal
 
 
 def require_operator(principal: AuthPrincipal = Depends(current_user_principal)) -> AuthPrincipal:

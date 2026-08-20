@@ -75,7 +75,7 @@ class Settings:
     worker_scan_interval_seconds: int = 300
     worker_lock_ttl_seconds: int = 600
     operator_phone_allowlist: tuple[str, ...] = ()
-    push_dispatcher_mode: str = "disabled"
+    push_dispatcher_mode: str = "mock"
     log_level: str = "INFO"
     resume_import_max_file_bytes: int = 10 * 1024 * 1024
 

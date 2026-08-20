@@ -66,9 +66,15 @@ def upgrade() -> None:
         "CREATE INDEX IF NOT EXISTS idx_knowledge_item_version_item "
         "ON knowledge_item_version (item_id, version DESC)"
     )
+    op.execute(
+        "CREATE TABLE IF NOT EXISTS background_task_run ("
+        "task_name TEXT PRIMARY KEY, status TEXT NOT NULL, processed_count INTEGER NOT NULL DEFAULT 0, "
+        "completed_at TEXT NOT NULL)"
+    )
 
 
 def downgrade() -> None:
+    op.drop_table("background_task_run")
     op.drop_table("knowledge_item_version")
     op.drop_table("knowledge_item")
     op.drop_table("resume_import")

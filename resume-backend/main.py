@@ -49,6 +49,7 @@ from app.services.membership import MembershipPackageConflictError, MembershipSe
 from app.services.rate_limit import InMemoryRateLimiter
 from app.services.push import PushDispatcher
 from app.services.resume_imports import ResumeImportService
+from app.services.observability import configure_logging, log_event
 from app.services.web_search import build_web_search_client
 from pydantic import ValidationError
 
@@ -85,6 +86,7 @@ async def _cleanup_downloads_periodically(download_service: DownloadService) -> 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or load_settings()
+    configure_logging(settings.log_level)
     database_target = settings.database_target
     initialize_database(
         database_target,
@@ -118,6 +120,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.middleware("http")
     async def add_request_id_and_limit_auth(request: Request, call_next):
         request_id = uuid4().hex
+        request.state.request_id = request_id
         origin = request.headers.get("origin")
         if settings.production and origin and origin not in settings.cors_origins:
             response = JSONResponse(
@@ -242,7 +245,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.exception_handler(sqlite3.Error)
     def database_error(request: Request, exception: sqlite3.Error):
-        logger.error("database error: %s %s (%s)", request.method, request.url.path, type(exception).__name__)
+        log_event(request, logging.ERROR, "database_error", error_type=type(exception).__name__)
         return JSONResponse(status_code=503, content=error("database_error", "Database operation failed"))
 
     @app.exception_handler(ExportEmptyError)
@@ -252,7 +255,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.exception_handler(ExportGenerationError)
     def export_generation_error(request: Request, exception: ExportGenerationError):
-        logger.error("export error: %s %s (%s)", request.method, request.url.path, type(exception).__name__)
+        log_event(request, logging.ERROR, "export_error", error_type=type(exception).__name__)
         return JSONResponse(status_code=503, content=error("export_error", "Export could not be generated"))
 
     @app.exception_handler(HTTPException)
@@ -266,7 +269,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.exception_handler(Exception)
     def unexpected_error(request: Request, exception: Exception):
-        logger.error("unexpected error: %s %s (%s)", request.method, request.url.path, type(exception).__name__)
+        log_event(request, logging.ERROR, "unexpected_error", error_type=type(exception).__name__)
         return JSONResponse(status_code=500, content=error("internal_error", "Internal server error"))
 
     @app.exception_handler(RewriteFactViolation)
@@ -344,6 +347,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "database_type": summary["database"]["type"],
             "backup": summary["backup"],
             "critical_config": summary["critical_config"],
+            "push_dispatcher_mode": summary["push_dispatcher_mode"],
+            "worker": summary["worker"],
         })
 
     @app.get("/health/detail")
