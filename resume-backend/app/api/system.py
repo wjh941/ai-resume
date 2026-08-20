@@ -184,18 +184,6 @@ def report_client_error(payload: ClientErrorPayload, request: Request) -> dict[s
     return success({"recorded": True})
 
 
-@router.post("/client-errors")
-def report_client_error(payload: ClientErrorPayload, request: Request) -> dict[str, object]:
-    log_event(
-        request,
-        40,
-        "client_error",
-        client_message=payload.message,
-        component=payload.component,
-    )
-    return success({"recorded": True})
-
-
 @router.post("/ai-config")
 def configure_ai(payload: AIConfigPayload, request: Request) -> dict[str, object]:
     _require_local_setup(request)

@@ -109,7 +109,7 @@ def current_user_principal(
 
 def require_operator(principal: AuthPrincipal = Depends(current_user_principal)) -> AuthPrincipal:
     if principal.role != "operator":
-        raise HTTPException(status_code=403, detail="Operator permission is required")
+        raise HTTPException(status_code=403, detail="当前账号没有运营权限。")
     return principal
 
 

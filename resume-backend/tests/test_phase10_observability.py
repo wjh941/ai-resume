@@ -35,3 +35,16 @@ def test_client_error_and_unhandled_error_are_sanitized_and_structured(api_clien
     assert response.status_code == 500
     assert "internal detail" not in response.text
     assert any('"request_id"' in message for message in logged)
+
+
+def test_client_error_route_is_registered_once(api_client) -> None:
+    from app.api import system
+
+    routes = [
+        route
+        for route in system.router.routes
+        if getattr(route, "path", None) == "/api/system/client-errors"
+        and "POST" in getattr(route, "methods", set())
+    ]
+
+    assert len(routes) == 1

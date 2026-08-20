@@ -36,6 +36,7 @@ def test_upload_rejects_unsafe_type(api_client) -> None:
 
     assert response.status_code == 422
     assert response.json()["code"] == "validation_error"
+    assert response.json()["message"] == "仅支持 PDF、DOC 和 DOCX 格式的简历文件。"
 
 
 def test_upload_rejects_file_larger_than_configured_limit(api_client) -> None:
@@ -49,3 +50,4 @@ def test_upload_rejects_file_larger_than_configured_limit(api_client) -> None:
 
     assert response.status_code == 422
     assert response.json()["code"] == "validation_error"
+    assert response.json()["message"] == "简历文件超过当前允许的大小限制。"

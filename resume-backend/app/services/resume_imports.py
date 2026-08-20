@@ -66,7 +66,7 @@ class ResumeImportService:
         suffix = Path(original_filename).suffix.lower()
         expected_content_type = _ALLOWED_UPLOADS.get(suffix)
         if not expected_content_type or upload.content_type != expected_content_type:
-            raise ResumeImportValidationError("Only PDF, DOC, and DOCX resume files are accepted.")
+            raise ResumeImportValidationError("仅支持 PDF、DOC 和 DOCX 格式的简历文件。")
 
         import_id = uuid4().hex
         self._directory.mkdir(parents=True, exist_ok=True)
@@ -77,7 +77,7 @@ class ResumeImportService:
                 while chunk := await upload.read(64 * 1024):
                     written += len(chunk)
                     if written > self._max_file_bytes:
-                        raise ResumeImportValidationError("The resume file exceeds the configured size limit.")
+                        raise ResumeImportValidationError("简历文件超过当前允许的大小限制。")
                     target.write(chunk)
             # TODO: Malware scanning and PDF/Word parsing are deferred until provider integration is approved.
             return self._imports.create(
