@@ -28,6 +28,20 @@ services:
     volumes:
       - export_data:/app/temp
 
+  worker:
+    build: ./resume-backend
+    command: ["python", "worker.py"]
+    env_file: ./resume-backend/.env
+    environment:
+      PRODUCTION: "true"
+      WORKER_ENABLED: "true"
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-ai_resume}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ai_resume}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - export_data:/app/temp
+
   frontend:
     build: ./resume-miniprogram
     depends_on: [backend]

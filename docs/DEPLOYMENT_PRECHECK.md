@@ -1,8 +1,8 @@
 # Deployment Pre-check
 
-Complete every item before setting `APP_ENV=production`. Phase 7 retains
-SQLite for development only; database migration, backup automation, monitoring,
-and HTTPS server deployment are not included here.
+Complete every item before setting `PRODUCTION=true`. SQLite remains for
+development only; production needs PostgreSQL, backup validation, a worker
+deployment decision, and an external HTTPS reverse proxy.
 
 ## Phase 8 Database and Backups
 
@@ -20,6 +20,24 @@ and HTTPS server deployment are not included here.
   Do not put them in frontend build variables or Docker image layers.
 - Compose serves HTTP only. Place Nginx or Caddy in front of it for HTTPS,
   redirect HTTP to HTTPS, and configure forwarded headers at that proxy.
+
+## Phase 9 Worker Service
+
+- Run `alembic upgrade head` once before starting application containers. The
+  Compose backend also runs the migration command at startup for convenience,
+  but release automation should make this an explicit, verified deployment
+  step.
+- The `worker` Compose service runs `python worker.py` separately from FastAPI.
+  It scans job subscriptions, cleans expired export files, and closes overdue
+  unpaid orders. It does not bind an HTTP port.
+- Set `WORKER_ENABLED=true` for the worker process and configure
+  `TASK_SCAN_INTERVAL_SECONDS` and `WORKER_LOCK_TTL_SECONDS` to exceed the
+  expected task duration. Run a single worker instance by default.
+- The database task lease reduces duplicate execution across instances, but it
+  is not a replacement for operational ownership, synchronized clocks, or
+  observing worker logs. Verify one manual worker cycle after deployment.
+- Subscription alerts are stored as in-app pending records only. SMS, WeChat,
+  and other push delivery remain intentionally unimplemented.
 
 ## Troubleshooting
 
