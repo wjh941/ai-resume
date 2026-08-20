@@ -1,10 +1,10 @@
 import { request } from "./http"
 import type { AuthUser, PhoneCodeResult } from "../types/auth"
 
-type BackendAuthUser = { user_id: string; phone: string }
+type BackendAuthUser = { user_id: string; phone: string; role?: string }
 
 function mapUser(user: BackendAuthUser): AuthUser {
-  return { userId: user.user_id, phone: user.phone }
+  return { userId: user.user_id, phone: user.phone, role: user.role === "operator" ? "operator" : "user" }
 }
 
 export async function sendPhoneCode(phone: string): Promise<PhoneCodeResult> {

@@ -3,13 +3,13 @@ import { clearAuthSession, getAuthToken } from "../stores/session"
 
 const API_BASE_URL = import.meta.env.VITE_RESUME_API_URL || ""
 
-const DEFAULT_ERROR_MESSAGE = "The service is temporarily unavailable. Please try again later."
+const DEFAULT_ERROR_MESSAGE = "服务暂时不可用，请稍后重试。"
 const RAW_ERROR_PATTERN = /traceback|stack trace|sqlite|sql error|internal server error|at \S+\.\w+ \(/i
 const CONFIGURATION_HINTS: Array<[RegExp, string]> = [
-  [/sms delivery is not configured/i, "SMS sign-in is not configured for this environment. Contact the service administrator."],
-  [/wechat.*not configured|https whitelisted redirect/i, "WeChat sign-in needs an approved HTTPS callback domain."],
-  [/payment channel.*not configured/i, "Payment is not configured for this environment. Choose another available option."],
-  [/export could not be generated|export output path/i, "Your export could not be saved. Please try again or contact support."],
+  [/sms delivery is not configured/i, "当前环境未配置 SMS 登录，请联系服务管理员。"],
+  [/wechat.*not configured|https whitelisted redirect/i, "微信登录需要已配置的 HTTPS 回调域名。"],
+  [/payment channel.*not configured/i, "当前未配置支付服务，请选择其他可用方式。"],
+  [/export could not be generated|export output path/i, "导出文件无法保存，请重试或联系服务支持。"],
 ]
 
 export function toUserMessage(reason: unknown, fallback = DEFAULT_ERROR_MESSAGE): string {
@@ -61,8 +61,8 @@ function promptLogin(): void {
     return
   }
   uni.showModal({
-    title: "Login required",
-    content: "Your session has expired. Please sign in again.",
+    title: "登录状态已失效",
+    content: "请重新登录后继续使用。",
     showCancel: false,
     success: () => {
       loginPromptActive = false

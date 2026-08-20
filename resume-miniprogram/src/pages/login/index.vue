@@ -19,16 +19,16 @@ function validPhone(value: string): boolean {
 async function requestCode(): Promise<void> {
   const normalized = phone.value.trim()
   if (!validPhone(normalized)) {
-    error.value = "Enter a valid mobile number."
+    error.value = "请输入正确的手机号。"
     return
   }
   sending.value = true
   error.value = ""
   try {
     const result = await sendPhoneCode(normalized)
-    hint.value = result.demoCode ? `Development code: ${result.demoCode}` : result.message
+    hint.value = result.demoCode ? `开发环境验证码：${result.demoCode}` : result.message
   } catch (reason) {
-    error.value = toUserMessage(reason, "Unable to request a verification code.")
+    error.value = toUserMessage(reason, "无法获取验证码，请稍后重试。")
   } finally {
     sending.value = false
   }
@@ -37,7 +37,7 @@ async function requestCode(): Promise<void> {
 async function signIn(): Promise<void> {
   const normalized = phone.value.trim()
   if (!validPhone(normalized) || !code.value.trim()) {
-    error.value = "Enter your mobile number and verification code."
+    error.value = "请输入手机号和验证码。"
     return
   }
   loggingIn.value = true
@@ -47,7 +47,7 @@ async function signIn(): Promise<void> {
     setAuthSession(session.token, session.user)
     uni.reLaunch({ url: "/pages/job-search/index" })
   } catch (reason) {
-    error.value = toUserMessage(reason, "Unable to sign in. Please try again.")
+    error.value = toUserMessage(reason, "登录失败，请稍后重试。")
   } finally {
     loggingIn.value = false
   }
@@ -55,8 +55,8 @@ async function signIn(): Promise<void> {
 
 function showWechatSetup(): void {
   uni.showModal({
-    title: "WeChat sign in setup",
-    content: "WeChat OAuth requires an HTTPS callback domain approved in WeChat Open Platform. It is not enabled in this environment.",
+    title: "微信登录暂不可用",
+    content: "微信 OAuth 需要在微信开放平台配置已备案的 HTTPS 回调域名，当前环境尚未启用。",
     showCancel: false,
   })
 }
@@ -65,19 +65,18 @@ function showWechatSetup(): void {
 <template>
   <view class="page">
     <view class="login-card">
-      <text class="eyebrow">AI RESUME</text>
-      <text class="title">Sign in to your workspace</text>
-      <text class="copy">Your resume drafts, plans, and account controls are protected by your phone session.</text>
-      <view class="field"><text>Mobile number</text><input v-model="phone" type="number" maxlength="11" placeholder="13800138000" /></view>
-      <view class="field code-field"><text>Verification code</text><input v-model="code" type="number" maxlength="6" placeholder="123456" /><button :loading="sending" @click="requestCode">Get code</button></view>
+      <text class="title">登录你的求职工作台</text>
+      <text class="copy">手机号登录后可安全访问你的简历草稿、职业计划和账户设置。</text>
+      <view class="field"><text>手机号</text><input v-model="phone" type="number" maxlength="11" placeholder="13800138000" /></view>
+      <view class="field code-field"><text>验证码</text><input v-model="code" type="number" maxlength="6" placeholder="123456" /><button :loading="sending" @click="requestCode">获取验证码</button></view>
       <text v-if="hint" class="hint">{{ hint }}</text>
       <text v-if="error" class="error">{{ error }}</text>
-      <button class="primary" :loading="loggingIn" @click="signIn">Sign in</button>
-      <button class="wechat" @click="showWechatSetup">Continue with WeChat</button>
+      <button class="primary" :loading="loggingIn" @click="signIn">登录</button>
+      <button class="wechat" @click="showWechatSetup">微信登录</button>
     </view>
   </view>
 </template>
 
 <style scoped>
-.page { min-height: 100vh; box-sizing: border-box; padding: 64rpx 28rpx; background: #f4f7fb; }.login-card { max-width: 620rpx; margin: 0 auto; padding: 38rpx 30rpx; background: #fff; border: 1rpx solid #e1eaf4; border-radius: 20rpx; box-shadow: 0 12rpx 30rpx rgba(35, 78, 130, .09); }.eyebrow,.title,.copy,.field > text,.hint,.error { display: block; }.eyebrow { color: #1677ff; font-size: 21rpx; font-weight: 700; }.title { margin-top: 12rpx; color: #1f2937; font-size: 40rpx; font-weight: 700; }.copy { margin-top: 14rpx; color: #64748b; font-size: 25rpx; line-height: 1.6; }.field { margin-top: 26rpx; }.field > text { margin-bottom: 10rpx; color: #4b5563; font-size: 24rpx; }.field input { width: 100%; min-height: 78rpx; box-sizing: border-box; padding: 0 18rpx; background: #f8fafc; border: 1rpx solid #dfe7f1; border-radius: 12rpx; font-size: 27rpx; }.code-field { display: grid; grid-template-columns: 1fr auto; gap: 12rpx; }.code-field > text { grid-column: 1 / -1; }.code-field button { margin: 0; padding: 0 20rpx; color: #1677ff; background: #edf6ff; border: 1rpx solid #b7d8ff; font-size: 23rpx; }.hint,.error { margin-top: 14rpx; font-size: 23rpx; line-height: 1.5; }.hint { color: #26735c; }.error { color: #c2410c; }.primary { margin-top: 28rpx; color: #fff; background: #1677ff; }.wechat { margin-top: 14rpx; color: #245b99; background: #edf6ff; border: 1rpx solid #cfe4fb; }
+.page { min-height: 100vh; box-sizing: border-box; padding: 64rpx 28rpx; background: #f4f7fb; }.login-card { max-width: 620rpx; margin: 0 auto; padding: 38rpx 30rpx; background: #fff; border: 1rpx solid #e1eaf4; border-radius: 20rpx; box-shadow: 0 12rpx 30rpx rgba(35, 78, 130, .09); }.title,.copy,.field > text,.hint,.error { display: block; }.title { color: #1f2937; font-size: 40rpx; font-weight: 700; }.copy { margin-top: 14rpx; color: #64748b; font-size: 25rpx; line-height: 1.6; }.field { margin-top: 26rpx; }.field > text { margin-bottom: 10rpx; color: #4b5563; font-size: 24rpx; }.field input { width: 100%; min-height: 78rpx; box-sizing: border-box; padding: 0 18rpx; background: #f8fafc; border: 1rpx solid #dfe7f1; border-radius: 12rpx; font-size: 27rpx; }.code-field { display: grid; grid-template-columns: 1fr auto; gap: 12rpx; }.code-field > text { grid-column: 1 / -1; }.code-field button { margin: 0; padding: 0 20rpx; color: #1677ff; background: #edf6ff; border: 1rpx solid #b7d8ff; font-size: 23rpx; }.hint,.error { margin-top: 14rpx; font-size: 23rpx; line-height: 1.5; }.hint { color: #26735c; }.error { color: #c2410c; }.primary { margin-top: 28rpx; color: #fff; background: #1677ff; }.wechat { margin-top: 14rpx; color: #245b99; background: #edf6ff; border: 1rpx solid #cfe4fb; }
 </style>

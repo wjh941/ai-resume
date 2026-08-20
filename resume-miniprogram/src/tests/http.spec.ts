@@ -25,7 +25,7 @@ describe("resolveApiUrl", () => {
 
   it("hides raw server details from end users", () => {
     expect(toUserMessage(new Error("Traceback (most recent call last): secret"))).toBe(
-      "The service is temporarily unavailable. Please try again later.",
+      "服务暂时不可用，请稍后重试。",
     )
   })
 })

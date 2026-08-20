@@ -5,6 +5,7 @@ const AUTH_USER_KEY = "resume_demo_auth_user"
 export type AuthSessionUser = {
   userId: string
   phone: string
+  role: "user" | "operator"
 }
 
 type UniStorage = {
@@ -62,14 +63,17 @@ export function getAuthUser(): AuthSessionUser | null {
   if (!user || typeof user !== "object") return null
   const candidate = user as Partial<AuthSessionUser>
   return typeof candidate.userId === "string" && typeof candidate.phone === "string"
-    ? { userId: candidate.userId, phone: candidate.phone }
+    ? { userId: candidate.userId, phone: candidate.phone, role: candidate.role === "operator" ? "operator" : "user" }
     : null
 }
 
-export function setAuthSession(token: string, user: AuthSessionUser): void {
+export function setAuthSession(
+  token: string,
+  user: Omit<AuthSessionUser, "role"> & Partial<Pick<AuthSessionUser, "role">>,
+): void {
   const uniStorage = storage()
   uniStorage?.setStorageSync(AUTH_TOKEN_KEY, token)
-  uniStorage?.setStorageSync(AUTH_USER_KEY, user)
+  uniStorage?.setStorageSync(AUTH_USER_KEY, { ...user, role: user.role === "operator" ? "operator" : "user" })
 }
 
 export function clearAuthSession(): void {
