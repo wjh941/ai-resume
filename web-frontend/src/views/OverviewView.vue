@@ -2,6 +2,7 @@
 import { ArrowUpRight, FilePenLine, KanbanSquare, ListChecks } from "lucide-vue-next"
 import { onMounted, ref } from "vue"
 
+import { ApiRequestError } from "../lib/api"
 import { loadOverview, type OverviewState } from "../lib/dashboard"
 
 const emit = defineEmits<{
@@ -17,8 +18,10 @@ async function refresh() {
   error.value = ""
   try {
     overview.value = await loadOverview()
-  } catch {
-    error.value = "暂时无法读取工作概览，请检查登录状态或稍后重试"
+  } catch (reason) {
+    error.value = reason instanceof ApiRequestError && reason.status === 401
+      ? "登录已过期，请退出后重新登录"
+      : "暂时无法读取工作概览，请稍后重试"
   } finally {
     loading.value = false
   }

@@ -6,6 +6,8 @@ type ItemsResponse = {
   items: Array<{ id: string; status?: string }>
 }
 
+type DraftListResponse = Array<{ id: string }>
+
 export type OverviewState = {
   applicationCount: number
   draftCount: number
@@ -18,13 +20,13 @@ export async function loadOverview(
 ): Promise<OverviewState> {
   const [applications, drafts, tasks] = await Promise.all([
     request<ItemsResponse>("/api/applications"),
-    request<ItemsResponse>("/api/draft/list"),
+    request<DraftListResponse>("/api/draft/list"),
     request<ItemsResponse>(`/api/career/tasks?plan_id=${encodeURIComponent(planId)}`),
   ])
 
   return {
     applicationCount: applications.items.length,
-    draftCount: drafts.items.length,
+    draftCount: drafts.length,
     openTaskCount: tasks.items.filter((task) => task.status !== "completed").length,
   }
 }
