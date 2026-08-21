@@ -60,8 +60,11 @@ names and retains its existing calculated score for candidate-specific ranking.
 
 The existing job-match response gains an additive `responsibilities` array. For
 roles without a sample, the matcher derives a concise local placeholder from the
-catalog so all returned items remain renderable. The frontend displays the
-sample content as local reference material and does not claim live vacancies.
+catalog so all returned items remain renderable. After the user generates a
+career plan, the Career Planner page calls the existing `/api/job/match` route
+and displays a `本地岗位参考` section with company, city, salary, matching score,
+responsibilities, and requirements. The frontend treats this as local reference
+material and does not claim live vacancies.
 
 ## PDF Print Layout
 
