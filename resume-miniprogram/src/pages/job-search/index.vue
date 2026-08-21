@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue"
+import { computed, onMounted, ref, watch } from "vue"
 
+import OnboardingTour from "../../components/OnboardingTour.vue"
 import {
   extractResumePdf,
   queryCareerAdvice,
@@ -11,6 +12,7 @@ import {
 } from "../../services/resume-api"
 import { IDENTITY_OPTIONS, IDENTITY_PROMPT, useConsultationStore } from "../../stores/consultation"
 import { useResumeStore } from "../../stores/resume"
+import { getAuthUser } from "../../stores/session"
 import type {
   AdviceTopic,
   CareerAdvice,
@@ -20,6 +22,7 @@ import type {
   ResumeReview,
 } from "../../types/consultation"
 import { prepareResumeForJob } from "../../utils/resume-autofill"
+import { completeOnboarding, hasCompletedOnboarding } from "../../utils/onboarding"
 
 const roleName = ref("")
 const selectedRoles = ref<string[]>([])
@@ -44,6 +47,7 @@ const careerAdvice = ref<CareerAdvice | null>(null)
 const marketSearchReport = ref<MarketSearchReport | null>(null)
 const showTargetPicker = ref(false)
 const expandedAnalysisOrders = ref<number[]>([1, 2, 3])
+const showOnboarding = ref(false)
 
 const store = useResumeStore()
 const consultation = useConsultationStore()
@@ -367,6 +371,27 @@ function openAccount() {
   uni.navigateTo({ url: "/pages/account/index" })
 }
 
+function finishOnboarding(): void {
+  const user = getAuthUser()
+  if (user) completeOnboarding(user.userId)
+  showOnboarding.value = false
+}
+
+function navigateFromOnboarding(destination: "resume" | "career" | "applications"): void {
+  const routes = {
+    resume: "/pages/resume-form/index",
+    career: "/pages/career-planner/index",
+    applications: "/pages/applications/index",
+  }
+  finishOnboarding()
+  uni.navigateTo({ url: routes[destination] })
+}
+
+onMounted(() => {
+  const user = getAuthUser()
+  showOnboarding.value = Boolean(user && !hasCompletedOnboarding(user.userId))
+})
+
 </script>
 
 <template>
@@ -666,6 +691,11 @@ function openAccount() {
       </view>
     </view>
   </scroll-view>
+  <OnboardingTour
+    :visible="showOnboarding"
+    @complete="finishOnboarding"
+    @navigate="navigateFromOnboarding"
+  />
 </template>
 
 <style scoped>

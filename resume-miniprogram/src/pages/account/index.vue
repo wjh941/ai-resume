@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue"
 
+import OnboardingTour from "../../components/OnboardingTour.vue"
 import { getCurrentUser, logout } from "../../services/auth-api"
 import { recordPrivacyConsent, requestAccountDataExport, requestAccountDeletion, requestAccountPrivacyDetails, type AccountPrivacyDetails } from "../../services/account-api"
 import { apiUrl, toUserMessage } from "../../services/http"
 import { clearAuthSession, getAuthToken, getAuthUser } from "../../stores/session"
 import type { AuthUser } from "../../types/auth"
+import { completeOnboarding } from "../../utils/onboarding"
 
 const user = ref<AuthUser | null>(getAuthUser())
 const loading = ref(false)
@@ -13,6 +15,7 @@ const error = ref("")
 const dataScope = ref<AccountPrivacyDetails | null>(null)
 const lifecycleMessage = ref("")
 const consentRecorded = ref(false)
+const showOnboarding = ref(false)
 const isOperator = computed(() => user.value?.role === "operator")
 
 async function loadUser(): Promise<void> {
@@ -49,6 +52,21 @@ function signOut(): void {
 
 function open(path: string): void {
   uni.navigateTo({ url: path })
+}
+
+function finishOnboarding(): void {
+  if (user.value) completeOnboarding(user.value.userId)
+  showOnboarding.value = false
+}
+
+function navigateFromOnboarding(destination: "resume" | "career" | "applications"): void {
+  const routes = {
+    resume: "/pages/resume-form/index",
+    career: "/pages/career-planner/index",
+    applications: "/pages/applications/index",
+  }
+  finishOnboarding()
+  uni.navigateTo({ url: routes[destination] })
 }
 
 async function loadScope(): Promise<void> {
@@ -114,6 +132,7 @@ onMounted(async () => {
       <text v-if="error" class="error">{{ error }}</text>
     </view>
     <view class="section">
+      <button @click="showOnboarding = true">重新查看新手引导</button>
       <text class="section-title">我的工作台</text>
       <button @click="open('/pages/drafts/index')">简历草稿</button>
       <button @click="open('/pages/privacy/index')">本地隐私</button>
@@ -134,6 +153,11 @@ onMounted(async () => {
     </view>
     <button class="danger" @click="signOut">退出登录</button>
   </scroll-view>
+  <OnboardingTour
+    :visible="showOnboarding"
+    @complete="finishOnboarding"
+    @navigate="navigateFromOnboarding"
+  />
 </template>
 
 <style scoped>
