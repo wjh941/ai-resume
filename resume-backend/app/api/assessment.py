@@ -2,8 +2,13 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query, Request
 
-from app.schemas.assessment import AnnualInsightPayload, AssessmentSubmitPayload
+from app.schemas.assessment import (
+    AnnualInsightPayload,
+    AnnualInsightQueryPayload,
+    AssessmentSubmitPayload,
+)
 from app.schemas.common import success
+from app.services.report_tiering import ReportEvidenceInput, project_report
 from app.services.career_assessment import assessment_questions
 from app.services.auth import current_user_id
 from app.services.membership import VipStatus, get_current_vip, require_vip_feature
@@ -72,6 +77,69 @@ async def list_annual_insights(
 ) -> dict[str, object]:
     return success(
         {"items": request.app.state.assessment_repository.list_annual_insights(year)}
+    )
+
+
+@router.post("/api/career/annual-insights/query")
+async def query_annual_insights(
+    payload: AnnualInsightQueryPayload,
+    request: Request,
+    vip: VipStatus = Depends(get_current_vip),
+) -> dict[str, object]:
+    items = request.app.state.assessment_repository.list_annual_insights_for_role(
+        payload.role_name,
+        payload.year,
+    )
+    source_notice = "资料范围：仅使用已归档年度资料，不包含实时招聘信息。"
+    concise_actions = [
+        "核验目标岗位职责与交付物",
+        "补充一项与岗位对应的已验证经历",
+        "结合正式 JD 复核后安排下一步行动",
+    ]
+    if items:
+        summary = (
+            f"已找到与{payload.role_name}相关的{len(items)}条归档年度资料，"
+            "可用于组织求职准备，不代表实时岗位供给或录用结果。"
+        )
+        evidence = [
+            ReportEvidenceInput(
+                type="annual_source",
+                title=str(item["title"]),
+                detail=(
+                    f"来源：{item['source_label']}。{item['content']} "
+                    f"置信说明：{item['confidence_note']}"
+                ),
+                date=str(item["publication_date"]),
+                scope=str(item["scope"]),
+            )
+            for item in items
+        ]
+        professional_actions = [
+            f"阅读《{item['title']}》并整理{item['category']}相关的准备要点"
+            for item in items[:3]
+        ]
+    else:
+        summary = "暂无可核验年度资料，可先参考岗位基础能力并补充已验证经历。"
+        evidence = []
+        professional_actions = concise_actions
+
+    report = project_report(
+        payload.report_mode,
+        "simplified",
+        vip,
+        "industry_insight",
+        summary,
+        concise_actions,
+        evidence,
+        source_notice,
+        professional_actions,
+    )
+    return success(
+        {
+            "role_name": payload.role_name,
+            "year": payload.year,
+            "report": report.model_dump(mode="json"),
+        }
     )
 
 

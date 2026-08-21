@@ -454,6 +454,7 @@ def initialize_database(database_path: DatabaseTarget, *, timeout_seconds: float
             CREATE TABLE IF NOT EXISTS annual_employment_insight (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 year INTEGER NOT NULL,
+                role_name TEXT NOT NULL DEFAULT '',
                 scope TEXT NOT NULL,
                 audience TEXT NOT NULL,
                 category TEXT NOT NULL,
@@ -496,6 +497,7 @@ def initialize_database(database_path: DatabaseTarget, *, timeout_seconds: float
         _migrate_phase9_lifecycle(connection)
         _migrate_phase10_operations(connection)
         _migrate_phase11_password_accounts(connection)
+        _migrate_phase12_report_tiering(connection)
         _seed_initial_data(connection)
         _migrate_legacy_job_cache(connection)
 
@@ -777,6 +779,15 @@ def _migrate_phase11_password_accounts(connection: sqlite3.Connection) -> None:
             last_login TEXT NOT NULL
         );
         """
+    )
+
+
+def _migrate_phase12_report_tiering(connection: sqlite3.Connection) -> None:
+    _ensure_column(
+        connection,
+        "annual_employment_insight",
+        "role_name",
+        "TEXT NOT NULL DEFAULT ''",
     )
 
 

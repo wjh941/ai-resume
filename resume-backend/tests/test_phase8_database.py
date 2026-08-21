@@ -40,13 +40,18 @@ def test_alembic_creates_current_schema_on_fresh_sqlite_database(tmp_path):
     with sqlite3.connect(database_path) as connection:
         users = {row[1] for row in connection.execute("PRAGMA table_info(users)")}
         subscriptions = {row[1] for row in connection.execute("PRAGMA table_info(job_match_subscription)")}
+        annual_insight_columns = {
+            row[1]
+            for row in connection.execute("PRAGMA table_info(annual_employment_insight)")
+        }
         tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
         revision = connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
 
     assert {"is_deleted", "deleted_at", "privacy_consent_at"} <= users
     assert {"match_filter", "last_notify_at"} <= subscriptions
+    assert {"role_name"} <= annual_insight_columns
     assert {"background_task_lock", "career_task", "interview_reminder", "resume_version", "password_account"} <= tables
-    assert revision == "20260821_phase11"
+    assert revision == "20260821_phase12"
 
 
 def test_postgres_connection_translates_existing_sqlite_insert_idioms():

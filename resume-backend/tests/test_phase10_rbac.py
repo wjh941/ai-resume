@@ -100,6 +100,10 @@ def test_phase10_migration_head_and_legacy_sqlite_upgrade(monkeypatch, tmp_path)
     _upgrade(f"sqlite:///{fresh_path.as_posix()}")
     with sqlite3.connect(fresh_path) as connection:
         fresh_columns = {row[1] for row in connection.execute("PRAGMA table_info(users)")}
+        fresh_annual_insight_columns = {
+            row[1]
+            for row in connection.execute("PRAGMA table_info(annual_employment_insight)")
+        }
         fresh_tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
         fresh_revision = connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
 
@@ -108,6 +112,10 @@ def test_phase10_migration_head_and_legacy_sqlite_upgrade(monkeypatch, tmp_path)
     initialize_database(legacy_path)
     with sqlite3.connect(legacy_path) as connection:
         legacy_columns = {row[1] for row in connection.execute("PRAGMA table_info(users)")}
+        legacy_annual_insight_columns = {
+            row[1]
+            for row in connection.execute("PRAGMA table_info(annual_employment_insight)")
+        }
     _upgrade(f"sqlite:///{legacy_path.as_posix()}")
 
     monkeypatch.delenv("OPERATOR_PHONE_ALLOWLIST", raising=False)
@@ -118,9 +126,11 @@ def test_phase10_migration_head_and_legacy_sqlite_upgrade(monkeypatch, tmp_path)
     assert settings.resume_import_max_file_bytes == 10 * 1024 * 1024
     assert settings.password_bcrypt_rounds == 12
     assert {"role"} <= fresh_columns
+    assert {"role_name"} <= fresh_annual_insight_columns
     assert {"push_send_log", "resume_import", "knowledge_item", "knowledge_item_version", "background_task_run", "password_account"} <= fresh_tables
-    assert fresh_revision == "20260821_phase11"
+    assert fresh_revision == "20260821_phase12"
     assert {"role"} <= legacy_columns
+    assert {"role_name"} <= legacy_annual_insight_columns
 
 
 def test_phase10_migration_renders_postgresql_offline_sql():

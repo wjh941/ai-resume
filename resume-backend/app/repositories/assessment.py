@@ -80,12 +80,13 @@ class AssessmentRepository:
             cursor = connection.execute(
                 """
                 INSERT INTO annual_employment_insight (
-                    year, scope, audience, category, title, content, source_label,
+                    year, role_name, scope, audience, category, title, content, source_label,
                     publication_date, confidence_note, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     normalized["year"],
+                    normalized["role_name"],
                     normalized["scope"],
                     normalized["audience"],
                     normalized["category"],
@@ -99,7 +100,7 @@ class AssessmentRepository:
             )
             row = connection.execute(
                 """
-                SELECT id, year, scope, audience, category, title, content, source_label,
+                SELECT id, year, role_name, scope, audience, category, title, content, source_label,
                        publication_date, confidence_note, created_at
                 FROM annual_employment_insight
                 WHERE id = ?
@@ -113,7 +114,7 @@ class AssessmentRepository:
             if year is None:
                 rows = connection.execute(
                     """
-                    SELECT id, year, scope, audience, category, title, content, source_label,
+                    SELECT id, year, role_name, scope, audience, category, title, content, source_label,
                            publication_date, confidence_note, created_at
                     FROM annual_employment_insight
                     ORDER BY year DESC, publication_date DESC, id DESC
@@ -122,7 +123,7 @@ class AssessmentRepository:
             else:
                 rows = connection.execute(
                     """
-                    SELECT id, year, scope, audience, category, title, content, source_label,
+                    SELECT id, year, role_name, scope, audience, category, title, content, source_label,
                            publication_date, confidence_note, created_at
                     FROM annual_employment_insight
                     WHERE year = ?
@@ -130,6 +131,24 @@ class AssessmentRepository:
                     """,
                     (year,),
                 ).fetchall()
+        return [self._annual_insight_from_row(row) for row in rows]
+
+    def list_annual_insights_for_role(
+        self, role_name: str, year: int | None
+    ) -> list[dict[str, object]]:
+        with connect(self._database_path) as connection:
+            statement = """
+                SELECT id, year, role_name, scope, audience, category, title, content, source_label,
+                       publication_date, confidence_note, created_at
+                FROM annual_employment_insight
+                WHERE role_name IN (?, '')
+            """
+            parameters: tuple[object, ...] = (role_name,)
+            if year is not None:
+                statement += " AND year = ?"
+                parameters += (year,)
+            statement += " ORDER BY CASE WHEN role_name = ? THEN 0 ELSE 1 END, year DESC, publication_date DESC, id DESC"
+            rows = connection.execute(statement, (*parameters, role_name)).fetchall()
         return [self._annual_insight_from_row(row) for row in rows]
 
     @staticmethod
@@ -141,7 +160,10 @@ class AssessmentRepository:
         if not 2000 <= year <= 2100:
             raise ValueError("Annual insight year is invalid")
 
-        normalized: dict[str, object] = {"year": year}
+        role_name = " ".join(str(insight.get("role_name", "")).split())
+        if len(role_name) > 120:
+            raise ValueError("Annual insight role_name is invalid")
+        normalized: dict[str, object] = {"year": year, "role_name": role_name}
         for field, maximum in (
             ("scope", 80),
             ("audience", 80),
@@ -168,6 +190,7 @@ class AssessmentRepository:
         return {
             "id": int(row["id"]),
             "year": int(row["year"]),
+            "role_name": str(row["role_name"]),
             "scope": str(row["scope"]),
             "audience": str(row["audience"]),
             "category": str(row["category"]),

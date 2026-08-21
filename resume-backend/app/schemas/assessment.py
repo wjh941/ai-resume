@@ -4,6 +4,8 @@ from datetime import date
 
 from pydantic import BaseModel, Field, StrictInt, field_validator
 
+from app.schemas.report import ReportMode
+
 
 def _normalized_text(value: str, field_name: str, maximum: int) -> str:
     normalized = " ".join(value.split())
@@ -33,6 +35,7 @@ class AssessmentSubmitPayload(BaseModel):
 
 class AnnualInsightPayload(BaseModel):
     year: int = Field(ge=2000, le=2100)
+    role_name: str = ""
     scope: str = Field(min_length=1, max_length=80)
     audience: str = Field(min_length=1, max_length=80)
     category: str = Field(min_length=1, max_length=80)
@@ -54,3 +57,22 @@ class AnnualInsightPayload(BaseModel):
     @classmethod
     def normalize_text_fields(cls, value: str) -> str:
         return _normalized_text(value, "text", 3000)
+
+    @field_validator("role_name")
+    @classmethod
+    def normalize_role_name(cls, value: str) -> str:
+        normalized = " ".join(value.split())
+        if len(normalized) > 120:
+            raise ValueError("role_name is too long")
+        return normalized
+
+
+class AnnualInsightQueryPayload(BaseModel):
+    role_name: str
+    year: int | None = Field(default=None, ge=2000, le=2100)
+    report_mode: ReportMode | None = None
+
+    @field_validator("role_name")
+    @classmethod
+    def normalize_query_role_name(cls, value: str) -> str:
+        return _normalized_text(value, "role_name", 120)
