@@ -456,6 +456,30 @@
     .insight-checklist p { font-size: var(--type-hint); }
     .insight-checklist .tag-row { margin-top: var(--space-xs); }
     .insight-table-note { display: flex; align-items: flex-start; gap: var(--space-s); margin-top: var(--space-m); color: var(--faint); font-size: var(--type-tag); }
+    .analysis-mode-control { display: inline-flex; align-items: center; gap: var(--space-s); min-width: max-content; color: var(--muted); font-size: var(--type-tag); }
+    .analysis-mode-group { display: inline-flex; padding: 3px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-muted); }
+    .analysis-mode-option { border: 0; border-radius: 8px; padding: 6px 9px; color: var(--muted); background: transparent; font-size: var(--type-tag); transition: color var(--motion-fast) var(--motion-curve), background var(--motion-fast) var(--motion-curve), box-shadow var(--motion-fast) var(--motion-curve); }
+    .analysis-mode-option[aria-pressed="true"] { color: var(--blue-strong); background: var(--surface); box-shadow: 0 2px 6px rgba(45, 61, 78, .10); }
+    .insight-query-workbench { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: var(--space-xl); margin: 0 0 var(--space-xl); padding: var(--space-xl); border-top: 1px solid var(--blue-line); border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--surface-blue) 42%, var(--surface)); }
+    .insight-query-copy { display: grid; align-content: start; gap: var(--space-m); }
+    .insight-query-copy h3 { font-size: var(--type-module); }
+    .insight-query-form { display: grid; gap: var(--space-m); align-content: start; }
+    .insight-query-fields { display: grid; grid-template-columns: minmax(0, 1fr) 132px; gap: var(--space-s); }
+    .layered-report { display: grid; gap: var(--space-m); padding: var(--space-l) 0 0; border-top: 1px solid var(--line); }
+    .layered-report:first-child { padding-top: 0; border-top: 0; }
+    .layered-report-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-m); }
+    .layered-report-summary { color: var(--ink); font-size: var(--type-body); }
+    .layered-report-actions { display: grid; gap: var(--space-s); margin: 0; padding: 0; list-style: none; }
+    .layered-report-actions li { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: var(--space-s); color: var(--muted); font-size: var(--type-hint); }
+    .layered-report-actions li::before { width: 18px; height: 18px; border-radius: 50%; color: var(--blue-strong); background: var(--blue-soft); content: ""; }
+    .layered-report-source { color: var(--faint); font-size: var(--type-tag); }
+    .layered-report-evidence { border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-muted); }
+    .layered-report-evidence summary { padding: var(--space-m); color: var(--blue-strong); cursor: pointer; font-size: var(--type-hint); font-weight: 600; }
+    .layered-report-evidence-list { display: grid; gap: var(--space-s); margin: 0; padding: 0 var(--space-m) var(--space-m); list-style: none; }
+    .layered-report-evidence-list li { padding-top: var(--space-s); border-top: 1px solid var(--line); color: var(--muted); font-size: var(--type-tag); }
+    .layered-report-evidence-list strong { display: block; color: var(--ink); font-size: var(--type-hint); }
+    .annual-insight-result { min-height: 168px; }
+    .annual-insight-result .empty { min-height: 168px; }
     .extension-grid .full { grid-column: 1 / -1; }
     .stat-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; margin-top: 14px; }
     .stat-mini { padding: 12px; border-radius: var(--radius-md); background: var(--surface-muted); }
@@ -579,7 +603,7 @@
       .modal-backdrop { align-items: end; padding: 12px; }
       .modal { width: 100%; max-height: calc(100vh - 24px); padding: 18px; }
       .extension-grid, .stat-strip, .career-plan-task-groups, .career-comparison-grid, #tierPlans { grid-template-columns: 1fr !important; }
-      .insight-signal-grid, .insight-action-panel { grid-template-columns: 1fr; }
+      .insight-signal-grid, .insight-action-panel, .insight-query-workbench { grid-template-columns: 1fr; }
       .extension-grid .full { grid-column: auto; }
     }
   </style>
@@ -736,6 +760,7 @@
 
         <!-- Module 7: annual static employment insight archive. No network request or recruitment-site scraping. -->
         <section class="page-section" id="page-insights">
+          <div id="annualInsightWorkspace"></div>
           <div class="hero-row"><div><div class="eyebrow">Annual employment insight</div><h2 id="insightsHeading">把静态资料，变成可执行判断。</h2><p>本页是本地职业决策框架：帮助你读懂职位描述、整理证据和安排行动，不抓取招聘网站，也不构成实时市场或录用承诺。</p></div><span class="tag green">离线参考框架</span></div>
           <section class="insight-signal-grid" aria-labelledby="insightsHeading">
             <article class="insight-signal-card primary"><span class="tag blue">岗位信号</span><h3>从“会什么”转向“能交付什么”</h3><p>阅读职位描述时，优先圈出业务场景、交付物、协作对象和衡量方式。工具名是入口，能被复述的项目结果才是筛选依据。</p><div class="insight-meta"><span>简历动作：写清背景、动作、结果</span><span>·</span><span>适用于校招与转岗</span></div></article>
@@ -916,6 +941,9 @@
       favoriteJobs: [],
       jobMatches: [],
       jobMatchLoading: false,
+      reportMode: loadLocal("resume-dashboard-report-mode", "simplified") === "professional" ? "professional" : "simplified",
+      lastReports: {},
+      annualInsightLoading: false,
       jobMatchFilters: loadLocal("resume-dashboard-job-match-filters", { target_role: "", city: "", salary_min: "", salary_max: "", seniority: "", category: "" }),
       aiStatus: { configured: false, provider: "", model: "", setup_allowed: false },
       jobAdvancedFilters: { salaryMin: "", salaryMax: "", family: "", city: "", difficulty: "" },
@@ -1820,10 +1848,11 @@
       // response into a newly logged-in account after an account switch.
       const requestToken = authSession.token;
       const requestUserId = authSession.userId();
-      const result = await apiOrMock("/api/job/plan", { method: "POST", body: JSON.stringify({ role_name: role, expand_detail: Boolean(expandDetail) }) }, () => buildMockCareerPlan(role, Boolean(expandDetail)), "职业规划", true);
+      const requestPayload = withCurrentReportMode({ role_name: role, expand_detail: Boolean(expandDetail) });
+      const result = await apiOrMock("/api/job/plan", { method: "POST", body: JSON.stringify(requestPayload) }, () => buildMockCareerPlan(role, Boolean(expandDetail)), "职业规划", true);
       if (isApiServiceFailure(result)) return API_SERVICE_FAILURE;
       if (!authSession.hasToken() || authSession.token !== requestToken || authSession.userId() !== requestUserId) return API_SERVICE_FAILURE;
-      const plan = normalizeCareerPlan(result, role);
+      const plan = { ...normalizeCareerPlan(result, role), report: result?.report || null };
       state.careerPlans = { ...(state.careerPlans || {}), [role]: plan };
       saveLocal("resume-dashboard-career-plan-cache", state.careerPlans);
       return plan;
@@ -2853,7 +2882,7 @@
       $("#copyMatchReportBtn").addEventListener("click", () => copyText(reportText, "匹配报告已复制"));
     }
     function projectCareerPlanForCurrentVip(plan) {
-      const value = normalizeCareerPlan(plan);
+      const value = { ...normalizeCareerPlan(plan), report: plan?.report || null };
       if (vipAllows("full_job_report")) return value;
       const technical = value.promotion_tracks.find(track => track.key === "technical") || value.promotion_tracks[0];
       return {
@@ -2904,7 +2933,7 @@
     }
     function renderCareerPlanSections(plan) {
       const skillItems = plan.comparison_items.filter(item => item.category === "hard");
-      return `<div class="career-report-grid">${plan.sections.map((section, index) => `<details ${index === 0 ? "open" : ""}><summary>${escapeHtml(section.title)}</summary><div class="career-report-body"><p>${escapeHtml(section.summary)}</p>${section.items.length ? `<ul>${section.items.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}${section.key === "hard_skills" && skillItems.length ? `<div class="plan-skill-list">${skillItems.map(item => `<div class="plan-skill-row ${careerPlanStatusClass(item.status)}"><span>${escapeHtml(item.competency)}</span><div class="plan-skill-meter"><span style="width:${careerPlanMatchPercentage(item.status)}%"></span></div><span>${careerPlanMatchPercentage(item.status)}%</span></div>`).join("")}</div>` : ""}</div></details>`).join("")}</div>`;
+      return `${renderLayeredReport(plan.report, "职业规划分析")}<div class="career-report-grid">${plan.sections.map((section, index) => `<details ${index === 0 ? "open" : ""}><summary>${escapeHtml(section.title)}</summary><div class="career-report-body"><p>${escapeHtml(section.summary)}</p>${section.items.length ? `<ul>${section.items.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}${section.key === "hard_skills" && skillItems.length ? `<div class="plan-skill-list">${skillItems.map(item => `<div class="plan-skill-row ${careerPlanStatusClass(item.status)}"><span>${escapeHtml(item.competency)}</span><div class="plan-skill-meter"><span style="width:${careerPlanMatchPercentage(item.status)}%"></span></div><span>${careerPlanMatchPercentage(item.status)}%</span></div>`).join("")}</div>` : ""}</div></details>`).join("")}</div>`;
     }
     function renderPromotionRoadmap(job, plan) {
       const selectedTrack = careerPlanTrackForRole(job.roleName);
@@ -3092,6 +3121,7 @@
       }
       if (count) count.textContent = `${items.length} 个结果`;
       target.innerHTML = `${result.limited ? '<div class="extension-note">免费账号展示匹配度最高的 3 个岗位。升级会员可查看完整列表和详细缺口。</div>' : ""}${items.map((item, index) => `<article class="card match-card"><div class="match-card-top"><div><h3>${escapeHtml(item.role_name)}</h3><p style="margin-top:4px;font-size:12px">${escapeHtml(item.company)} · ${escapeHtml(item.city)} · ${escapeHtml(item.salary_range)}</p></div><span class="match-score" title="综合匹配度">${Number(item.match_score) || 0}%</span></div><p>${escapeHtml(item.description || "岗位说明待补充")}</p><div class="match-skill-block"><span class="match-skill-label">已有匹配信号</span><div class="tag-row">${asArray(item.matched_skills).length ? asArray(item.matched_skills).map(skill => `<span class="tag green">${escapeHtml(skill)}</span>`).join("") : '<span class="field-help">尚未识别到明确技能信号</span>'}</div></div><div class="match-skill-block"><span class="match-skill-label">待补核心要求</span><div class="tag-row">${asArray(item.missing_skills).length ? asArray(item.missing_skills).map(skill => `<span class="tag amber">${escapeHtml(skill)}</span>`).join("") : '<span class="tag green">核心要求已有覆盖</span>'}</div></div><div class="match-card-actions"><button class="btn small primary" type="button" data-match-detail="${index}">查看匹配详情</button><button class="favorite-star ${state.favoriteJobs.some(job => job.roleName === item.role_name) ? "active" : ""}" type="button" data-match-favorite="${index}" aria-label="收藏 ${escapeHtml(item.role_name)}">★</button></div></article>`).join("")}`;
+      if (result.report) target.insertAdjacentHTML("afterbegin", renderLayeredReport(result.report, "岗位匹配报告"));
       $$('[data-match-detail]', target).forEach(button => button.addEventListener("click", () => openJobMatchDetail(Number(button.dataset.matchDetail))));
       $$('[data-match-favorite]', target).forEach(button => button.addEventListener("click", () => toggleJobMatchFavorite(Number(button.dataset.matchFavorite))));
     }
@@ -3132,9 +3162,10 @@
       saveLocal("resume-dashboard-job-match-filters", filters);
       state.jobMatchLoading = true; renderJobMatches();
       const payload = Object.fromEntries(Object.entries(filters).filter(([, value]) => String(value ?? "").trim() !== ""));
+      const reportPayload = withCurrentReportMode(payload);
       const requestToken = authSession.token;
       const requestUserId = authSession.userId();
-      const result = await apiOrMock("/api/job/match", { method: "POST", body: JSON.stringify(payload) }, () => {
+      const result = await apiOrMock("/api/job/match", { method: "POST", body: JSON.stringify(reportPayload) }, () => {
         const items = mockJobMatchItems(filters);
         const limited = !vipAllows("full_job_report") && items.length > 3;
         return { items: limited ? items.slice(0, 3) : items, total: items.length, limited, source_notice: "后端不可达，当前展示仅供预览的本地岗位匹配参考。" };
@@ -3142,6 +3173,7 @@
       state.jobMatchLoading = false;
       if (isApiServiceFailure(result) || !authSession.hasToken() || authSession.token !== requestToken || authSession.userId() !== requestUserId) { renderJobMatches(); return; }
       state.jobMatchResult = result || {};
+      state.lastReports.jobMatch = result?.report || null;
       state.jobMatches = asArray(result?.items);
       renderJobMatches();
     }
@@ -3162,10 +3194,11 @@
       state.jobs = buildJobCandidates(suggestions, query).slice(0, 8).map(normalizeJob);
       state.jobPage = 1;
       if (!requireAI("岗位智能分析")) { state.jobLoading = false; renderJobs(); return; }
-      const intelligence = await apiOrMock("/api/job/query", { method: "POST", body: JSON.stringify({ role_name: query }) }, null, "job intelligence", true);
+      const intelligence = await apiOrMock("/api/job/query", { method: "POST", body: JSON.stringify(withCurrentReportMode({ role_name: query })) }, null, "job intelligence", true);
       if (isApiServiceFailure(intelligence)) { state.jobLoading = false; renderJobs(); return; }
       if (!authSession.hasToken()) { state.jobLoading = false; renderJobs(); return; }
       if (intelligence) {
+        state.lastReports.job = intelligence.report || null;
         const profileName = intelligence.role_name || query;
         const matchingIndex = state.jobs.findIndex(job => job.roleName === profileName || job.roleName === query);
         const profile = {
@@ -3479,8 +3512,9 @@
     }
     async function openPolishGuard() {
       if (!requireAI("简历轻度润色")) return;
-      const result = await apiOrMock("/api/resume/ai-rewrite", { method: "POST", body: JSON.stringify({ resume: dashboardResumePayload(state.resume), job: resumeRewriteJob(), mode: "light" }) }, null, "简历轻度润色", true);
+      const result = await apiOrMock("/api/resume/ai-rewrite", { method: "POST", body: JSON.stringify(withCurrentReportMode({ resume: dashboardResumePayload(state.resume), job: resumeRewriteJob(), mode: "light" })) }, null, "简历轻度润色", true);
       if (isApiServiceFailure(result) || !result) return;
+      state.lastReports.resume = result.report || null;
       const suggestion = dashboardResumeFromApi(result);
       const fields = ["summary", "project"].filter(key => String(suggestion[key] || "").trim() && suggestion[key] !== state.resume[key]);
       if (!fields.length) { showToast("模型没有返回与当前内容不同的安全建议", "warning"); return; }
@@ -3493,8 +3527,9 @@
     }
     async function openResumeSmartFill() {
       if (!requireAI("简历智能填充")) return;
-      const result = await apiOrMock("/api/resume/ai-rewrite", { method: "POST", body: JSON.stringify({ resume: dashboardResumePayload(state.resume), job: resumeRewriteJob(), mode: "light" }) }, null, "简历智能填充", true);
+      const result = await apiOrMock("/api/resume/ai-rewrite", { method: "POST", body: JSON.stringify(withCurrentReportMode({ resume: dashboardResumePayload(state.resume), job: resumeRewriteJob(), mode: "light" })) }, null, "简历智能填充", true);
       if (isApiServiceFailure(result) || !result) return;
+      state.lastReports.resume = result.report || null;
       const suggestion = dashboardResumeFromApi(result);
       const fields = ["summary", "project", "skills"].filter(key => !String(state.resume[key] || "").trim() && String(suggestion[key] || "").trim());
       if (!fields.length) { showToast("已有内容不会被覆盖；没有可安全填入的空白字段", "warning"); return; }
@@ -3567,7 +3602,7 @@
       if (!requireAI("职业测评")) return;
       state.assessmentLoading = true;
       const normalized = Object.fromEntries(Object.entries(state.assessmentAnswers).map(([key, answer]) => [key, answer?.skipped ? null : answer?.value || answer]));
-      const result = await apiOrMock("/api/career/assessment/submit", { method: "POST", body: JSON.stringify({ answers: normalized }) }, () => ({ result: {
+      const result = await apiOrMock("/api/career/assessment/submit", { method: "POST", body: JSON.stringify(withCurrentReportMode({ answers: normalized })) }, () => ({ result: {
         top_interests: [{ label: "分析与探索", score: 4.5 }, { label: "结构化执行", score: 4.1 }],
         work_style_summary: "你更适合有明确问题、可以持续积累和复盘的工作方式。",
         strength_evidence: ["能从真实项目中提炼方法和结果"],
@@ -3578,6 +3613,7 @@
       if (isApiServiceFailure(result)) { renderAssessment(); return; }
       if (!authSession.hasToken()) { renderAssessment(); return; }
       state.assessmentResult = result?.result || result;
+      state.lastReports.assessment = result?.report || null;
       state.assessmentHistory.unshift({ id: Date.now(), createdAt: new Date().toLocaleString("zh-CN"), score: scoreAssessment(state.assessmentResult), result: state.assessmentResult });
       state.assessmentHistory = state.assessmentHistory.slice(0, 10);
       saveLocal("resume-dashboard-assessment-result", state.assessmentResult);
@@ -3590,6 +3626,7 @@
       const score = scoreAssessment(result);
       const assessmentText = [`职业测评报告：${score} / 100`, `工作方式：${result.work_style_summary || "—"}`, `兴趣方向：${asArray(result.top_interests).map(item => `${item.label}(${item.score})`).join("、") || "—"}`, `推荐岗位：${asArray(result.recommended_roles).join("、") || "—"}`, `优势证据：${asArray(result.strength_evidence).join("、") || "—"}`].join("\n");
       $("#assessmentBody").innerHTML = `<div class="result-hero"><div class="eyebrow">Assessment signal</div><div class="result-score">${score}<small> / 100</small></div><p style="margin:5px 0 0">${escapeHtml(result.work_style_summary || "已生成当前职业信号")}</p><div class="tag-row" style="margin-top:15px">${(result.top_interests || []).map(item => `<span class="tag blue">${escapeHtml(item.label)} · ${item.score}</span>`).join("")}</div><div class="tag-row" style="margin-top:10px">${(result.recommended_roles || []).map(item => `<span class="tag green">${escapeHtml(item)}</span>`).join("")}</div></div><div class="toolbar-group" style="margin-top:15px"><button class="btn primary" id="syncAssessmentBtn">同步到三档职业规划</button><button class="btn" id="resetAssessmentBtn">重新测评</button><button class="btn small" id="assessmentHistoryInlineBtn">查看历史</button><button class="btn small soft" id="copyAssessmentBtn">复制测评报告</button></div><div style="margin-top:17px"><h3>已说明的真实优势</h3><p style="margin-top:7px">${escapeHtml((result.strength_evidence || []).join(" · ") || "暂未记录足够的优势证据")}</p></div>`;
+      $("#assessmentBody").insertAdjacentHTML("beforeend", renderLayeredReport(state.lastReports.assessment, "职业测评分析"));
       $("#assessmentResult").style.display = "block";
       const hasFullAssessment = vipAllows("full_assessment") && result.report_scope !== "simplified";
       $("#assessmentResult").innerHTML = hasFullAssessment ? `<details class="collapse static" open><summary><div><h3>7 / 30 / 90 天行动计划</h3><p style="margin:3px 0 0;color:var(--muted);font-size:11px">把测评结果转成可执行动作</p></div></summary><div class="collapse-content"><div class="grid grid-3">${[["7 天", result.action_plan?.seven_day], ["30 天", result.action_plan?.thirty_day], ["90 天", result.action_plan?.ninety_day]].map(([title, list]) => `<div class="tier"><span class="tag blue">${title}</span><ul class="action-list">${(list || []).map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div>`).join("")}</div></div></details>` : `<div class="empty"><strong>已生成简化测评结果</strong><p>升级基础会员可解锁完整 7 / 30 / 90 天职业路线。</p><button class="btn small primary" id="unlockAssessmentPlanBtn" style="margin-top:12px">查看会员方案</button></div>`;
@@ -4496,8 +4533,99 @@
       return copyTextBase(maskTextExport(text), message);
     };
 
+    function reportTierClient() {
+      return window.ResumeDashboardReportTier || {
+        withReportMode: (payload, mode) => mode === "professional" || mode === "simplified" ? { ...payload, report_mode: mode } : { ...payload },
+        normalizeReport: (value) => {
+          const report = value?.report || value || {};
+          return {
+            mode: report.mode === "professional" ? "professional" : "simplified",
+            summary: typeof report.summary === "string" ? report.summary : "",
+            actions: Array.isArray(report.actions) ? report.actions : [],
+            evidence: Array.isArray(report.evidence) ? report.evidence : [],
+            sourceNotice: typeof report.source_notice === "string" ? report.source_notice : "",
+            upgradeNotice: typeof report.upgrade_notice === "string" ? report.upgrade_notice : ""
+          };
+        },
+        visibleEvidence: (report) => report.mode === "professional" ? report.evidence : []
+      };
+    }
+    function withCurrentReportMode(payload) {
+      return reportTierClient().withReportMode(payload, state.reportMode);
+    }
+    function setReportMode(mode) {
+      state.reportMode = mode === "professional" ? "professional" : "simplified";
+      saveLocal("resume-dashboard-report-mode", state.reportMode);
+      $$('[data-report-mode-toggle]').forEach(button => {
+        const active = button.dataset.reportModeToggle === state.reportMode;
+        button.setAttribute("aria-pressed", String(active));
+      });
+    }
+    function bindReportModeButtons(scope = document) {
+      $$('[data-report-mode-toggle]', scope).forEach(button => {
+        button.addEventListener("click", () => setReportMode(button.dataset.reportModeToggle));
+      });
+      setReportMode(state.reportMode);
+    }
+    function initReportModeControls() {
+      if ($("#reportModeToolbar")) return;
+      const host = $(".topbar-actions");
+      if (!host) return;
+      host.insertAdjacentHTML("afterbegin", `<div class="analysis-mode-control" id="reportModeToolbar"><span>分析视图</span><div class="analysis-mode-group" role="group" aria-label="分析报告模式"><button class="analysis-mode-option" type="button" data-report-mode-toggle="simplified">精简版</button><button class="analysis-mode-option" type="button" data-report-mode-toggle="professional">专业版</button></div></div>`);
+      bindReportModeButtons($("#reportModeToolbar"));
+    }
+    function renderLayeredReport(value, title) {
+      if (!value) return "";
+      const client = reportTierClient();
+      const report = client.normalizeReport({ report: value?.report || value });
+      if (!report.summary && !report.actions.length && !report.sourceNotice && !report.upgradeNotice) return "";
+      const evidence = client.visibleEvidence(report);
+      const evidenceHtml = evidence.length ? `<details class="layered-report-evidence"><summary>查看 ${evidence.length} 条依据</summary><ul class="layered-report-evidence-list">${evidence.map(item => `<li><strong>${escapeHtml(item.title || "资料条目")}</strong><span>${escapeHtml(item.detail || "")}</span>${item.date || item.scope ? `<small>${escapeHtml([item.date, item.scope].filter(Boolean).join(" · "))}</small>` : ""}</li>`).join("")}</ul></details>` : "";
+      return `<section class="layered-report" aria-label="${escapeHtml(title)}"><div class="layered-report-head"><h4>${escapeHtml(title)}</h4><span class="tag ${report.mode === "professional" ? "green" : "blue"}">${report.mode === "professional" ? "专业版" : "精简版"}</span></div>${report.summary ? `<p class="layered-report-summary">${escapeHtml(report.summary)}</p>` : ""}${report.actions.length ? `<ol class="layered-report-actions">${report.actions.map(action => `<li><span>${escapeHtml(action)}</span></li>`).join("")}</ol>` : ""}${evidenceHtml}${report.sourceNotice ? `<p class="layered-report-source">${escapeHtml(report.sourceNotice)}</p>` : ""}${report.upgradeNotice ? `<p class="layered-report-source">${escapeHtml(report.upgradeNotice)}</p>` : ""}</section>`;
+    }
+    function renderAnnualInsightResult() {
+      const target = $("#annualInsightResult");
+      if (!target) return;
+      if (state.annualInsightLoading) {
+        target.innerHTML = '<div class="empty"><strong>正在读取年度归档资料</strong><p>资料加载完成后会展示可执行建议；不会把归档资料当作实时招聘数据。</p></div>';
+        return;
+      }
+      const result = state.lastReports.annual;
+      target.innerHTML = result ? renderLayeredReport(result, `${result.role_name || "目标岗位"} · ${result.year || "年度"}就业洞察`) : '<div class="empty"><strong>选择岗位后开始查询</strong><p>先输入目标岗位和资料年份，再选择精简版或专业版。专业版仅在已授权时展示资料依据。</p></div>';
+    }
+    async function requestAnnualInsight() {
+      if (!requireLogin()) return;
+      const roleName = $("#annualInsightRole")?.value.trim();
+      const year = Number($("#annualInsightYear")?.value);
+      if (!roleName) { showToast("请输入要查询的目标岗位", "warning"); return; }
+      if (!Number.isInteger(year) || year < 2000 || year > 2100) { showToast("请输入有效的资料年份", "warning"); return; }
+      state.annualInsightLoading = true;
+      renderAnnualInsightResult();
+      const result = await apiOrMock(
+        "/api/career/annual-insights/query",
+        { method: "POST", body: JSON.stringify(withCurrentReportMode({ role_name: roleName, year })) },
+        () => ({ role_name: roleName, year, report: { mode: "simplified", summary: "当前处于离线演示状态，未读取年度归档资料。", actions: ["稍后连接后端后重试查询", "以目标公司的正式 JD 复核岗位条件", "先整理一条与岗位相关的真实经历"], evidence: [], source_notice: "资料范围：离线演示未加载年度归档资料。", upgrade_notice: "" } }),
+        "年度就业洞察"
+      );
+      state.annualInsightLoading = false;
+      if (isApiServiceFailure(result)) { renderAnnualInsightResult(); return; }
+      state.lastReports.annual = result || null;
+      renderAnnualInsightResult();
+    }
+    function renderAnnualInsightWorkspace() {
+      const host = $("#annualInsightWorkspace");
+      if (!host || host.dataset.ready) return;
+      const roleName = safeText(state.resume?.role, state.jobs[0]?.roleName || "");
+      host.dataset.ready = "true";
+      host.innerHTML = `<section class="insight-query-workbench" aria-labelledby="annualInsightQueryTitle"><div class="insight-query-copy"><h3 id="annualInsightQueryTitle">查询岗位的年度就业洞察</h3><p>选择目标岗位和资料年份，按当前分析视图生成行动建议。精简版强调下一步；专业版在会员授权后给出资料依据与更完整的行动计划。</p><p class="field-help">仅查询已归档资料，不替代实时招聘信息、薪资数据或录用结论。</p></div><form class="insight-query-form" id="annualInsightQueryForm"><div class="insight-query-fields"><div class="field"><label for="annualInsightRole">目标岗位</label><input class="input" id="annualInsightRole" maxlength="80" value="${escapeHtml(roleName)}" placeholder="例如：数据分析师"></div><div class="field"><label for="annualInsightYear">资料年份</label><input class="input" id="annualInsightYear" type="number" min="2000" max="2100" value="${new Date().getFullYear()}"></div></div><div class="analysis-mode-control"><span>本次报告</span><div class="analysis-mode-group" role="group" aria-label="年度就业洞察报告模式"><button class="analysis-mode-option" type="button" data-report-mode-toggle="simplified">精简版</button><button class="analysis-mode-option" type="button" data-report-mode-toggle="professional">专业版</button></div></div><button class="btn primary" type="submit">查询年度就业洞察</button></form><div class="annual-insight-result" id="annualInsightResult" aria-live="polite"></div></section>`;
+      bindReportModeButtons(host);
+      $("#annualInsightQueryForm").addEventListener("submit", event => { event.preventDefault(); requestAnnualInsight(); });
+      renderAnnualInsightResult();
+    }
     async function initialize() {
       applyTheme();
+      initReportModeControls();
+      renderAnnualInsightWorkspace();
       showLoadingState();
       bindEvents();
       const restoredLogin = await hydrateAuthSession(false);

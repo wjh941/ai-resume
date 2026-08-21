@@ -29,4 +29,22 @@ describe("dashboard report tier delivery", () => {
     const html = readFileSync(resolve(process.cwd(), "public/premium-dashboard.html"), "utf8")
     expect(html).toContain('src="./dashboard-report-tier.js"')
   })
+
+  it("includes an accessible annual-insight query with layered report output", () => {
+    const html = readFileSync(resolve(process.cwd(), "public/premium-dashboard.html"), "utf8")
+    expect(html).toContain('id="annualInsightQueryForm"')
+    expect(html).toContain('id="annualInsightRole"')
+    expect(html).toContain('id="annualInsightYear"')
+    expect(html).toContain('id="annualInsightResult"')
+    expect(html).toContain("function requestAnnualInsight")
+    expect(html).toContain("function renderLayeredReport")
+    expect(html).toContain("/api/career/annual-insights/query")
+  })
+
+  it("sends the selected report tier with connected analysis requests", () => {
+    const html = readFileSync(resolve(process.cwd(), "public/premium-dashboard.html"), "utf8")
+    expect(html).toContain("withCurrentReportMode")
+    expect(html).toContain("report_mode")
+    expect(html).toContain("report: plan?.report || null")
+  })
 })
