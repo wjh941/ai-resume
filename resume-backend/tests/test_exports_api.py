@@ -1,20 +1,87 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 import sqlite3
+import sys
+from types import ModuleType
 
 import pytest
 from fastapi.testclient import TestClient
 from docx import Document
 
 from conftest import make_draft_payload
-from app.services.export_pdf import PdfRendererUnavailableError, chromium_is_available
+from app.schemas.resume import ResumePayload
+from app.services.export_pdf import (
+    PdfRendererUnavailableError,
+    _render_with_playwright,
+    chromium_is_available,
+    render_resume_html,
+)
 
 
 def save_draft(api_client) -> dict:
     response = api_client.post("/api/draft/save", json=make_draft_payload())
     assert response.status_code == 200
     return response.json()["data"]
+
+
+def test_resume_html_has_print_safe_wrapping_and_page_rules():
+    html = render_resume_html(
+        ResumePayload.model_validate(make_draft_payload()["resume"]),
+        "technology",
+    )
+
+    assert "@page { size: A4; margin: 14mm 16mm; }" in html
+    assert "overflow-wrap: anywhere" in html
+    assert "break-inside: avoid" in html
+
+
+def test_playwright_pdf_prefers_css_page_size(monkeypatch, tmp_path):
+    pdf_kwargs: dict[str, object] = {}
+
+    class FakePage:
+        async def set_content(self, _html: str) -> None:
+            return None
+
+        async def pdf(self, **kwargs) -> None:
+            pdf_kwargs.update(kwargs)
+            Path(str(kwargs["path"])).write_bytes(b"%PDF-fake")
+
+    class FakeBrowser:
+        async def new_page(self) -> FakePage:
+            return FakePage()
+
+        async def close(self) -> None:
+            return None
+
+    class FakeChromium:
+        async def launch(self) -> FakeBrowser:
+            return FakeBrowser()
+
+    class FakePlaywright:
+        chromium = FakeChromium()
+
+        async def __aenter__(self) -> "FakePlaywright":
+            return self
+
+        async def __aexit__(self, *_args) -> None:
+            return None
+
+    fake_module = ModuleType("playwright.async_api")
+    fake_module.async_playwright = FakePlaywright
+    playwright_module = ModuleType("playwright")
+    playwright_module.async_api = fake_module
+    monkeypatch.setitem(sys.modules, "playwright", playwright_module)
+    monkeypatch.setitem(sys.modules, "playwright.async_api", fake_module)
+    monkeypatch.setattr("app.services.export_pdf.chromium_is_available", lambda _path: True)
+
+    output_path = tmp_path / "resume.pdf"
+    asyncio.run(_render_with_playwright("<html></html>", output_path, str(tmp_path)))
+
+    assert output_path.read_bytes().startswith(b"%PDF")
+    assert pdf_kwargs["prefer_css_page_size"] is True
 
 
 def test_word_export_returns_safe_filename_and_download(api_client):

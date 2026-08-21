@@ -3,13 +3,14 @@
 <head>
   <meta charset="utf-8">
   <style>
-    @page { size: A4; margin: 16mm; }
+    @page { size: A4; margin: 14mm 16mm; }
     * { box-sizing: border-box; }
-    body { color: #1f2329; font-family: "Microsoft YaHei", Arial, sans-serif; font-size: 10.5pt; line-height: 1.55; }
-    h1 { margin: 0; font-size: 24pt; }
-    h2 { margin: 18px 0 8px; padding-bottom: 4px; border-bottom: 1px solid #e5e6eb; font-size: 13pt; }
-    .contact, .meta { color: #4e5969; }
-    .entry { margin: 8px 0; }
+    body { color: #1f2329; font-family: "Microsoft YaHei", Arial, sans-serif; font-size: 10pt; line-height: 1.58; overflow-wrap: anywhere; word-break: break-word; }
+    h1 { margin: 0; font-size: 23pt; line-height: 1.2; }
+    h2 { margin: 15px 0 7px; padding-bottom: 4px; border-bottom: 1px solid #e5e6eb; font-size: 13pt; break-after: avoid; }
+    section, .entry { break-inside: avoid; }
+    .contact, .meta { color: #4e5969; overflow-wrap: anywhere; }
+    .entry { margin: 7px 0; }
     .entry-title { font-weight: 700; }
     ul { margin: 6px 0; padding-left: 18px; }
     {{ theme_styles }}

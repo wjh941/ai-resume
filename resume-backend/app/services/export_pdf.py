@@ -137,7 +137,12 @@ async def _render_with_playwright(html: str, output_path: Path, browser_root: st
             try:
                 page = await browser.new_page()
                 await page.set_content(html)
-                await page.pdf(path=str(output_path), format="A4", print_background=True)
+                await page.pdf(
+                    path=str(output_path),
+                    format="A4",
+                    print_background=True,
+                    prefer_css_page_size=True,
+                )
             finally:
                 await browser.close()
     except PdfRendererUnavailableError:
