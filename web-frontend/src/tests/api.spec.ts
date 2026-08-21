@@ -42,7 +42,10 @@ describe("requestApi", () => {
       vi.fn().mockResolvedValue(new Response(JSON.stringify({ detail: "expired" }), { status: 401 })),
     )
 
-    await expect(requestApi("/api/auth/me")).rejects.toThrow("expired")
+    await expect(requestApi("/api/auth/me")).rejects.toMatchObject({
+      message: "expired",
+      status: 401,
+    })
 
     expect(localStorage.getItem("resume-web-session")).toBeNull()
   })
