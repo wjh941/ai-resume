@@ -4,11 +4,13 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.schemas.report import ReportMode
 from app.schemas.resume import ResumePayload
 
 
 class JobQueryRequest(BaseModel):
     role_name: str = Field(min_length=1, max_length=200)
+    report_mode: ReportMode | None = None
 
     @field_validator("role_name")
     @classmethod
@@ -53,3 +55,4 @@ class ResumeRewriteRequest(BaseModel):
     resume: ResumePayload
     job: JobIntelligence
     mode: Literal["light", "deep"]
+    report_mode: ReportMode | None = None

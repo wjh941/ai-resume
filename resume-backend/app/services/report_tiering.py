@@ -8,6 +8,23 @@ class ReportEvidenceInput(ReportEvidence):
     pass
 
 
+def make_report_evidence(
+    evidence_type: str,
+    title: object,
+    detail: object,
+    *,
+    date: object = "",
+    scope: object = "",
+) -> ReportEvidenceInput:
+    return ReportEvidenceInput(
+        type=str(evidence_type),
+        title=str(title)[:160],
+        detail=str(detail)[:1_000],
+        date=str(date)[:32],
+        scope=str(scope)[:240],
+    )
+
+
 def project_report(
     requested_mode: ReportMode | None,
     default_mode: ReportMode,
@@ -32,5 +49,5 @@ def project_report(
         actions=professional_actions if is_professional else actions[:3],
         evidence=validated_evidence if is_professional else [],
         source_notice=source_notice,
-        upgrade_notice="" if is_professional else "Upgrade to view professional evidence and detailed actions.",
+        upgrade_notice="" if is_professional else "升级会员可查看证据映射、资料来源和详细行动计划。",
     )

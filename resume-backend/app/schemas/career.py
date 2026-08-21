@@ -6,6 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.schemas.consultation import IdentityCode
+from app.schemas.report import ReportMode
 
 
 MatchingLevel = Literal["high", "transferable", "needs_upskilling", "long_shot"]
@@ -176,6 +177,7 @@ class JobMatchRequest(BaseModel):
     seniority: Literal["", "entry", "mid", "senior"] = ""
     category: str = Field(default="", max_length=80)
     target_role: str = Field(default="", max_length=120)
+    report_mode: ReportMode | None = None
 
     @field_validator("city", "category", "target_role")
     @classmethod
@@ -260,6 +262,7 @@ class CareerTaskGenerateRequest(BaseModel):
 class JobPlanRequest(BaseModel):
     role_name: str = Field(min_length=1, max_length=120)
     expand_detail: bool = False
+    report_mode: ReportMode | None = None
 
     @field_validator("role_name")
     @classmethod

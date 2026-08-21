@@ -18,6 +18,7 @@ from app.schemas.career import (
 from app.schemas.common import success
 from app.services.auth import current_user_id
 from app.services.membership import VipPermissionError, VipStatus, get_current_vip
+from app.services.report_tiering import make_report_evidence, project_report
 
 
 router = APIRouter()
@@ -275,4 +276,35 @@ async def job_plan(
         assessment,
         expand_detail,
     )
-    return success(project_job_plan_for_vip(plan, vip).model_dump())
+    projected_plan = project_job_plan_for_vip(plan, vip)
+    plan_payload = projected_plan.model_dump()
+    concise_actions = projected_plan.action_plan.seven_day[:3] or [
+        "核验目标岗位的职责和交付物",
+        "补充一项可验证的项目或经历",
+        "使用正式 JD 复核下一步行动",
+    ]
+    professional_actions = [
+        *projected_plan.action_plan.seven_day,
+        *projected_plan.action_plan.thirty_day,
+        *projected_plan.action_plan.ninety_day,
+    ]
+    plan_payload["report"] = project_report(
+        payload.report_mode,
+        "professional" if projected_plan.report_scope == "detailed" else "simplified",
+        vip,
+        "full_job_report",
+        f"{payload.role_name}的职业规划基于当前账户资料和本地规则生成，应以正式 JD 和真实反馈复核。",
+        concise_actions,
+        [
+            make_report_evidence(
+                "personal_evidence",
+                item.get("title", "已验证经历"),
+                f"{item.get('context', '')} {item.get('actions', '')} {item.get('outcome', '')}",
+                scope=payload.role_name,
+            )
+            for item in evidence[:20]
+        ],
+        "资料范围：当前账户已验证经历、简历和本地职业规划规则。",
+        professional_actions or concise_actions,
+    ).model_dump(mode="json")
+    return success(plan_payload)

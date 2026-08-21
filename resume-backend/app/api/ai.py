@@ -11,6 +11,7 @@ from app.services.auth import current_user_id
 from app.services.job_matching import MatchContext
 from app.services.rewrite_guard import validate_rewrite_facts
 from app.services.membership import VipPermissionError, VipStatus, get_current_vip
+from app.services.report_tiering import make_report_evidence, project_report
 
 
 router = APIRouter()
@@ -63,7 +64,11 @@ async def search_job_market(request: Request, role_name: str):
 
 
 @router.post("/api/job/query")
-async def query_job(payload: JobQueryRequest, request: Request):
+async def query_job(
+    payload: JobQueryRequest,
+    request: Request,
+    vip: VipStatus = Depends(get_current_vip),
+):
     role_name = " ".join(payload.role_name.split())
     cache = request.app.state.job_cache
     settings = request.app.state.settings
@@ -72,7 +77,29 @@ async def query_job(payload: JobQueryRequest, request: Request):
     if job is None:
         job = await request.app.state.ai_client.query_job(role_name)
         cache.put(role_name, provider_cache_key, job)
-    return success(job.model_dump())
+    job_payload = job.model_dump()
+    focus_items = [*job.required_skills, *job.hard_requirements, *job.responsibilities]
+    report = project_report(
+        payload.report_mode,
+        "simplified",
+        vip,
+        "full_job_report",
+        f"{job.role_name}的岗位要点用于求职准备，不代表实时招聘信息。",
+        [f"围绕{item}准备一项可展示的成果" for item in focus_items[:3]],
+        [
+            make_report_evidence(
+                "analysis_framework",
+                f"结构化岗位要点：{item}",
+                "来自本地结构化岗位知识，用于准备和复核正式 JD。",
+                scope=job.role_name,
+            )
+            for item in focus_items[:20]
+        ],
+        "资料范围：本地结构化岗位知识，不包含实时岗位数量或薪资数据。",
+        [*job.responsibilities, *job.career_route],
+    )
+    job_payload["report"] = report.model_dump(mode="json")
+    return success(job_payload)
 
 
 @router.post("/api/job/match")
@@ -83,8 +110,9 @@ async def match_jobs(
     vip: VipStatus = Depends(get_current_vip),
 ):
     # Candidate context is built from the JWT owner only; request bodies contain filters, never identity.
+    context = _match_context(request, user_id, payload.target_role)
     items = request.app.state.job_matcher.match(
-        _match_context(request, user_id, payload.target_role),
+        context,
         request.app.state.career_catalog_repository.list_roles(),
         payload,
         detail_unlocked=vip.vip_level in {"basic", "premium"},
@@ -99,7 +127,37 @@ async def match_jobs(
             "公司、城市和薪资仅供方向筛选，请以正式 JD 核验。"
         ),
     )
-    return success(response.model_dump())
+    verified_evidence = [
+        item
+        for item in request.app.state.evidence_repository.list(user_id)
+        if item.verified
+    ]
+    missing_skills = [skill for item in items for skill in item.missing_skills]
+    response_payload = response.model_dump()
+    response_payload["report"] = project_report(
+        payload.report_mode,
+        "professional" if vip.allows("full_job_report") else "simplified",
+        vip,
+        "full_job_report",
+        "岗位匹配基于当前账户的资料和本地岗位目录，不代表实时招聘结果。",
+        [f"补充 {skill} 的可验证项目或经历" for skill in missing_skills[:3]]
+        or ["完善一项与目标岗位相关的已验证经历"],
+        [
+            make_report_evidence(
+                "personal_evidence",
+                item.title,
+                f"{item.context} {item.actions} {item.outcome}",
+                scope=payload.target_role or "岗位匹配",
+            )
+            for item in verified_evidence[:20]
+        ],
+        "资料范围：当前账户已验证经历与本地岗位目录，不包含实时招聘信息。",
+        [
+            f"将已验证经历映射到 {item.role_name} 的职责和技能要求"
+            for item in items[:3]
+        ],
+    ).model_dump(mode="json")
+    return success(response_payload)
 
 
 @router.post("/api/resume/ai-rewrite")
@@ -116,4 +174,37 @@ async def rewrite_resume(
         payload.mode,
     )
     validate_rewrite_facts(payload.resume, rewritten)
-    return success(rewritten.model_dump())
+    rewritten_payload = rewritten.model_dump()
+    resume_items = [
+        *( (item.name, item.role, item.description) for item in payload.resume.projects ),
+        *( (item.company, item.position, item.description) for item in payload.resume.employment ),
+    ]
+    rewritten_payload["report"] = project_report(
+        payload.report_mode,
+        "professional" if payload.mode == "deep" and vip.allows("full_job_report") else "simplified",
+        vip,
+        "full_job_report",
+        f"简历润色围绕 {payload.job.role_name} 的岗位关键词组织表达，事实仍以原始简历为准。",
+        [
+            "核对润色内容是否与原始经历一致",
+            "补充一项可验证的项目交付物",
+            "使用正式 JD 复核关键词与职责对应关系",
+        ],
+        [
+            make_report_evidence(
+                "analysis_framework",
+                title,
+                f"{role} {description}",
+                scope=payload.job.role_name,
+            )
+            for title, role, description in resume_items[:20]
+            if title or description
+        ],
+        "资料范围：本次提交的简历和岗位信息；不生成或补充未经验证的事实。",
+        [
+            f"逐条核对简历内容与 {payload.job.role_name} 的职责匹配关系",
+            "为关键项目准备可复核的交付物或证明材料",
+            "根据真实面试反馈迭代一版简历",
+        ],
+    ).model_dump(mode="json")
+    return success(rewritten_payload)

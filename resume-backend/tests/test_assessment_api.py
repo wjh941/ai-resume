@@ -73,3 +73,18 @@ def test_assessment_submission_rejects_scores_outside_five_point_scale(api_clien
 
     assert response.status_code == 422
     assert response.json()["code"] == "validation_error"
+
+
+
+
+def test_free_assessment_professional_request_hides_report_evidence(api_client):
+    response = api_client.post(
+        "/api/career/assessment/submit",
+        json={"answers": {"interest_investigative_1": 5}, "report_mode": "professional"},
+    )
+
+    assert response.status_code == 200, response.text
+    data = response.json()["data"]
+    assert data["result"]
+    assert data["report"]["mode"] == "simplified"
+    assert data["report"]["evidence"] == []

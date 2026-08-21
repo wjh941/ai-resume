@@ -18,6 +18,7 @@ def _normalized_text(value: str, field_name: str, maximum: int) -> str:
 
 class AssessmentSubmitPayload(BaseModel):
     answers: dict[str, StrictInt] = Field(default_factory=dict, max_length=40)
+    report_mode: ReportMode | None = None
 
     @field_validator("answers")
     @classmethod

@@ -55,3 +55,18 @@ def test_paid_match_returns_local_mock_sample_detail(api_client):
     assert item["responsibilities"] == ["维护业务指标体系", "完成专题数据分析"]
     assert item["requirements"] == ["SQL", "Python", "数据可视化"]
     assert 0 <= item["match_score"] <= 100
+
+
+
+
+def test_free_professional_job_match_hides_evidence_and_preserves_items(api_client):
+    response = api_client.post(
+        "/api/job/match",
+        json={"target_role": "Data Analyst", "report_mode": "professional"},
+    )
+
+    assert response.status_code == 200, response.text
+    data = response.json()["data"]
+    assert data["items"]
+    assert data["report"]["mode"] == "simplified"
+    assert data["report"]["evidence"] == []

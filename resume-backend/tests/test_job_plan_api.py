@@ -170,6 +170,25 @@ def test_basic_job_plan_returns_detailed_content(api_client, auth_headers):
     assert data["promotion_tracks"][0]["nodes"][0]["case_detail"] == "Ship a verified project."
 
 
+def test_basic_job_plan_can_choose_simplified_report_without_changing_detail_scope(api_client, auth_headers):
+    headers = auth_headers("13900000006")
+    _save_profile(api_client, headers)
+    api_client.headers.update(headers)
+    grant_vip(api_client, "basic")
+
+    response = api_client.post(
+        "/api/job/plan",
+        headers=headers,
+        json={"role_name": "Data Engineer", "expand_detail": True, "report_mode": "simplified"},
+    )
+
+    assert response.status_code == 200, response.text
+    data = response.json()["data"]
+    assert data["report_scope"] == "detailed"
+    assert data["report"]["mode"] == "simplified"
+    assert data["report"]["evidence"] == []
+
+
 def test_job_plan_never_passes_another_users_context_to_ai(api_client, auth_headers):
     owner_headers = auth_headers("13900000003")
     _save_profile(api_client, owner_headers, ["OWNER-ONLY-SKILL"])

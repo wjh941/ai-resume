@@ -70,3 +70,15 @@ def test_anonymous_default_professional_never_grants_evidence():
     assert report.mode == "simplified"
     assert report.evidence == []
     assert "Private SQL migration" not in report.model_dump_json()
+
+
+
+
+def test_job_query_adds_a_simplified_report_without_changing_job_fields(api_client):
+    response = api_client.post("/api/job/query", json={"role_name": "Data Analyst"})
+
+    assert response.status_code == 200, response.text
+    data = response.json()["data"]
+    assert data["role_name"] == "Data Analyst"
+    assert data["report"]["mode"] == "simplified"
+    assert data["report"]["evidence"] == []

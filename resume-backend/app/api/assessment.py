@@ -8,7 +8,12 @@ from app.schemas.assessment import (
     AssessmentSubmitPayload,
 )
 from app.schemas.common import success
-from app.services.report_tiering import ReportEvidenceInput, project_report
+from app.schemas.report import ReportMode
+from app.services.report_tiering import (
+    ReportEvidenceInput,
+    make_report_evidence,
+    project_report,
+)
 from app.services.career_assessment import assessment_questions
 from app.services.auth import current_user_id
 from app.services.membership import VipStatus, get_current_vip, require_vip_feature
@@ -43,7 +48,7 @@ async def submit_assessment(
         answers=payload.answers,
         result=result,
     )
-    return success(_assessment_for_vip(saved, vip))
+    return success(_assessment_with_report(saved, vip, payload.report_mode))
 
 
 @router.get("/api/career/assessment")
@@ -51,8 +56,15 @@ async def get_assessment(
     request: Request,
     user_id: str = Depends(current_user_id),
     vip: VipStatus = Depends(get_current_vip),
+    report_mode: ReportMode | None = Query(default=None),
 ) -> dict[str, object]:
-    return success(_assessment_for_vip(request.app.state.assessment_repository.get(user_id), vip))
+    return success(
+        _assessment_with_report(
+            request.app.state.assessment_repository.get(user_id),
+            vip,
+            report_mode,
+        )
+    )
 
 
 @router.post("/api/career/annual-insights")
@@ -150,6 +162,58 @@ def _annual_evidence_detail(item: dict[str, object]) -> str:
     if len(content) > content_limit:
         content = f"{content[:content_limit - 3]}..."
     return f"{prefix}{content}{suffix}"
+
+
+def _assessment_with_report(
+    saved: dict[str, object],
+    vip: VipStatus,
+    report_mode: ReportMode | None,
+) -> dict[str, object]:
+    projected = _assessment_for_vip(saved, vip)
+    result = dict(saved.get("result", {}))
+    top_interests = result.get("top_interests", [])
+    strength_evidence = result.get("strength_evidence", [])
+    action_plan = result.get("action_plan", {})
+    concise_actions = list(action_plan.get("seven_day", []))[:3] or [
+        "选择一个目标岗位并核验职责",
+        "补充一项可验证的项目或经历",
+        "根据真实反馈更新求职准备",
+    ]
+    professional_actions = [
+        *list(action_plan.get("seven_day", [])),
+        *list(action_plan.get("thirty_day", [])),
+        *list(action_plan.get("ninety_day", [])),
+    ]
+    report = project_report(
+        report_mode,
+        "professional" if vip.allows("full_assessment") else "simplified",
+        vip,
+        "full_assessment",
+        "职业测评用于整理当前偏好与答题信息，不是心理诊断或就业结果承诺。",
+        concise_actions,
+        [
+            make_report_evidence(
+                "analysis_framework",
+                str(item.get("label", item.get("key", "兴趣方向"))),
+                f"{item.get('reason', '')} 得分：{item.get('score', '')}",
+                scope="职业测评",
+            )
+            for item in top_interests[:3]
+            if isinstance(item, dict)
+        ]
+        + [
+            make_report_evidence(
+                "analysis_framework",
+                "答题中的能力线索",
+                strength,
+                scope="职业测评",
+            )
+            for strength in strength_evidence[:17]
+        ],
+        "资料范围：当前账户提交的测评答案和本地测评规则。",
+        professional_actions or concise_actions,
+    )
+    return {**projected, "report": report.model_dump(mode="json")}
 
 
 def _assessment_for_vip(saved: dict[str, object], vip: VipStatus) -> dict[str, object]:

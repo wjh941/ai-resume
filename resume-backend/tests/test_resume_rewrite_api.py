@@ -22,6 +22,19 @@ def test_mock_rewrite_changes_descriptions_without_changing_resume_facts(api_cli
 
     assert response.status_code == 200
     assert response.json()["code"] == "ok"
+
+
+def test_free_resume_rewrite_professional_request_hides_report_evidence(api_client):
+    payload = make_rewrite_payload()
+    payload["report_mode"] = "professional"
+
+    response = api_client.post("/api/resume/ai-rewrite", json=payload)
+
+    assert response.status_code == 200, response.text
+    data = response.json()["data"]
+    assert data["basic"]
+    assert data["report"]["mode"] == "simplified"
+    assert data["report"]["evidence"] == []
     rewritten = response.json()["data"]
     assert rewritten["basic"] == payload["resume"]["basic"]
     assert rewritten["education"] == payload["resume"]["education"]
