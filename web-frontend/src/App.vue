@@ -6,18 +6,25 @@ import LoginPanel from "./components/LoginPanel.vue"
 import WebTopbar from "./components/WebTopbar.vue"
 import { requestApi } from "./lib/api"
 import { clearSession, readSession, type Session } from "./lib/session"
+import AccountView from "./views/AccountView.vue"
+import ApplicationsView from "./views/ApplicationsView.vue"
+import CareerView from "./views/CareerView.vue"
+import InsightsView from "./views/InsightsView.vue"
+import JobsView from "./views/JobsView.vue"
+import OverviewView from "./views/OverviewView.vue"
+import ResumeView from "./views/ResumeView.vue"
 
 const session = ref<Session | null>(readSession())
 const activeView = ref<WorkspaceView>("overview")
 const dark = ref(false)
-const pageTitle = computed(() => ({
-  overview: "工作概览",
-  resume: "简历中心",
-  career: "职业规划",
-  jobs: "岗位机会",
-  applications: "投递管理",
-  insights: "年度洞察",
-  account: "账户设置",
+const activeComponent = computed(() => ({
+  overview: OverviewView,
+  resume: ResumeView,
+  career: CareerView,
+  jobs: JobsView,
+  applications: ApplicationsView,
+  insights: InsightsView,
+  account: AccountView,
 }[activeView.value]))
 
 watch(dark, (value) => {
@@ -43,14 +50,7 @@ async function logout() {
     <main class="web-workspace">
       <WebTopbar :user="session.user" :dark="dark" @logout="logout" @toggle-theme="dark = !dark" />
       <section class="workspace-stage" :aria-labelledby="`${activeView}-title`">
-        <div class="workspace-heading">
-          <h1 :id="`${activeView}-title`">{{ pageTitle }}</h1>
-          <p>正在加载与你的求职计划相关的内容。</p>
-        </div>
-        <div class="workspace-loading" role="status">
-          <span class="loading-bar" aria-hidden="true" />
-          <p>工作台模块正在准备中</p>
-        </div>
+        <component :is="activeComponent" @navigate="activeView = $event" />
       </section>
     </main>
   </div>
