@@ -207,3 +207,43 @@ Phase 1-10 的实现与待办见 [Phase10 变更记录](docs/phase10-changelog.m
 - 工作台顶部可切换“精简版”和“专业版”。岗位查询、岗位匹配、职业规划、职业测评和简历润色会把该选择传给后端；旧接口字段保持不变，新增报告位于响应的 `report` 字段。
 - 精简版用日常语言给出摘要和最多三项下一步行动，不显示证据条目。专业版仅在服务端确认会员权益后展示证据映射、资料范围和完整行动计划，前端不会仅凭隐藏元素绕过权限。
 - 在“年度就业洞察”中输入目标岗位和资料年份即可查询归档资料。结果只用于整理求职准备和核验方向，不代表实时岗位数量、薪资区间或录用概率。
+
+## 双前端入口
+
+项目同时保留两个互不替代的前端产品：
+
+- `resume-miniprogram`：Uni-App 源码，用于微信小程序构建和 H5 预览。
+- `web-frontend`：面向桌面浏览器的独立 Web 工作台，提供账号登录、岗位查询、职业行动、投递记录和年度就业洞察。
+
+本地开发端口保持固定：FastAPI 后端为 `http://127.0.0.1:8000`，小程序 H5 预览为 `http://127.0.0.1:5186`，独立 Web 前端为 `http://127.0.0.1:5174`。三者职责不同，不应互换端口。
+
+启动独立 Web 前端：
+
+```powershell
+cd web-frontend
+npm install
+Copy-Item .env.example .env.local
+npm run dev
+```
+
+浏览器打开 `http://127.0.0.1:5174`。默认情况下，Vite 会把 `/api`、`/downloads` 和 `/health` 代理到本机后端 `http://127.0.0.1:8000`。部署到公网时，在 `web-frontend/.env.local` 设置 HTTPS 后端地址：
+
+```dotenv
+VITE_API_BASE_URL=https://api.example.com
+```
+
+独立 Web 前端使用与小程序相同的 JWT 和业务 API，不会替代微信小程序；小程序继续通过以下命令构建：
+
+```powershell
+cd resume-miniprogram
+npm run dev:h5
+npm run build:mp-weixin
+```
+
+Web 前端验证命令：
+
+```powershell
+cd web-frontend
+npm run test
+npm run build
+```
