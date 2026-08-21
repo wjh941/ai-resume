@@ -425,6 +425,7 @@ onMounted(() => {
           <text class="search-icon">⌕</text>
           <view v-if="roleName.trim() && (suggestionLoading || visibleSuggestions.length)" class="suggestion-popover">
             <text class="popover-title">{{ suggestionLoading ? "正在匹配岗位…" : "匹配岗位" }}</text>
+            <transition-group name="suggestion-list" tag="view" class="suggestion-list">
             <button
               v-for="suggestion in visibleSuggestions"
               :key="suggestion.roleName"
@@ -437,6 +438,7 @@ onMounted(() => {
               </view>
               <text class="suggestion-add">添加</text>
             </button>
+            </transition-group>
           </view>
         </view>
 
@@ -734,6 +736,7 @@ onMounted(() => {
 .suggestion-name,.suggestion-category,.suggestion-add { display: block; }
 .suggestion-name { font-size: 27rpx; font-weight: 600; }.suggestion-category { margin-top: 5rpx; color: #8292a6; font-size: 21rpx; }
 .suggestion-add { color: #2d77d1; font-size: 22rpx; }
+.suggestion-list-enter-active,.suggestion-list-leave-active { transition: opacity var(--ui-motion-fast) var(--ui-motion-ease), transform var(--ui-motion-fast) var(--ui-motion-ease); }.suggestion-list-enter-from,.suggestion-list-leave-to { opacity: 0; transform: translateY(-6rpx); }
 
 .selected-role-area { margin-top: 20rpx; }
 .selected-role-title { display: block; color: #718096; font-size: 23rpx; }
@@ -809,4 +812,5 @@ onMounted(() => {
 .planner-entry { margin-top: 0; padding: 0 24rpx; line-height: 62rpx; border: 1rpx solid #9bc8ff; border-radius: 999rpx; background: rgba(255,255,255,.76); color: #1677ff; font-size: 24rpx; }
 .loading-skeleton { min-height: 250rpx; }.skeleton-title,.skeleton-line { height: 24rpx; margin-top: 20rpx; border-radius: 8rpx; background: linear-gradient(90deg, #edf2f7 25%, #f8fafc 40%, #edf2f7 65%); background-size: 400% 100%; animation: shimmer 1.2s ease-in-out infinite; }.skeleton-title { width: 52%; height: 36rpx; margin-top: 0; }.skeleton-line.short { width: 48%; }@keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
 .account-entry { display: flex; justify-content: flex-end; margin-top: -8rpx; }
+@media (prefers-reduced-motion: reduce) { .suggestion-list-enter-active,.suggestion-list-leave-active { transition: opacity var(--ui-motion-fast) ease; }.suggestion-list-enter-from,.suggestion-list-leave-to { transform: none; } }
 </style>
