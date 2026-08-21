@@ -194,7 +194,9 @@ class JobMatchItem(BaseModel):
     matched_skills: list[str]
     missing_skills: list[str]
     description: str
+    responsibilities: list[str]
     requirements: list[str]
+    match_score_reference: int | None = Field(default=None, ge=0, le=100)
     detail_unlocked: bool
 
 

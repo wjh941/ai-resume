@@ -15,10 +15,12 @@ import {
   type CareerTask,
 } from "../../services/career-task-api"
 import { queryJob } from "../../services/resume-api"
+import { listLocalJobMatches } from "../../services/job-match-api"
 import { useCareerStore } from "../../stores/career"
 import { useResumeStore } from "../../stores/resume"
 import { getClientId } from "../../stores/session"
 import type { CareerIdentityCode, CareerProfilePayload, MajorSuggestion, RecommendationTier, RoleRecommendation } from "../../types/career"
+import type { LocalJobMatchItem } from "../../types/job-match"
 import { prepareResumeForJob } from "../../utils/resume-autofill"
 import { canOpenComparison } from "../../utils/role-comparison"
 
@@ -59,6 +61,8 @@ const skillsText = ref(profile.value.skills.join("、"))
 const loading = ref(false)
 const resumeLoading = ref("")
 const error = ref("")
+const localJobMatches = ref<LocalJobMatchItem[]>([])
+const localJobMatchNotice = ref("")
 const careerTasks = ref<CareerTask[]>([])
 const taskSaving = ref(false)
 const taskForm = ref({ title: "", dueDate: "", applicationId: "", evidenceId: "" })
@@ -175,11 +179,28 @@ async function generatePlan() {
     const result = await generateCareerRecommendations(saved.clientId)
     store.setResult(result)
     selectedTier.value = "stable"
+    await loadLocalJobMatches(result.tiers.stable[0]?.role.roleName || "")
     uni.pageScrollTo({ scrollTop: 620, duration: 250 })
   } catch (reason) {
     error.value = reason instanceof Error ? reason.message : "规划生成失败，请检查后端服务。"
   } finally {
     loading.value = false
+  }
+}
+
+async function loadLocalJobMatches(targetRole: string) {
+  if (!targetRole) {
+    localJobMatches.value = []
+    localJobMatchNotice.value = ""
+    return
+  }
+  try {
+    const result = await listLocalJobMatches(targetRole)
+    localJobMatches.value = result.items
+    localJobMatchNotice.value = result.sourceNotice
+  } catch {
+    localJobMatches.value = []
+    localJobMatchNotice.value = ""
   }
 }
 
@@ -396,6 +417,17 @@ onUnmounted(() => {
           <view class="chip-row"><text v-for="item in majorReport?.recommendedCourses" :key="item" class="chip">{{ item }}</text></view>
         </view>
 
+        <view v-if="localJobMatches.length" class="card local-job-panel">
+          <view class="section-heading"><text>本地岗位参考</text><text class="hint">模拟数据</text></view>
+          <view v-for="item in localJobMatches" :key="item.roleName" class="local-job-item">
+            <view class="local-job-top"><view><text class="local-job-name">{{ item.roleName }}</text><text class="local-job-company">{{ item.company }} · {{ item.city }}</text></view><text class="local-job-score">匹配 {{ item.matchScore }} 分</text></view>
+            <text class="local-job-salary">{{ item.salaryRange }}</text>
+            <text class="local-job-copy">职责：{{ item.responsibilities.join("、") }}</text>
+            <text class="local-job-copy">要求：{{ item.requirements.join("、") }}</text>
+          </view>
+          <text v-if="localJobMatchNotice" class="local-job-notice">{{ localJobMatchNotice }}</text>
+        </view>
+
         <view class="roadmap-track" aria-label="职业发展路径">
           <view v-for="item in tierOptions" :key="item.key" class="roadmap-stage" :class="{ active: selectedTier === item.key }" @click="chooseTier(item.key)">
             <text>{{ item.label }}</text><text>{{ item.hint }}</text>
@@ -485,6 +517,7 @@ button { margin-top: 24rpx; border-radius: 12rpx; font-size: 28rpx; }
 .role-actions { display: flex; gap: 14rpx; margin-top: 20rpx; }.role-actions button { flex: 1; margin-top: 0; font-size: 23rpx; }
 .compare-button { color: #4e5969; background: #f2f3f5; border: 1rpx solid #dfe4ea; }.compare-button.selected { color: #1677ff; background: #e8f3ff; border-color: #91caff; }
 .notice { padding: 8rpx 8rpx 0; font-size: 21rpx; }
+.local-job-item { margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid #e7edf5; }.local-job-item:first-of-type { margin-top: 12rpx; }.local-job-top { display: flex; justify-content: space-between; gap: 16rpx; }.local-job-name,.local-job-company,.local-job-salary,.local-job-copy,.local-job-notice { display: block; }.local-job-name { color: #1d2a3a; font-size: 26rpx; font-weight: 700; }.local-job-company,.local-job-copy,.local-job-notice { margin-top: 6rpx; color: #64748b; font-size: 22rpx; line-height: 1.55; }.local-job-score { flex-shrink: 0; color: #1677ff; font-size: 22rpx; font-weight: 700; }.local-job-salary { margin-top: 10rpx; color: #26735c; font-size: 24rpx; font-weight: 700; }.local-job-copy { color: #475569; }.local-job-notice { margin-top: 14rpx; color: #718096; }
 .roadmap-track { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12rpx; margin-top: 22rpx; }
 .roadmap-stage { position: relative; min-width: 0; padding: 18rpx 16rpx; border: 1rpx solid #dfe7f1; border-radius: 16rpx; background: #fff; box-shadow: 0 6rpx 18rpx rgba(35, 78, 130, .05); transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease, background .22s ease; }
 .roadmap-stage::after { position: absolute; top: 50%; left: calc(100% + 2rpx); width: 10rpx; height: 1rpx; content: ""; background: #c7d9ec; }.roadmap-stage:last-child::after { display: none; }

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.schemas.career import JobMatchItem, JobMatchRequest, RoleProfile
+from app.services.mock_job_samples import get_mock_job_sample
 
 
 def _normalized(value: str) -> str:
@@ -59,7 +60,8 @@ class JobMatcher:
         role: RoleProfile,
         detail_unlocked: bool,
     ) -> JobMatchItem:
-        requirements = _unique([*role.required_skills, *role.entry_skills])
+        sample = get_mock_job_sample(role.role_name)
+        requirements = list(sample.requirements) if sample else _unique([*role.required_skills, *role.entry_skills])
         known_skills = {_normalized(skill) for skill in context.skills}
         evidence_text = _normalized(context.evidence_text)
         matched = [
@@ -83,16 +85,22 @@ class JobMatcher:
         cities = self._cities_by_family.get(role.family, ("北京", "上海", "深圳"))
         return JobMatchItem(
             role_name=role.role_name,
-            company="本地岗位库参考",
-            city=" / ".join(cities),
-            salary_range=f"{salary_min}k-{salary_max}k（本地参考）",
+            company=sample.company if sample else "本地岗位库参考",
+            city=sample.city if sample else " / ".join(cities),
+            salary_range=sample.salary_range if sample else f"{salary_min}k-{salary_max}k（本地参考）",
             seniority=seniority,
             category=role.family,
             match_score=score,
             matched_skills=matched,
             missing_skills=missing if detail_unlocked else missing[:2],
             description=role.description,
+            responsibilities=(
+                list(sample.responsibilities)
+                if sample
+                else [f"参与{role.role_name}相关的可验证交付"]
+            ),
             requirements=requirements if detail_unlocked else requirements[:3],
+            match_score_reference=sample.match_score_reference if sample else None,
             detail_unlocked=detail_unlocked,
         )
 
