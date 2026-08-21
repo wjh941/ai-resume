@@ -105,10 +105,7 @@ async def query_annual_insights(
             ReportEvidenceInput(
                 type="annual_source",
                 title=str(item["title"]),
-                detail=(
-                    f"来源：{item['source_label']}。{item['content']} "
-                    f"置信说明：{item['confidence_note']}"
-                ),
+                detail=_annual_evidence_detail(item),
                 date=str(item["publication_date"]),
                 scope=str(item["scope"]),
             )
@@ -141,6 +138,18 @@ async def query_annual_insights(
             "report": report.model_dump(mode="json"),
         }
     )
+
+
+def _annual_evidence_detail(item: dict[str, object]) -> str:
+    source_label = str(item["source_label"])
+    content = str(item["content"])
+    confidence_note = str(item["confidence_note"])
+    prefix = f"来源：{source_label}。"
+    suffix = f" 置信说明：{confidence_note}"
+    content_limit = 1_000 - len(prefix) - len(suffix)
+    if len(content) > content_limit:
+        content = f"{content[:content_limit - 3]}..."
+    return f"{prefix}{content}{suffix}"
 
 
 def _assessment_for_vip(saved: dict[str, object], vip: VipStatus) -> dict[str, object]:

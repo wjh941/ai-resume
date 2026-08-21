@@ -90,3 +90,24 @@ def test_entitled_empty_role_query_reports_only_archive_availability(api_client)
     assert report["mode"] == "professional"
     assert report["evidence"] == []
     assert report["summary"] == "暂无可核验年度资料，可先参考岗位基础能力并补充已验证经历。"
+
+
+def test_professional_query_bounds_valid_long_archived_source_detail(api_client):
+    grant_vip(api_client, "premium")
+    source = _source("Data Analyst", "Long archived source", "2026-07-01")
+    source["content"] = "A" * 3000
+    source["source_label"] = "S" * 200
+    source["confidence_note"] = "C" * 300
+    api_client.app.state.assessment_repository.save_annual_insight(source)
+
+    response = api_client.post(
+        "/api/career/annual-insights/query",
+        json={"role_name": "Data Analyst", "year": 2026, "report_mode": "professional"},
+    )
+
+    assert response.status_code == 200, response.text
+    evidence = response.json()["data"]["report"]["evidence"]
+    assert len(evidence) == 1
+    assert len(evidence[0]["detail"]) <= 1000
+    assert "S" * 200 in evidence[0]["detail"]
+    assert "C" * 300 in evidence[0]["detail"]
