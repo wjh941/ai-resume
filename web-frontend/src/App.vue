@@ -17,6 +17,7 @@ import ResumeView from "./views/ResumeView.vue"
 const session = ref<Session | null>(readSession())
 const activeView = ref<WorkspaceView>("overview")
 const dark = ref(false)
+const logoutLoading = ref(false)
 const activeComponent = computed(() => ({
   overview: OverviewView,
   resume: ResumeView,
@@ -32,6 +33,7 @@ watch(dark, (value) => {
 }, { immediate: true })
 
 async function logout() {
+  logoutLoading.value = true
   try {
     await requestApi("/api/auth/logout", { method: "POST" })
   } catch {
@@ -39,6 +41,7 @@ async function logout() {
   } finally {
     clearSession()
     session.value = null
+    logoutLoading.value = false
   }
 }
 </script>
@@ -48,7 +51,7 @@ async function logout() {
   <div v-else class="web-shell">
     <WebSidebar :active-view="activeView" @navigate="activeView = $event" />
     <main class="web-workspace">
-      <WebTopbar :user="session.user" :dark="dark" @logout="logout" @toggle-theme="dark = !dark" />
+      <WebTopbar :user="session.user" :dark="dark" :logout-loading="logoutLoading" @logout="logout" @toggle-theme="dark = !dark" />
       <section class="workspace-stage" :aria-labelledby="`${activeView}-title`">
         <Transition name="view-swap" mode="out-in">
           <div :key="activeView" class="view-transition-shell">

@@ -5,6 +5,7 @@ import { computed, ref } from "vue"
 import { loginWithPassword, loginWithPhone, registerAccount } from "../lib/auth"
 import { requestApi } from "../lib/api"
 import type { Session } from "../lib/session"
+import AsyncButton from "./AsyncButton.vue"
 
 const emit = defineEmits<{
   authenticated: [session: Session]
@@ -103,14 +104,14 @@ async function submit() {
           </template>
           <template v-else>
             <label>手机号<input v-model.trim="phone" inputmode="numeric" autocomplete="tel" maxlength="11" required placeholder="请输入 11 位手机号" /></label>
-            <label>验证码<span class="verification-row"><input v-model.trim="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required placeholder="6 位验证码" /><button type="button" :disabled="sending" @click="sendCode">{{ sending ? '发送中' : '获取验证码' }}</button></span></label>
+            <label>验证码<span class="verification-row"><input v-model.trim="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required placeholder="6 位验证码" /><AsyncButton type="button" :loading="sending" @click="sendCode">{{ sending ? '发送中' : '获取验证码' }}</AsyncButton></span></label>
           </template>
 
           <p v-if="hint" class="form-hint" aria-live="polite">{{ hint }}</p>
           <p v-if="error" class="form-error" role="alert">{{ error }}</p>
-          <button class="primary-button" type="submit" :disabled="loading">
+          <AsyncButton class="primary-button" type="submit" :loading="loading">
             <span>{{ loading ? '正在验证' : submitLabel }}</span><ArrowRight :size="18" aria-hidden="true" />
-          </button>
+          </AsyncButton>
         </form>
         <p class="login-footnote"><Smartphone :size="15" aria-hidden="true" />个人部署可只使用账号密码登录，无需配置 SMS 服务。</p>
       </div>

@@ -3,6 +3,8 @@ import { FilePenLine, RefreshCw } from "lucide-vue-next"
 import { onMounted, ref } from "vue"
 
 import { requestApi } from "../lib/api"
+import AsyncButton from "../components/AsyncButton.vue"
+import LoadingSpinner from "../components/LoadingSpinner.vue"
 
 type Draft = {
   id: string
@@ -33,12 +35,12 @@ onMounted(refresh)
 <template>
   <section class="view-layout">
     <div class="view-heading">
-      <div><h1>简历中心</h1><p>集中查看已保存的简历草稿，确保每段经历都能说明你的真实贡献。</p></div>
-      <button class="text-action" type="button" :disabled="loading" @click="refresh"><RefreshCw :size="16" aria-hidden="true" />刷新</button>
+      <div><h1 id="resume-title">简历中心</h1><p>集中查看已保存的简历草稿，确保每段经历都能说明你的真实贡献。</p></div>
+      <AsyncButton class="text-action" type="button" :loading="loading" @click="refresh"><RefreshCw :size="16" aria-hidden="true" />刷新</AsyncButton>
     </div>
 
     <p v-if="error" class="notice-error" role="alert">{{ error }}</p>
-    <div v-else-if="loading" class="content-skeleton" aria-busy="true"><span /><span /><span /></div>
+    <div v-else-if="loading" class="content-skeleton" aria-busy="true"><LoadingSpinner class="content-loading-spinner" label="正在读取简历草稿" /><span /><span /><span /></div>
     <div v-else-if="drafts.length" class="record-list">
       <article v-for="draft in drafts" :key="draft.id" class="record-row">
         <span class="record-symbol record-coral"><FilePenLine :size="21" aria-hidden="true" /></span>

@@ -3,6 +3,7 @@ import { BookmarkPlus, BriefcaseBusiness, Search } from "lucide-vue-next"
 import { computed, ref } from "vue"
 
 import { requestApi } from "../lib/api"
+import AsyncButton from "../components/AsyncButton.vue"
 
 type JobResult = {
   role_name: string
@@ -59,19 +60,19 @@ async function favorite() {
 
 <template>
   <section class="view-layout">
-    <div class="view-heading"><div><h1>岗位机会</h1><p>围绕一个明确的岗位梳理能力要求，再回到真实经历补齐准备。</p></div></div>
+    <div class="view-heading"><div><h1 id="jobs-title">岗位机会</h1><p>围绕一个明确的岗位梳理能力要求，再回到真实经历补齐准备。</p></div></div>
     <form class="role-query" @submit.prevent="queryRole">
       <label><span>目标岗位</span><input v-model.trim="roleName" maxlength="200" placeholder="例如：数据分析师" /></label>
       <div class="mode-switch" role="group" aria-label="报告表达方式">
         <button type="button" :class="{ 'is-selected': reportMode === 'simplified' }" @click="reportMode = 'simplified'">精简版</button>
         <button type="button" :class="{ 'is-selected': reportMode === 'professional' }" @click="reportMode = 'professional'">专业版</button>
       </div>
-      <button class="primary-button compact" type="submit" :disabled="loading"><Search :size="17" aria-hidden="true" />{{ loading ? "分析中" : "查询岗位" }}</button>
+      <AsyncButton class="primary-button compact" type="submit" :loading="loading"><Search :size="17" aria-hidden="true" />{{ loading ? "分析中" : "查询岗位" }}</AsyncButton>
     </form>
     <p v-if="error" class="notice-error" role="alert">{{ error }}</p>
 
     <article v-if="result" class="job-result">
-      <div class="result-heading"><div><h2>{{ result.role_name }}</h2><p>{{ result.report?.summary || "根据当前资料整理岗位准备方向。" }}</p></div><button class="text-action" type="button" :disabled="saving" @click="favorite"><BookmarkPlus :size="16" aria-hidden="true" />收藏岗位</button></div>
+      <div class="result-heading"><div><h2>{{ result.role_name }}</h2><p>{{ result.report?.summary || "根据当前资料整理岗位准备方向。" }}</p></div><AsyncButton class="text-action" type="button" :loading="saving" @click="favorite"><BookmarkPlus :size="16" aria-hidden="true" />收藏岗位</AsyncButton></div>
       <div class="job-columns">
         <section><h3>优先能力</h3><ul class="tag-list"><li v-for="skill in skills" :key="skill">{{ skill }}</li></ul></section>
         <section><h3>核心职责</h3><ul class="plain-list"><li v-for="item in result.responsibilities?.slice(0, 4)" :key="item">{{ item }}</li></ul></section>

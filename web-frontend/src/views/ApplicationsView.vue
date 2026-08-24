@@ -3,6 +3,8 @@ import { Building2, Plus, RefreshCw } from "lucide-vue-next"
 import { onMounted, ref } from "vue"
 
 import { requestApi } from "../lib/api"
+import AsyncButton from "../components/AsyncButton.vue"
+import LoadingSpinner from "../components/LoadingSpinner.vue"
 
 type Application = {
   id: string
@@ -74,16 +76,16 @@ onMounted(refresh)
 
 <template>
   <section class="view-layout">
-    <div class="view-heading"><div><h1>投递管理</h1><p>保存投递意向、跟进状态和面试安排，让每一次行动都可复盘。</p></div><button class="text-action" type="button" :disabled="loading" @click="refresh"><RefreshCw :size="16" aria-hidden="true" />刷新</button></div>
+    <div class="view-heading"><div><h1 id="applications-title">投递管理</h1><p>保存投递意向、跟进状态和面试安排，让每一次行动都可复盘。</p></div><AsyncButton class="text-action" type="button" :loading="loading" @click="refresh"><RefreshCw :size="16" aria-hidden="true" />刷新</AsyncButton></div>
     <form class="application-form" @submit.prevent="addApplication">
       <label><span>公司</span><input v-model.trim="company" maxlength="200" placeholder="例如：示例科技" /></label>
       <label><span>岗位</span><input v-model.trim="roleName" required maxlength="160" placeholder="例如：产品运营" /></label>
       <label><span>城市</span><input v-model.trim="city" maxlength="120" placeholder="例如：上海" /></label>
       <label><span>状态</span><select v-model="status"><option value="saved">待投递</option><option value="applied">已投递</option><option value="screening">筛选中</option><option value="interview">面试中</option><option value="offer">已获录用</option></select></label>
-      <button class="primary-button compact" type="submit" :disabled="saving"><Plus :size="17" aria-hidden="true" />{{ saving ? "保存中" : "新增记录" }}</button>
+      <AsyncButton class="primary-button compact" type="submit" :loading="saving"><Plus :size="17" aria-hidden="true" />{{ saving ? "保存中" : "新增记录" }}</AsyncButton>
     </form>
     <p v-if="error" class="notice-error" role="alert">{{ error }}</p>
-    <div v-else-if="loading" class="content-skeleton" aria-busy="true"><span /><span /></div>
+    <div v-else-if="loading" class="content-skeleton" aria-busy="true"><LoadingSpinner class="content-loading-spinner" label="正在读取投递记录" /><span /><span /></div>
     <div v-else-if="items.length" class="application-table">
       <article v-for="item in items" :key="item.id" class="application-row"><span class="record-symbol record-sky"><Building2 :size="20" aria-hidden="true" /></span><div><h2>{{ item.role_name }}</h2><p>{{ item.company }}<template v-if="item.city"> · {{ item.city }}</template></p></div><span class="status-tag">{{ statusLabels[item.status] || item.status }}</span><small>{{ item.next_interview_at || item.next_action_at || "尚未设置下一步" }}</small></article>
     </div>

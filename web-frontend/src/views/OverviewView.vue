@@ -4,6 +4,9 @@ import { onMounted, ref } from "vue"
 
 import { ApiRequestError } from "../lib/api"
 import { loadOverview, type OverviewState } from "../lib/dashboard"
+import AnimatedNumber from "../components/AnimatedNumber.vue"
+import AsyncButton from "../components/AsyncButton.vue"
+import LoadingSpinner from "../components/LoadingSpinner.vue"
 
 const emit = defineEmits<{
   navigate: [view: "resume" | "career" | "applications"]
@@ -35,25 +38,26 @@ onMounted(refresh)
     <div class="view-heading overview-hero">
       <div>
         <div class="section-kicker"><Activity :size="15" aria-hidden="true" />今日工作台</div>
-        <h1>今天先完成一件重要的事</h1>
+        <h1 id="overview-title">今天先完成一件重要的事</h1>
         <p>把求职资料、目标岗位和投递节奏放在同一处推进。</p>
       </div>
       <div class="heading-actions">
         <span v-if="!loading && !error" class="sync-status"><CircleCheck :size="15" aria-hidden="true" />数据已同步</span>
-        <button class="text-action" type="button" :disabled="loading" @click="refresh">刷新概览</button>
+        <AsyncButton class="text-action" type="button" :loading="loading" @click="refresh">刷新概览</AsyncButton>
       </div>
     </div>
 
     <div v-if="loading" class="overview-loading" aria-busy="true" aria-label="正在读取工作概览">
+      <LoadingSpinner class="overview-loading-spinner" label="正在读取工作概览" />
       <span v-for="index in 3" :key="index" class="overview-skeleton" />
     </div>
     <div v-else-if="error" class="notice-error notice-with-action" role="alert">
-      <span>{{ error }}</span><button class="notice-action" type="button" @click="refresh">重新读取</button>
+      <span>{{ error }}</span><AsyncButton class="notice-action" type="button" :loading="loading" @click="refresh">重新读取</AsyncButton>
     </div>
     <div v-else class="overview-strip" aria-live="polite">
-      <article class="metric-block"><span class="metric-icon"><FilePenLine :size="21" aria-hidden="true" /></span><span>简历草稿</span><strong>{{ overview?.draftCount ?? "-" }}</strong><small>已有内容可继续完善</small></article>
-      <article class="metric-block metric-mint"><span class="metric-icon"><ListChecks :size="21" aria-hidden="true" /></span><span>待完成行动</span><strong>{{ overview?.openTaskCount ?? "-" }}</strong><small>把计划变成下一步动作</small></article>
-      <article class="metric-block metric-sky"><span class="metric-icon"><KanbanSquare :size="21" aria-hidden="true" /></span><span>投递记录</span><strong>{{ overview?.applicationCount ?? "-" }}</strong><small>持续记录每次进展</small></article>
+      <article class="metric-block"><span class="metric-icon"><FilePenLine :size="21" aria-hidden="true" /></span><span>简历草稿</span><strong><AnimatedNumber :value="overview?.draftCount ?? '-'" /></strong><small>已有内容可继续完善</small></article>
+      <article class="metric-block metric-mint"><span class="metric-icon"><ListChecks :size="21" aria-hidden="true" /></span><span>待完成行动</span><strong><AnimatedNumber :value="overview?.openTaskCount ?? '-'" /></strong><small>把计划变成下一步动作</small></article>
+      <article class="metric-block metric-sky"><span class="metric-icon"><KanbanSquare :size="21" aria-hidden="true" /></span><span>投递记录</span><strong><AnimatedNumber :value="overview?.applicationCount ?? '-'" /></strong><small>持续记录每次进展</small></article>
     </div>
 
     <section class="action-route" aria-label="求职下一步">
