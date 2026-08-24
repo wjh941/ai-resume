@@ -29,12 +29,14 @@ function validPassword(value: string): boolean {
 }
 
 function changeLoginMode(mode: "phone" | "password"): void {
+  if (sending.value || loggingIn.value || passwordAction.value !== null) return
   loginMode.value = mode
   hint.value = ""
   error.value = ""
 }
 
 async function requestCode(): Promise<void> {
+  if (sending.value || loggingIn.value || passwordAction.value !== null) return
   const normalized = phone.value.trim()
   if (!validPhone(normalized)) {
     error.value = "请输入正确的手机号。"
@@ -53,6 +55,7 @@ async function requestCode(): Promise<void> {
 }
 
 async function signIn(): Promise<void> {
+  if (sending.value || loggingIn.value || passwordAction.value !== null) return
   const normalized = phone.value.trim()
   if (!validPhone(normalized) || !code.value.trim()) {
     error.value = "请输入手机号和验证码。"
@@ -72,6 +75,7 @@ async function signIn(): Promise<void> {
 }
 
 async function submitPassword(action: "login" | "register"): Promise<void> {
+  if (sending.value || loggingIn.value || passwordAction.value !== null) return
   const normalized = account.value.trim().toLowerCase()
   if (!validAccount(normalized)) {
     error.value = "账号需为 3-32 位小写英文字母、数字或 ._-。"
@@ -111,12 +115,12 @@ function showWechatSetup(): void {
       <text class="title">登录你的求职工作台</text>
       <text class="copy">登录后可安全访问你的简历草稿、职业计划和账户设置。</text>
       <view class="auth-tabs" role="tablist">
-        <button class="tab" :class="{ active: loginMode === 'phone' }" @click="changeLoginMode('phone')">手机号验证码</button>
-        <button class="tab" :class="{ active: loginMode === 'password' }" @click="changeLoginMode('password')">账号密码</button>
+        <button class="tab" :class="{ active: loginMode === 'phone' }" :disabled="Boolean(sending || loggingIn || passwordAction)" @click="changeLoginMode('phone')">手机号验证码</button>
+        <button class="tab" :class="{ active: loginMode === 'password' }" :disabled="Boolean(sending || loggingIn || passwordAction)" @click="changeLoginMode('password')">账号密码</button>
       </view>
       <template v-if="loginMode === 'phone'">
         <view class="field"><text>手机号</text><input v-model="phone" type="number" maxlength="11" placeholder="13800138000" /></view>
-        <view class="field code-field"><text>验证码</text><input v-model="code" type="number" maxlength="6" placeholder="123456" /><button :loading="sending" :disabled="loggingIn" @click="requestCode">获取验证码</button></view>
+        <view class="field code-field"><text>验证码</text><input v-model="code" type="number" maxlength="6" placeholder="123456" /><button :loading="sending" :disabled="sending || loggingIn" @click="requestCode">获取验证码</button></view>
         <text v-if="hint" class="hint">{{ hint }}</text>
       </template>
       <template v-else>
@@ -125,10 +129,10 @@ function showWechatSetup(): void {
         <text class="field-hint">账号仅支持小写英文字母、数字和 ._-；密码至少 10 个字符。</text>
       </template>
       <text v-if="error" class="error">{{ error }}</text>
-      <button v-if="loginMode === 'phone'" class="primary" :loading="loggingIn" :disabled="sending" @click="signIn">登录</button>
+      <button v-if="loginMode === 'phone'" class="primary" :loading="loggingIn" :disabled="loggingIn || sending" @click="signIn">登录</button>
       <template v-else>
-        <button class="primary" :loading="passwordAction === 'login'" :disabled="passwordAction !== null" @click="submitPassword('login')">账号登录</button>
-        <button class="secondary" :loading="passwordAction === 'register'" :disabled="passwordAction !== null" @click="submitPassword('register')">注册新账号</button>
+        <button class="primary" :loading="passwordAction === 'login'" :disabled="passwordAction !== null || sending || loggingIn" @click="submitPassword('login')">账号登录</button>
+        <button class="secondary" :loading="passwordAction === 'register'" :disabled="passwordAction !== null || sending || loggingIn" @click="submitPassword('register')">注册新账号</button>
       </template>
       <button class="wechat" @click="showWechatSetup">微信登录</button>
     </view>

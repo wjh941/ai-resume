@@ -45,6 +45,12 @@ The following changes are interaction-only and preserve existing APIs, routes, p
 - H5 career assessment, membership, operator knowledgebase, job search, job collection, privacy backup, and resume editor async controls now pair native loading feedback with disabled guards.
 - H5 operator knowledgebase version reads/restores and application timeline/reminder/delete flows clear state on failure or cancellation; no request payload or route changed.
 
+### Final pending-control hardening
+
+- H5 login now mutually disables verification-code and phone-login actions while either request is pending, with function-level duplicate guards for password login/register as well.
+- H5 resume-editor version comparison and restore actions use independent inline loading states keyed by version id, clear them in `finally`, and lock competing save/import/export/version actions without changing version API calls.
+- H5 job collection save/remove and subscription switch/filter requests reject cross-action duplicates while retaining the existing native switch pending treatment.
+
 ## `web-frontend`
 
 - `AsyncButton`: reusable pending button with disabled click protection, `aria-busy`, and inline spinner.
@@ -88,5 +94,5 @@ Particle bursts, global card flips, swipe-away deletion, bottom-sheet drawers, a
 ## Verification
 
 - Web unit tests: 38 tests passed across 12 files; production build passed.
-- H5 unit tests: 36 files, 85 tests passed.
+- H5 unit tests: 36 files, 86 tests passed.
 - H5 build passed with `npm run build:h5`.

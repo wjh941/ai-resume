@@ -28,6 +28,8 @@ const versions = ref<ResumeVersion[]>([])
 const versionNote = ref("")
 const versionDiff = ref<string[]>([])
 const versionLoading = ref(false)
+const versionComparingId = ref("")
+const restoringVersionId = ref("")
 const importLoading = ref(false)
 const saveLoading = ref(false)
 const importFilename = ref("")
@@ -53,6 +55,7 @@ function openApplicationTracker() {
 }
 
 async function save(): Promise<boolean> {
+  if (saveLoading.value) return false
   const errors = validateResume(resume.value)
   if (errors.length) {
     uni.showToast({ title: errors[0].message, icon: "none" })
@@ -116,6 +119,7 @@ function chooseResumeFile(): Promise<PickedResumeFile> {
 }
 
 async function importResume(): Promise<void> {
+  if (importLoading.value || saveLoading.value || versionLoading.value || versionComparingId.value || restoringVersionId.value || exporting.value) return
   if (!store.draft.id && !(await save())) return
   if (!store.draft.id) return
   importLoading.value = true
@@ -149,6 +153,7 @@ function applyImportPreview(): void {
 }
 
 async function exportResume(kind: "word" | "pdf") {
+  if (exporting.value || saveLoading.value || importLoading.value || versionLoading.value || versionComparingId.value || restoringVersionId.value) return
   if (!store.draft.id && !(await save())) return
   if (!store.draft.id) return
   exporting.value = kind
@@ -187,6 +192,7 @@ async function loadVersions() {
 }
 
 async function saveVersion() {
+  if (versionLoading.value || saveLoading.value || importLoading.value || versionComparingId.value || restoringVersionId.value || exporting.value) return
   if (!store.draft.id && !(await save())) return
   if (!store.draft.id) return
   versionLoading.value = true
@@ -204,12 +210,13 @@ async function saveVersion() {
 }
 
 function restoreVersion(version: ResumeVersion) {
-  if (!store.draft.id) return
+  if (!store.draft.id || versionLoading.value || versionComparingId.value || restoringVersionId.value || importLoading.value || exporting.value) return
   uni.showModal({
     title: "恢复版本",
     content: "恢复后将覆盖当前草稿内容，请确认已保存需要保留的修改。",
     success: async (result) => {
       if (!result.confirm || !store.draft.id) return
+      restoringVersionId.value = version.id
       try {
         await restoreResumeVersion(store.draft.id, version.id)
         store.draft = toResumeDraft(await getDraft(getClientId(), store.draft.id))
@@ -219,6 +226,8 @@ function restoreVersion(version: ResumeVersion) {
         uni.showToast({ title: "已恢复所选版本", icon: "success" })
       } catch (reason) {
         uni.showToast({ title: reason instanceof Error ? reason.message : "版本恢复失败，请稍后重试", icon: "none" })
+      } finally {
+        restoringVersionId.value = ""
       }
     },
   })
@@ -226,11 +235,14 @@ function restoreVersion(version: ResumeVersion) {
 
 async function compareVersion(version: ResumeVersion) {
   const active = versions.value.find((item) => item.isActive)
-  if (!store.draft.id || !active || active.id === version.id) return
+  if (!store.draft.id || !active || active.id === version.id || versionLoading.value || versionComparingId.value || restoringVersionId.value || importLoading.value || exporting.value) return
+  versionComparingId.value = version.id
   try {
     versionDiff.value = await compareResumeVersions(store.draft.id, active.id, version.id)
   } catch (reason) {
     uni.showToast({ title: reason instanceof Error ? reason.message : "版本比较失败，请稍后重试", icon: "none" })
+  } finally {
+    versionComparingId.value = ""
   }
 }
 
@@ -248,9 +260,9 @@ onMounted(loadVersions)
         <button size="mini" @click="backToForm">返回填写</button>
         <button size="mini" @click="openApplicationTracker">加入投递计划</button>
         <button size="mini" class="primary" :loading="saveLoading" :disabled="saveLoading || Boolean(exporting)" @click="save">保存草稿</button>
-        <button size="mini" :loading="importLoading" :disabled="importLoading || Boolean(exporting)" @click="importResume">导入简历</button>
-        <button size="mini" :loading="exporting === 'word'" :disabled="Boolean(exporting)" @click="exportResume('word')">导出 Word</button>
-        <button size="mini" :loading="exporting === 'pdf'" :disabled="Boolean(exporting)" @click="exportResume('pdf')">导出 PDF</button>
+        <button size="mini" :loading="importLoading" :disabled="importLoading || saveLoading || versionLoading || Boolean(versionComparingId || restoringVersionId || exporting)" @click="importResume">导入简历</button>
+        <button size="mini" :loading="exporting === 'word'" :disabled="Boolean(exporting || saveLoading || importLoading || versionLoading || versionComparingId || restoringVersionId)" @click="exportResume('word')">导出 Word</button>
+        <button size="mini" :loading="exporting === 'pdf'" :disabled="Boolean(exporting || saveLoading || importLoading || versionLoading || versionComparingId || restoringVersionId)" @click="exportResume('pdf')">导出 PDF</button>
       </view>
     </view>
     <view v-if="importPreview" class="import-panel">
@@ -268,12 +280,12 @@ onMounted(loadVersions)
       <view class="version-heading"><text>简历版本</text><text>快照不会新建草稿</text></view>
       <view class="version-create">
         <input v-model="versionNote" placeholder="版本备注，例如：投递前" />
-        <button size="mini" class="primary" :loading="versionLoading" :disabled="versionLoading || Boolean(exporting)" @click="saveVersion">保存版本</button>
+        <button size="mini" class="primary" :loading="versionLoading" :disabled="versionLoading || Boolean(versionComparingId || restoringVersionId || importLoading || exporting)" @click="saveVersion">保存版本</button>
       </view>
       <view v-if="versions.length" class="version-list">
         <view v-for="version in versions" :key="version.id" class="version-row">
           <view><text class="version-note">{{ version.note || "未命名版本" }}</text><text class="version-time">{{ version.createdAt }}</text></view>
-          <view class="version-actions"><text v-if="version.isActive" class="version-active">当前版本</text><button v-else size="mini" class="secondary" @click="compareVersion(version)">比较</button><button v-if="!version.isActive" size="mini" class="secondary" @click="restoreVersion(version)">恢复</button></view>
+          <view class="version-actions"><text v-if="version.isActive" class="version-active">当前版本</text><button v-else size="mini" class="secondary" :loading="versionComparingId === version.id" :disabled="Boolean(versionComparingId || restoringVersionId || versionLoading || importLoading || exporting)" @click="compareVersion(version)">比较</button><button v-if="!version.isActive" size="mini" class="secondary" :loading="restoringVersionId === version.id" :disabled="Boolean(restoringVersionId || versionComparingId || versionLoading || importLoading || exporting)" @click="restoreVersion(version)">恢复</button></view>
         </view>
       </view>
       <text v-else class="version-empty">保存草稿后可创建版本快照。</text>

@@ -48,7 +48,7 @@ async function load(): Promise<void> {
 }
 
 async function toggleFavorite(): Promise<void> {
-  if (saving.value) return
+  if (saving.value || removingFavoriteId.value || subscriptionSaving.value) return
   if (!selectedRole.value) {
     error.value = "Enter a job role to save it."
     return
@@ -74,6 +74,7 @@ async function toggleFavorite(): Promise<void> {
 }
 
 async function removeFavorite(id: string): Promise<void> {
+  if (removingFavoriteId.value || subscriptionSaving.value) return
   removingFavoriteId.value = id
   try {
     await deleteFavoriteJob(id)
@@ -86,6 +87,7 @@ async function removeFavorite(id: string): Promise<void> {
 }
 
 async function updateSubscription(event: Event): Promise<void> {
+  if (removingFavoriteId.value || subscriptionSaving.value) return
   const next = Boolean((event as unknown as { detail?: { value?: boolean } }).detail?.value)
   enabled.value = next
   subscriptionSaving.value = true
@@ -102,6 +104,7 @@ async function updateSubscription(event: Event): Promise<void> {
 }
 
 async function saveSubscriptionFilter(): Promise<void> {
+  if (removingFavoriteId.value || subscriptionSaving.value) return
   subscriptionSaving.value = true
   try {
     const subscription = await setJobMatchSubscriptionSettings(enabled.value, matchFilter.value)
