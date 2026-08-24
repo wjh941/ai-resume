@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue"
+import { onHide } from "@dcloudio/uni-app"
+import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue"
 
 import FormField from "../../components/FormField.vue"
 import LoadingSpinner from "../../components/LoadingSpinner.vue"
@@ -8,6 +9,7 @@ import { saveDraft } from "../../services/resume-api"
 import { useResumeStore } from "../../stores/resume"
 import { getClientId } from "../../stores/session"
 import type { EvidenceSuggestion } from "../../types/evidence"
+import { createDebouncedTask } from "../../utils/debounced-task"
 import {
   createRoleBasedInternshipDraft,
   createRoleBasedProjectDraft,
@@ -22,15 +24,37 @@ const evidenceSuggestions = ref<EvidenceSuggestion[]>([])
 const suggestionsLoading = ref(false)
 const fieldErrors = ref<Record<string, string>>({})
 const saving = ref(false)
+const localSaveState = ref<"idle" | "saving" | "saved" | "error">("idle")
+const validationActive = ref(false)
+let checkpointPaused = false
 
-watch(() => store.draft, () => store.checkpoint(), { deep: true })
+function persistLocalCheckpoint(): void {
+  try {
+    store.checkpoint()
+    localSaveState.value = "saved"
+  } catch {
+    localSaveState.value = "error"
+  }
+}
+
+const localCheckpoint = createDebouncedTask(persistLocalCheckpoint, 800)
+
+watch(() => store.draft, () => {
+  if (checkpointPaused) return
+  localSaveState.value = "saving"
+  localCheckpoint.schedule()
+}, { deep: true })
 watch(activeJob, (job) => {
   evidenceSuggestions.value = []
   if (job) void loadEvidenceSuggestions(job.roleName)
 }, { immediate: true })
 watch(resume, () => {
-  if (Object.keys(fieldErrors.value).length) fieldErrors.value = toValidationErrorMap(validateResume(resume.value))
+  if (validationActive.value) fieldErrors.value = toValidationErrorMap(validateResume(resume.value))
 }, { deep: true })
+
+const flushLocalCheckpoint = () => localCheckpoint.flush()
+onHide(flushLocalCheckpoint)
+onBeforeUnmount(flushLocalCheckpoint)
 
 function addEducation() {
   resume.value.education.push({ school: "", major: "", degree: "", startDate: "", endDate: "", courses: "" })
@@ -86,18 +110,27 @@ function applyEvidenceSuggestion(suggestion: EvidenceSuggestion) {
 
 async function save() {
   if (saving.value) return
+  localCheckpoint.flush()
+  validationActive.value = true
   const errors = validateResume(resume.value)
   fieldErrors.value = toValidationErrorMap(errors)
   if (errors.length) return
-  if (errors.length) return uni.showToast({ title: errors[0].message, icon: "none" })
   saving.value = true
   try {
     const saved = await saveDraft(getClientId(), store.draft)
-    store.draft.id = saved.id
-    store.checkpoint()
+    checkpointPaused = true
+    try {
+      store.draft.id = saved.id
+      await nextTick()
+    } finally {
+      checkpointPaused = false
+    }
+    localCheckpoint.cancel()
+    persistLocalCheckpoint()
     uni.showToast({ title: "草稿已保存", icon: "success" })
   } catch {
-    store.checkpoint()
+    localCheckpoint.cancel()
+    persistLocalCheckpoint()
     uni.showToast({ title: "网络异常，已保留本地草稿", icon: "none" })
   } finally {
     saving.value = false
@@ -123,15 +156,15 @@ function prepareAndChooseTemplate() {
     </view>
     <view class="card">
       <text class="heading">个人信息</text>
-      <FormField label="姓名" v-model="resume.basic.name" placeholder="请输入姓名" />
-      <FormField label="手机号码" v-model="resume.basic.phone" placeholder="请输入手机号码" />
-      <FormField label="邮箱" v-model="resume.basic.email" placeholder="请输入邮箱" />
+      <FormField label="姓名" v-model="resume.basic.name" placeholder="请输入姓名" :error="fieldErrors['basic.name']" />
+      <FormField label="手机号码" v-model="resume.basic.phone" placeholder="请输入手机号码" :error="fieldErrors['basic.phone']" />
+      <FormField label="邮箱" v-model="resume.basic.email" placeholder="请输入邮箱" :error="fieldErrors['basic.email']" />
       <FormField label="所在城市" v-model="resume.basic.city" placeholder="请输入城市" />
     </view>
 
     <view class="card">
       <text class="heading">求职信息</text>
-      <FormField label="期望岗位" v-model="resume.job.targetRole" placeholder="例如：数据工程师" />
+      <FormField label="期望岗位" v-model="resume.job.targetRole" placeholder="例如：数据工程师" :error="fieldErrors['job.targetRole']" />
       <FormField label="期望薪资" v-model="resume.job.expectedSalary" placeholder="例如：20k-30k" />
       <FormField label="到岗时间" v-model="resume.job.availability" placeholder="例如：两周内" />
     </view>
@@ -215,6 +248,9 @@ function prepareAndChooseTemplate() {
       <textarea v-model="resume.selfEvaluation" placeholder="自我评价" />
     </view>
 
+    <text class="local-save-status" aria-live="polite">
+      {{ localSaveState === "saving" ? "正在保存到本机" : localSaveState === "saved" ? "已保存到本机" : localSaveState === "error" ? "本机自动保存失败，请手动保存" : "" }}
+    </text>
     <view class="actions">
       <button :loading="saving" :disabled="saving" @click="save">保存草稿</button>
       <button class="primary" @click="prepareAndChooseTemplate">智能补全并选择模板</button>
@@ -240,4 +276,5 @@ textarea { width: 100%; min-height: 130rpx; margin: 16rpx 0; padding: 16rpx; box
 .suggestion-top { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; color: #245b99; font-size: 24rpx; font-weight: 700; }.suggestion-top text:last-child { color: #86909c; font-size: 20rpx; font-weight: 400; }
 .suggestion-description, .suggestion-risk { display: block; margin-top: 10rpx; color: #4e5969; font-size: 22rpx; line-height: 1.55; white-space: pre-line; }.suggestion-risk { color: #b26a00; }.suggestion-card button { margin-top: 12rpx; }
 .validation-summary { margin-bottom: 20rpx; padding: 16rpx 20rpx; color: #b42318; background: #fff7f0; border: 1rpx solid #ffccc7; border-radius: 12rpx; }.validation-summary text { display: block; font-size: 23rpx; line-height: 1.55; }
+.local-save-status { display: block; min-height: 34rpx; margin-bottom: 12rpx; color: #66788b; font-size: 22rpx; text-align: right; }
 </style>

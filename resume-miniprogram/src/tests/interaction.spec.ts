@@ -126,6 +126,19 @@ describe("runWithLoading", () => {
     expect(applications).toContain(':aria-label="`删除 ${item.company} 的 ${item.roleName} 投递记录`"')
   })
 
+  it("debounces H5 local checkpoints and maps resume field errors", () => {
+    const resumeForm = readFileSync(new URL("../pages/resume-form/index.vue", import.meta.url), "utf8")
+    expect(resumeForm).toContain("createDebouncedTask")
+    expect(resumeForm).toContain("const localSaveState")
+    expect(resumeForm).toContain("checkpointPaused")
+    expect(resumeForm).toContain("localCheckpoint.flush()")
+    expect(resumeForm).toContain(':error="fieldErrors[\'basic.name\']"')
+    expect(resumeForm).toContain(':error="fieldErrors[\'basic.phone\']"')
+    expect(resumeForm).toContain(':error="fieldErrors[\'basic.email\']"')
+    expect(resumeForm).toContain(':error="fieldErrors[\'job.targetRole\']"')
+    expect(resumeForm).not.toContain("if (errors.length) return\n  if (errors.length)")
+  })
+
   it("uses the accessible H5 long-text contract", () => {
     const componentUrl = new URL("../components/ExpandableText.vue", import.meta.url)
     expect(existsSync(fileURLToPath(componentUrl))).toBe(true)

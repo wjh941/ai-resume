@@ -4,6 +4,13 @@ import { createEmptyResume } from "../types/resume"
 import { toValidationErrorMap, validateResume } from "../utils/validators"
 
 describe("validateResume", () => {
+  it("maps all required resume fields to inline errors", () => {
+    const errors = toValidationErrorMap(validateResume(createEmptyResume()))
+    expect(Object.keys(errors)).toEqual(expect.arrayContaining([
+      "basic.name", "basic.phone", "basic.email", "job.targetRole",
+    ]))
+  })
+
   it("rejects invalid phone", () => {
     const resume = createEmptyResume()
     resume.basic.name = "张三"
