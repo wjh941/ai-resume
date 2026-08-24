@@ -11,7 +11,9 @@ const key = (overrides: Partial<KeyboardEvent>) => ({
   ctrlKey: false,
   metaKey: false,
   altKey: false,
+  shiftKey: false,
   isComposing: false,
+  repeat: false,
   ...overrides,
 }) as KeyboardEvent
 
@@ -26,6 +28,22 @@ describe("resolveWorkspaceShortcut", () => {
   it("ignores IME composition and unrelated keys", () => {
     expect(resolveWorkspaceShortcut(key({ key: "s", ctrlKey: true, isComposing: true }))).toBeNull()
     expect(resolveWorkspaceShortcut(key({ key: "s" }))).toBeNull()
+  })
+
+  it("requires exact modifiers for every command", () => {
+    expect(resolveWorkspaceShortcut(key({ key: "s", ctrlKey: true, shiftKey: true }))).toBeNull()
+    expect(resolveWorkspaceShortcut(key({ key: "s", ctrlKey: true, altKey: true }))).toBeNull()
+    expect(resolveWorkspaceShortcut(key({ key: "s", ctrlKey: true, metaKey: true }))).toBeNull()
+    expect(resolveWorkspaceShortcut(key({ key: "ArrowLeft", altKey: true, shiftKey: true }))).toBeNull()
+    expect(resolveWorkspaceShortcut(key({ key: "ArrowLeft", altKey: true, ctrlKey: true }))).toBeNull()
+    expect(resolveWorkspaceShortcut(key({ key: "Escape", shiftKey: true }))).toBeNull()
+    expect(resolveWorkspaceShortcut(key({ key: "Escape", metaKey: true }))).toBeNull()
+  })
+
+  it("ignores repeated keydown events", () => {
+    expect(resolveWorkspaceShortcut(key({ key: "s", ctrlKey: true, repeat: true }))).toBeNull()
+    expect(resolveWorkspaceShortcut(key({ key: "ArrowLeft", altKey: true, repeat: true }))).toBeNull()
+    expect(resolveWorkspaceShortcut(key({ key: "Escape", repeat: true }))).toBeNull()
   })
 
   it("keeps resume save and back inert while a save is pending", () => {
