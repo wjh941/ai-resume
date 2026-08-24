@@ -14,6 +14,27 @@ Date: 2026-08-24
 - Added async state helpers that always clear pending state in `finally`, including rejected and cancelled requests.
 - Added fixed-height block loading surfaces and route/view transition shells to prevent content jumps.
 
+## 2026-08-24 next interaction iteration
+
+The following changes are interaction-only and preserve existing APIs, routes, page structure, mock data, Chinese UI copy, and business logic.
+
+### `web-frontend`
+
+- `AsyncButton` now exposes a stable `is-loading` hook while retaining native disabled behavior, `aria-busy`, and the shared inline spinner.
+- Primary action buttons use a restrained CSS ripple/press response; the base motion and loading variables remain centralized and reduced-motion aware.
+- View transition shells and skeleton blocks keep their layout stable during route/module swaps.
+- `ComparisonRolePicker` locks role chips and the compare action while the existing comparison request is pending, preventing duplicate submissions without changing the comparison API.
+- Added `FutureCapabilityShell` as a presentation-only slot for future capability surfaces. It contains no request, routing, or business logic and does not replace any delivered module.
+
+### `resume-miniprogram` H5
+
+- Existing `App.vue` page-enter and loading-block styles now expose semantic motion/spinner aliases and a stable loading-block minimum height.
+- `resume-form` clears suggestion and draft-save pending state in `finally`; save taps are guarded/disabled and suggestion loading uses the shared spinner.
+- `template-picker` guards the existing readiness check, clears the selected-template loading state on success, failure, abort, or warning cancellation, and disables competing template actions while pending.
+- `evidence` adds shared list loading feedback, guards save/delete taps, and always clears row delete loading in `finally`.
+- `knowledgebase` separates data-source loading from the existing initialization request, disables duplicate initialization taps, and clears source loading on all outcomes.
+- No new H5 business page or module was added; experience evidence, assessment, comparison, membership, and order routes remain existing capabilities only.
+
 ## `web-frontend`
 
 - `AsyncButton`: reusable pending button with disabled click protection, `aria-busy`, and inline spinner.
