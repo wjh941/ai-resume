@@ -50,6 +50,7 @@ async function loadSuggestions(): Promise<void> {
   try { suggestions.value = await getEvidenceSuggestions(roleName.value.trim()) } catch { error.value = "暂时无法生成证据建议，请稍后重试" } finally { suggestionsLoading.value = false }
 }
 async function checkReadiness(): Promise<void> {
+  if (readinessLoading.value) return
   const draft = drafts.value.find((item) => item.id === selectedDraftId.value)
   if (!draft) { readiness.value = null; error.value = "请先选择一份简历草稿，再检查准备度"; return }
   readinessLoading.value = true; error.value = ""

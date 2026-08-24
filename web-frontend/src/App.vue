@@ -56,6 +56,7 @@ watch(dark, (value) => {
 }, { immediate: true })
 
 async function logout() {
+  if (logoutLoading.value) return
   logoutLoading.value = true
   try {
     await requestApi("/api/auth/logout", { method: "POST" })

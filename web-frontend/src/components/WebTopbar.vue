@@ -25,6 +25,7 @@ const emit = defineEmits<{
         type="button"
         :title="dark ? '切换浅色界面' : '切换深色界面'"
         :aria-label="dark ? '切换浅色界面' : '切换深色界面'"
+        :aria-pressed="dark"
         @click="emit('toggleTheme')"
       >
         <Sun v-if="dark" :size="18" aria-hidden="true" />

@@ -38,6 +38,7 @@ async function refresh() {
 }
 
 async function addTask() {
+  if (saving.value) return
   if (!title.value.trim()) {
     error.value = "请先填写一项可执行的行动"
     return

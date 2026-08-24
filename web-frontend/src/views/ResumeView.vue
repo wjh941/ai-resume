@@ -77,9 +77,9 @@ onMounted(refresh)
         <span class="record-symbol record-coral"><FilePenLine :size="21" aria-hidden="true" /></span>
         <div><h2>{{ draft.jobTitle || "未命名简历" }}</h2><p>模板：{{ draft.templateId || "默认模板" }} · 最近保存：{{ draft.updatedAt || "时间待同步" }}</p></div>
         <div class="record-actions">
-          <AsyncButton class="text-action compact" type="button" title="继续编辑" @click="emit('open-draft', draft.id)"><Pencil :size="15" aria-hidden="true" />编辑</AsyncButton>
-          <AsyncButton class="text-action compact" type="button" :loading="pendingAction === 'copy' && pendingDraftId === draft.id" :disabled="Boolean(pendingAction)" title="复制草稿" @click="copy(draft)"><Copy :size="15" aria-hidden="true" />复制</AsyncButton>
-          <AsyncButton class="danger-action compact" type="button" :loading="pendingAction === 'delete' && pendingDraftId === draft.id" :disabled="Boolean(pendingAction)" title="删除草稿" @click="remove(draft)"><Trash2 :size="15" aria-hidden="true" />删除</AsyncButton>
+          <AsyncButton class="text-action compact" type="button" :title="`编辑 ${draft.jobTitle || '未命名简历'}`" :aria-label="`编辑 ${draft.jobTitle || '未命名简历'}`" @click="emit('open-draft', draft.id)"><Pencil :size="15" aria-hidden="true" />编辑</AsyncButton>
+          <AsyncButton class="text-action compact" type="button" :loading="pendingAction === 'copy' && pendingDraftId === draft.id" :disabled="Boolean(pendingAction)" :title="`复制 ${draft.jobTitle || '未命名简历'}`" :aria-label="`复制 ${draft.jobTitle || '未命名简历'}`" @click="copy(draft)"><Copy :size="15" aria-hidden="true" />复制</AsyncButton>
+          <AsyncButton class="danger-action compact" type="button" :loading="pendingAction === 'delete' && pendingDraftId === draft.id" :disabled="Boolean(pendingAction)" :title="`删除 ${draft.jobTitle || '未命名简历'}`" :aria-label="`删除 ${draft.jobTitle || '未命名简历'}`" @click="remove(draft)"><Trash2 :size="15" aria-hidden="true" />删除</AsyncButton>
         </div>
       </article>
     </div>

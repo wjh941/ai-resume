@@ -25,6 +25,7 @@ const skills = computed(() => [...(result.value?.required_skills || []), ...(res
 const emit = defineEmits<{ navigate: [view: WorkspaceView] }>()
 
 async function queryRole() {
+  if (loading.value) return
   if (!roleName.value.trim()) {
     error.value = "请输入要查询的目标岗位"
     return
@@ -45,7 +46,7 @@ async function queryRole() {
 }
 
 async function favorite() {
-  if (!result.value) return
+  if (!result.value || saving.value) return
   saving.value = true
   try {
     await requestApi("/api/job-collection/favorites", {
@@ -63,15 +64,15 @@ async function favorite() {
 <template>
   <section class="view-layout">
     <div class="view-heading"><div><h1 id="jobs-title">岗位机会</h1><p>围绕一个明确的岗位梳理能力要求，再回到真实经历补齐准备。</p></div></div>
-    <form class="role-query" @submit.prevent="queryRole">
-      <label><span>目标岗位</span><input v-model.trim="roleName" maxlength="200" placeholder="例如：数据分析师" /></label>
+    <form class="role-query" :aria-describedby="error ? 'jobs-error' : undefined" @submit.prevent="queryRole">
+      <label><span>目标岗位</span><input v-model.trim="roleName" maxlength="200" placeholder="例如：数据分析师" :aria-invalid="Boolean(error && !roleName.trim())" /></label>
       <div class="mode-switch" role="group" aria-label="报告表达方式">
         <button type="button" :disabled="loading" :class="{ 'is-selected': reportMode === 'simplified' }" @click="reportMode = 'simplified'">精简版</button>
         <button type="button" :disabled="loading" :class="{ 'is-selected': reportMode === 'professional' }" @click="reportMode = 'professional'">专业版</button>
       </div>
       <AsyncButton class="primary-button compact" type="submit" :loading="loading"><Search :size="17" aria-hidden="true" />{{ loading ? "分析中" : "查询岗位" }}</AsyncButton>
     </form>
-    <ErrorNotice v-if="error" :message="error" />
+    <ErrorNotice v-if="error" id="jobs-error" :message="error" />
 
     <article v-if="result" class="job-result">
       <div class="result-heading"><div><h2>{{ result.role_name }}</h2><p>{{ result.report?.summary || "根据当前资料整理岗位准备方向。" }}</p></div><div class="heading-actions"><AsyncButton class="text-action" type="button" @click="emit('navigate', 'comparison')">加入岗位对比</AsyncButton><AsyncButton class="text-action" type="button" :loading="saving" @click="favorite"><BookmarkPlus :size="16" aria-hidden="true" />收藏岗位</AsyncButton></div></div>

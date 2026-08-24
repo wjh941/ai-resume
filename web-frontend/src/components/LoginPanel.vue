@@ -28,6 +28,7 @@ const submitLabel = computed(() => {
 })
 
 async function sendCode() {
+  if (loading.value || sending.value) return
   if (!/^1\d{10}$/.test(phone.value)) {
     error.value = "请填写正确的 11 位手机号"
     return
@@ -50,6 +51,7 @@ async function sendCode() {
 }
 
 async function submit() {
+  if (loading.value || sending.value) return
   error.value = ""
   hint.value = ""
   loading.value = true
@@ -90,26 +92,26 @@ async function submit() {
           <p>使用手机号或个人账户继续。</p>
         </div>
         <div class="login-tabs" role="tablist" aria-label="登录方式">
-          <button type="button" :class="{ 'is-selected': mode === 'password' }" role="tab" :aria-selected="mode === 'password'" @click="mode = 'password'">账号密码</button>
-          <button type="button" :class="{ 'is-selected': mode === 'phone' }" role="tab" :aria-selected="mode === 'phone'" @click="mode = 'phone'">手机号验证</button>
+          <button type="button" :class="{ 'is-selected': mode === 'password' }" :disabled="loading || sending" role="tab" :aria-selected="mode === 'password'" @click="mode = 'password'">账号密码</button>
+          <button type="button" :class="{ 'is-selected': mode === 'phone' }" :disabled="loading || sending" role="tab" :aria-selected="mode === 'phone'" @click="mode = 'phone'">手机号验证</button>
         </div>
 
-        <form class="login-form" @submit.prevent="submit">
+        <form class="login-form" :aria-describedby="error ? 'login-error' : undefined" @submit.prevent="submit">
           <template v-if="mode === 'password'">
-            <label>账号<input v-model.trim="account" autocomplete="username" minlength="3" maxlength="32" required placeholder="3 至 32 位账号" /></label>
-            <label>密码<input v-model="password" type="password" autocomplete="current-password" minlength="10" maxlength="72" required placeholder="至少 10 位密码" /></label>
+            <label>账号<input v-model.trim="account" autocomplete="username" minlength="3" maxlength="32" required placeholder="3 至 32 位账号" :aria-invalid="Boolean(error && (account.length < 3 || account.length > 32))" /></label>
+            <label>密码<input v-model="password" type="password" autocomplete="current-password" minlength="10" maxlength="72" required placeholder="至少 10 位密码" :aria-invalid="Boolean(error && (password.length < 10 || password.length > 72))" /></label>
             <button class="form-link" type="button" @click="accountMode = accountMode === 'login' ? 'register' : 'login'">
               {{ accountMode === 'login' ? '没有账户？创建账户' : '已有账户？直接登录' }}
             </button>
           </template>
           <template v-else>
-            <label>手机号<input v-model.trim="phone" inputmode="numeric" autocomplete="tel" maxlength="11" required placeholder="请输入 11 位手机号" /></label>
-            <label>验证码<span class="verification-row"><input v-model.trim="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required placeholder="6 位验证码" /><AsyncButton type="button" :loading="sending" @click="sendCode">{{ sending ? '发送中' : '获取验证码' }}</AsyncButton></span></label>
+            <label>手机号<input v-model.trim="phone" inputmode="numeric" autocomplete="tel" maxlength="11" required placeholder="请输入 11 位手机号" :aria-invalid="Boolean(error && !/^1\d{10}$/.test(phone))" /></label>
+            <label>验证码<span class="verification-row"><input v-model.trim="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required placeholder="6 位验证码" :aria-invalid="Boolean(error && code.length !== 6)" /><AsyncButton type="button" :loading="sending" :disabled="loading" @click="sendCode">{{ sending ? '发送中' : '获取验证码' }}</AsyncButton></span></label>
           </template>
 
           <p v-if="hint" class="form-hint" aria-live="polite">{{ hint }}</p>
-          <ErrorNotice v-if="error" :message="error" compact />
-          <AsyncButton class="primary-button" type="submit" :loading="loading">
+          <ErrorNotice v-if="error" id="login-error" :message="error" compact />
+          <AsyncButton class="primary-button" type="submit" :loading="loading" :disabled="sending">
             <span>{{ loading ? '正在验证' : submitLabel }}</span><ArrowRight :size="18" aria-hidden="true" />
           </AsyncButton>
         </form>
