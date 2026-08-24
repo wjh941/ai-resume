@@ -46,13 +46,13 @@ export function createResumeFormOrchestration(options: ResumeFormOrchestrationOp
     if (validationActive.value) fieldErrors.value = options.validate()
   }, { deep: true })
 
-  const flush = () => localCheckpoint.flush()
-  options.registerHide(flush)
-  options.registerBeforeUnmount(flush)
+  const flushLocalCheckpoint = () => localCheckpoint.flush()
+  options.registerHide(flushLocalCheckpoint)
+  options.registerBeforeUnmount(flushLocalCheckpoint)
 
   const save = async (): Promise<ResumeFormSaveResult> => {
     if (saving.value) return "busy"
-    flush()
+    flushLocalCheckpoint()
     validationActive.value = true
     fieldErrors.value = options.validate()
     if (Object.keys(fieldErrors.value).length) return "invalid"
@@ -79,5 +79,5 @@ export function createResumeFormOrchestration(options: ResumeFormOrchestrationOp
     }
   }
 
-  return { localSaveState, fieldErrors, saving, save }
+  return { localSaveState, fieldErrors, saving, flushLocalCheckpoint, save }
 }

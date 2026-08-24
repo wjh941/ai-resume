@@ -53,9 +53,9 @@ export const useResumeStore = defineStore("resume", {
       if (!this.draft.resume.job.targetRole.trim()) this.draft.resume.job.targetRole = job.roleName
       this.checkpoint()
     },
-    applyEvidenceSuggestion(suggestion: EvidenceSuggestion): boolean {
+    applyEvidenceSuggestion(suggestion: EvidenceSuggestion, checkpoint = true): boolean {
       const applied = applyToDraft(this.draft, suggestion)
-      if (applied) this.checkpoint()
+      if (applied && checkpoint) this.checkpoint()
       return applied
     },
     resetDraft(checkpoint = true): void {

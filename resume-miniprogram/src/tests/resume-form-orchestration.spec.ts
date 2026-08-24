@@ -115,6 +115,24 @@ describe("createResumeFormOrchestration", () => {
     expect(controller.localSaveState.value).toBe("error")
   })
 
+  it("catches a navigation-boundary checkpoint failure and cancels the delayed duplicate", async () => {
+    const checkpoint = vi.fn(() => { throw new Error("storage full") })
+    const navigate = vi.fn()
+    const { draft, controller } = setup({ checkpoint })
+
+    draft.resume.projects.push({ name: "Draft", role: "", startDate: "", endDate: "", description: "" })
+    await nextTick()
+
+    expect(() => {
+      controller.flushLocalCheckpoint()
+      navigate()
+    }).not.toThrow()
+    expect(controller.localSaveState.value).toBe("error")
+    expect(navigate).toHaveBeenCalledTimes(1)
+    vi.runAllTimers()
+    expect(checkpoint).toHaveBeenCalledTimes(1)
+  })
+
   it("flushes locally before invoking the remote API only from manual save", async () => {
     const events: string[] = []
     const checkpoint = vi.fn(() => events.push("checkpoint"))

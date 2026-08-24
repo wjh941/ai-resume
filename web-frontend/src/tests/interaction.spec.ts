@@ -172,6 +172,21 @@ describe("useAsyncAction", () => {
     expect(questionCard).toContain(':aria-invalid="invalid || undefined"')
   })
 
+  it("routes invalid resume saves and visible cancel controls through accessible shared handlers", () => {
+    const editor = readFileSync(new URL("../views/ResumeEditorView.vue", import.meta.url), "utf8")
+    const applications = readFileSync(new URL("../views/ApplicationsView.vue", import.meta.url), "utf8")
+
+    expect(editor).toContain('result === "invalid"')
+    expect(editor).toContain("focusFirstInvalidResumeField")
+    expect(editor).toContain('role="alert"')
+    expect(editor).toContain('@click="cancel"')
+    expect(editor).toContain('else if (action === "back") cancel()')
+    expect(editor).toContain(':disabled="loading || saving"')
+    expect(applications).toContain('@click="cancelEditing"')
+    expect(applications).toContain('if (action === "reset") cancelEditing()')
+    expect(applications).toContain(':disabled="loading || Boolean(pendingKey)"')
+  })
+
   it("observes a late-mounted progressive list sentinel with a manual fallback", () => {
     const sentinel = readFileSync(new URL("../components/ProgressiveListSentinel.vue", import.meta.url), "utf8")
 

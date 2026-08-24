@@ -2,6 +2,12 @@ export type WorkspaceShortcut = "save" | "back" | "close"
 export type ResumeEditorShortcutAction = "save" | "back" | "ignore"
 export type ApplicationsCloseAction = "reset" | "collapse"
 
+export function runPendingGuardedAction(pending: boolean, action: () => void): boolean {
+  if (pending) return false
+  action()
+  return true
+}
+
 export function resolveWorkspaceShortcut(event: KeyboardEvent): WorkspaceShortcut | null {
   if (event.isComposing || event.repeat) return null
   if (event.ctrlKey !== event.metaKey && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "s") return "save"

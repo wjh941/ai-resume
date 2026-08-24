@@ -9,7 +9,7 @@ import ProgressiveListSentinel from "../components/ProgressiveListSentinel.vue"
 import { useIncrementalList } from "../composables/useIncrementalList"
 import { addTimelineEvent, deleteApplication, listApplications, listTimeline, saveApplication, saveReminder, type ApplicationInput, type ApplicationRecord, type ApplicationStatus } from "../lib/applications"
 import { appendTimelineEvent, removeApplication, replaceApplication } from "../lib/application-workflow"
-import { resolveApplicationsCloseAction, resolveWorkspaceShortcut } from "../lib/keyboard-shortcuts"
+import { runPendingGuardedAction, resolveApplicationsCloseAction, resolveWorkspaceShortcut } from "../lib/keyboard-shortcuts"
 
 const statusLabels: Record<ApplicationStatus, string> = { saved: "待投递", applied: "已投递", screening: "筛选中", interview: "面试中", offer: "已获录用", rejected: "未通过", closed: "已结束" }
 const items = ref<ApplicationRecord[]>([])
@@ -31,6 +31,7 @@ const {
 } = useIncrementalList(items)
 
 function resetForm(): void { editingId.value = null; form.value = { company: "", roleName: "", city: "", status: "saved", source: "", appliedAt: "", nextActionAt: "", nextInterviewAt: "", interviewNotes: "", notes: "", contactInfo: "", attachmentRef: "", draftId: "" } }
+function cancelEditing(): void { runPendingGuardedAction(loading.value || Boolean(pendingKey.value), resetForm) }
 function toIso(value: string): string | null { return value ? new Date(value).toISOString() : null }
 function toDate(value: string | null): string { return value ? value.slice(0, 10) : "" }
 function toDateTime(value: string | null): string { return value ? value.slice(0, 16) : "" }
@@ -87,7 +88,7 @@ function handleShortcut(event: KeyboardEvent): void {
   )
   if (!action) return
   event.preventDefault()
-  if (action === "reset") resetForm()
+  if (action === "reset") cancelEditing()
   else expandedId.value = null
 }
 
@@ -107,7 +108,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleShortcut))
       <label><span>城市</span><input v-model.trim="form.city" maxlength="120" placeholder="例如：上海" /></label>
       <label><span>状态</span><select v-model="form.status"><option v-for="(label, value) in statusLabels" :key="value" :value="value">{{ label }}</option></select></label>
       <AsyncButton class="primary-button compact" type="submit" :loading="pendingKey === 'create' || pendingKey.startsWith('save:')"><Save v-if="editing" :size="17" aria-hidden="true" /><Plus v-else :size="17" aria-hidden="true" />{{ editing ? "保存修改" : "新增记录" }}</AsyncButton>
-      <AsyncButton v-if="editing" class="text-action compact" type="button" @click="resetForm"><X :size="15" aria-hidden="true" />取消编辑</AsyncButton>
+      <AsyncButton v-if="editing" class="text-action compact" type="button" :disabled="loading || Boolean(pendingKey)" :aria-disabled="loading || Boolean(pendingKey) || undefined" @click="cancelEditing"><X :size="15" aria-hidden="true" />取消编辑</AsyncButton>
     </form>
     <div class="application-toolbar"><label><span>筛选状态</span><select v-model="filterStatus" :disabled="loading" @change="refresh"><option value="">全部状态</option><option v-for="(label, value) in statusLabels" :key="value" :value="value">{{ label }}</option></select></label><span class="toolbar-hint">共 {{ items.length }} 条记录</span></div>
     <ErrorNotice v-if="error" id="applications-error" :message="error"><AsyncButton class="notice-action" type="button" :loading="loading" @click="refresh">重试</AsyncButton></ErrorNotice>

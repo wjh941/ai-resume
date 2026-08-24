@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import {
+  runPendingGuardedAction,
   resolveApplicationsCloseAction,
   resolveResumeEditorShortcutAction,
   resolveWorkspaceShortcut,
@@ -60,5 +61,16 @@ describe("resolveWorkspaceShortcut", () => {
     expect(resolveApplicationsCloseAction("close", false, false, false)).toBeNull()
     expect(resolveApplicationsCloseAction("close", true, true, true)).toBeNull()
     expect(resolveApplicationsCloseAction("save", false, true, true)).toBeNull()
+  })
+
+  it("routes visible and keyboard cancel actions through the same pending guard", () => {
+    const cancel = vi.fn()
+
+    expect(runPendingGuardedAction(true, cancel)).toBe(false)
+    expect(cancel).not.toHaveBeenCalled()
+    expect(runPendingGuardedAction(false, cancel)).toBe(true)
+    expect(cancel).toHaveBeenCalledTimes(1)
+    expect(resolveResumeEditorShortcutAction("back", true)).toBe("ignore")
+    expect(resolveApplicationsCloseAction("close", true, true, false)).toBeNull()
   })
 })

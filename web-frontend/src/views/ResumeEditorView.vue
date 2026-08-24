@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue"
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
 import { Plus, Save, X } from "lucide-vue-next"
 
 import AsyncButton from "../components/AsyncButton.vue"
@@ -12,9 +12,11 @@ import {
 import { getDraft, saveDraft, type DraftRecord } from "../lib/drafts"
 import { toDraftSaveInput } from "../lib/draft-workflow"
 import {
+  runPendingGuardedAction,
   resolveResumeEditorShortcutAction,
   resolveWorkspaceShortcut,
 } from "../lib/keyboard-shortcuts"
+import { focusFirstInvalidResumeField } from "../lib/resume-invalid-feedback"
 import { createResumeEditorOrchestration } from "../lib/resume-editor-orchestration"
 import { validateDraft } from "../lib/resume-validation"
 
@@ -26,6 +28,7 @@ const emit = defineEmits<{
 
 const loading = ref(true)
 const error = ref("")
+const invalidSummary = ref("")
 
 const {
   draft,
@@ -99,16 +102,30 @@ function updateCertificates(event: Event): void {
 }
 
 async function save(): Promise<void> {
-  await saveEditor()
+  invalidSummary.value = ""
+  const result = await saveEditor()
+  if (result === "invalid") {
+    invalidSummary.value = Object.values(fieldErrors.value)[0] || ""
+    await nextTick()
+    focusFirstInvalidResumeField(fieldErrors.value)
+  }
+}
+
+function cancel(): void {
+  runPendingGuardedAction(loading.value || saving.value, () => emit("cancel"))
 }
 
 function handleShortcut(event: KeyboardEvent): void {
-  const action = resolveResumeEditorShortcutAction(resolveWorkspaceShortcut(event), saving.value)
+  const action = resolveResumeEditorShortcutAction(resolveWorkspaceShortcut(event), loading.value || saving.value)
   if (!action) return
   event.preventDefault()
   if (action === "save") void save()
-  else if (action === "back") emit("cancel")
+  else if (action === "back") cancel()
 }
+
+watch(fieldErrors, (currentErrors) => {
+  if (!Object.keys(currentErrors).length) invalidSummary.value = ""
+}, { deep: true })
 
 onMounted(() => {
   window.addEventListener("keydown", handleShortcut)
@@ -125,7 +142,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleShortcut))
         <p>补充真实经历与目标岗位信息，保存后可继续完善。</p>
       </div>
       <div class="heading-actions">
-        <AsyncButton class="text-action" type="button" @click="emit('cancel')"><X :size="16" aria-hidden="true" />返回草稿</AsyncButton>
+        <AsyncButton class="text-action" type="button" :disabled="loading || saving" :aria-disabled="loading || saving || undefined" @click="cancel"><X :size="16" aria-hidden="true" />返回草稿</AsyncButton>
         <AsyncButton class="primary-button compact" type="button" :loading="saving" :disabled="loading" @click="save"><Save :size="16" aria-hidden="true" />保存草稿</AsyncButton>
       </div>
     </div>
@@ -137,34 +154,35 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleShortcut))
     <ErrorNotice v-else-if="error && !draft" :message="error" />
     <form v-else-if="draft" class="resume-editor-form" novalidate @submit.prevent="save">
       <ErrorNotice v-if="error" :message="error" />
+      <p v-if="invalidSummary" class="form-error validation-summary" role="alert">{{ invalidSummary }}</p>
       <section class="editor-section">
         <h2>基本信息</h2>
         <div class="editor-grid">
           <label>
             <span>草稿名称</span>
-            <input v-model.trim="draft.jobTitle" maxlength="160" :aria-invalid="Boolean(fieldErrors.jobTitle)" :aria-describedby="fieldErrors.jobTitle ? 'resume-job-title-error' : undefined" />
+            <input id="resume-job-title" v-model.trim="draft.jobTitle" maxlength="160" :aria-invalid="Boolean(fieldErrors.jobTitle)" :aria-describedby="fieldErrors.jobTitle ? 'resume-job-title-error' : undefined" />
             <small v-if="fieldErrors.jobTitle" id="resume-job-title-error" class="form-error">{{ fieldErrors.jobTitle }}</small>
           </label>
           <label><span>简历模板</span><select v-model="draft.templateId"><option value="business">商务模板</option><option value="technology">技术模板</option><option value="graduate">毕业生模板</option><option value="analytics">分析模板</option></select></label>
           <label>
             <span>姓名</span>
-            <input v-model.trim="draft.resume.basic.name" maxlength="80" :aria-invalid="Boolean(fieldErrors['basic.name'])" :aria-describedby="fieldErrors['basic.name'] ? 'resume-basic-name-error' : undefined" />
+            <input id="resume-basic-name" v-model.trim="draft.resume.basic.name" maxlength="80" :aria-invalid="Boolean(fieldErrors['basic.name'])" :aria-describedby="fieldErrors['basic.name'] ? 'resume-basic-name-error' : undefined" />
             <small v-if="fieldErrors['basic.name']" id="resume-basic-name-error" class="form-error">{{ fieldErrors["basic.name"] }}</small>
           </label>
           <label>
             <span>手机号</span>
-            <input v-model.trim="draft.resume.basic.phone" maxlength="30" :aria-invalid="Boolean(fieldErrors['basic.phone'])" :aria-describedby="fieldErrors['basic.phone'] ? 'resume-basic-phone-error' : undefined" />
+            <input id="resume-basic-phone" v-model.trim="draft.resume.basic.phone" maxlength="30" :aria-invalid="Boolean(fieldErrors['basic.phone'])" :aria-describedby="fieldErrors['basic.phone'] ? 'resume-basic-phone-error' : undefined" />
             <small v-if="fieldErrors['basic.phone']" id="resume-basic-phone-error" class="form-error">{{ fieldErrors["basic.phone"] }}</small>
           </label>
           <label>
             <span>邮箱</span>
-            <input v-model.trim="draft.resume.basic.email" type="email" maxlength="160" :aria-invalid="Boolean(fieldErrors['basic.email'])" :aria-describedby="fieldErrors['basic.email'] ? 'resume-basic-email-error' : undefined" />
+            <input id="resume-basic-email" v-model.trim="draft.resume.basic.email" type="email" maxlength="160" :aria-invalid="Boolean(fieldErrors['basic.email'])" :aria-describedby="fieldErrors['basic.email'] ? 'resume-basic-email-error' : undefined" />
             <small v-if="fieldErrors['basic.email']" id="resume-basic-email-error" class="form-error">{{ fieldErrors["basic.email"] }}</small>
           </label>
           <label><span>城市</span><input v-model.trim="draft.resume.basic.city" maxlength="80" /></label>
           <label>
             <span>目标岗位</span>
-            <input v-model.trim="draft.resume.job.targetRole" maxlength="120" :aria-invalid="Boolean(fieldErrors['job.targetRole'])" :aria-describedby="fieldErrors['job.targetRole'] ? 'resume-target-role-error' : undefined" />
+            <input id="resume-target-role" v-model.trim="draft.resume.job.targetRole" maxlength="120" :aria-invalid="Boolean(fieldErrors['job.targetRole'])" :aria-describedby="fieldErrors['job.targetRole'] ? 'resume-target-role-error' : undefined" />
             <small v-if="fieldErrors['job.targetRole']" id="resume-target-role-error" class="form-error">{{ fieldErrors["job.targetRole"] }}</small>
           </label>
           <label><span>期望薪资</span><input v-model.trim="draft.resume.job.expectedSalary" maxlength="80" /></label>

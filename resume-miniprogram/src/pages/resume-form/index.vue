@@ -31,6 +31,7 @@ const {
   localSaveState,
   fieldErrors,
   saving,
+  flushLocalCheckpoint,
   save: saveResume,
 } = createResumeFormOrchestration({
   draft: () => store.draft,
@@ -46,30 +47,25 @@ const {
 
 function addEducation() {
   resume.value.education.push({ school: "", major: "", degree: "", startDate: "", endDate: "", courses: "" })
-  store.checkpoint()
 }
 
 function addEmployment() {
   resume.value.employment.push({ company: "", position: "", startDate: "", endDate: "", description: "" })
-  store.checkpoint()
 }
 
 function addProject() {
   resume.value.projects.push({ name: "", role: "", startDate: "", endDate: "", description: "" })
-  store.checkpoint()
 }
 
 function addSuggestedProject() {
   if (!activeJob.value) return
   resume.value.projects.push(createRoleBasedProjectDraft(activeJob.value))
-  store.checkpoint()
   uni.showToast({ title: "已添加项目草案，请补全真实信息", icon: "none" })
 }
 
 function addSuggestedInternship() {
   if (!activeJob.value) return
   resume.value.employment.push(createRoleBasedInternshipDraft(activeJob.value))
-  store.checkpoint()
   uni.showToast({ title: "已添加实习草案，请替换待确认信息", icon: "none" })
 }
 
@@ -89,7 +85,7 @@ function openEvidenceLibrary() {
 }
 
 function applyEvidenceSuggestion(suggestion: EvidenceSuggestion) {
-  if (!store.applyEvidenceSuggestion(suggestion)) {
+  if (!store.applyEvidenceSuggestion(suggestion, false)) {
     uni.showToast({ title: "已有对应经历，不会覆盖", icon: "none" })
     return
   }
@@ -105,14 +101,15 @@ async function save() {
   }
 }
 
-function prepareAndChooseTemplate() {
+async function prepareAndChooseTemplate() {
   const job = activeJob.value
   if (!job) {
     uni.showToast({ title: "请先查询并选择目标岗位", icon: "none" })
     return
   }
   prepareResumeForJob(store.draft, job)
-  store.checkpoint()
+  await nextTick()
+  flushLocalCheckpoint()
   uni.navigateTo({ url: "/pages/template-picker/index" })
 }
 </script>

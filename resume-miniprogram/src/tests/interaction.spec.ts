@@ -178,6 +178,16 @@ describe("runWithLoading", () => {
     expect(resumeForm).not.toContain("if (errors.length) return\n  if (errors.length)")
   })
 
+  it("keeps resume-form checkpoint persistence inside the caught orchestrator boundary", () => {
+    const resumeForm = readFileSync(new URL("../pages/resume-form/index.vue", import.meta.url), "utf8")
+
+    expect(resumeForm.match(/store\.checkpoint\(\)/g)).toHaveLength(1)
+    expect(resumeForm).toContain("checkpoint: () => store.checkpoint()")
+    expect(resumeForm).toContain("store.applyEvidenceSuggestion(suggestion, false)")
+    expect(resumeForm).toContain("flushLocalCheckpoint")
+    expect(resumeForm).toMatch(/prepareResumeForJob[\s\S]*await nextTick\(\)[\s\S]*flushLocalCheckpoint\(\)[\s\S]*uni\.navigateTo/)
+  })
+
   it("uses the accessible H5 long-text contract", () => {
     const componentUrl = new URL("../components/ExpandableText.vue", import.meta.url)
     expect(existsSync(fileURLToPath(componentUrl))).toBe(true)
