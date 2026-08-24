@@ -247,3 +247,51 @@ cd web-frontend
 npm run test
 npm run build
 ```
+
+## Interaction Layer / 交互层
+
+### English
+
+The current front-end iteration is interaction-only and follows [`docs/superpowers/specs/2026-08-24-interaction-layer-next-design.md`](docs/superpowers/specs/2026-08-24-interaction-layer-next-design.md).
+
+- `resume-miniprogram` H5 keeps every existing page, route, API contract, mock data set, Chinese copy, and business workflow. No new business page or capability is added.
+- `web-frontend` keeps login/session, dashboard, resume drafts and full editor, job opportunity/search, career planning, delivery management, evidence management, career assessment, job comparison, membership/orders, insights, account privacy, and responsive dark mode.
+- Both frontends use reusable loading spinners, inline button loading, disabled pending controls, stable skeleton blocks, and route/content transitions.
+- Pending state is cleared in `finally`, including rejected, aborted, and timeout-shaped request failures. Existing API adapters and request payloads are unchanged.
+- Motion uses centralized CSS variables with native transform/transition primitives and reduced-motion handling. High-frequency submit, save, query, filter, toggle, and comparison actions receive restrained feedback; particle bursts, global card flips, swipe-away deletion, and bottom sheets remain intentionally disabled.
+- The Web future-capability shell is presentation-only and does not replace any delivered business module or call an API.
+
+Validation:
+
+```powershell
+cd web-frontend
+npm run test
+npm run build
+
+cd ../resume-miniprogram
+npm run test:unit
+npm run build:h5
+```
+
+### 中文
+
+当前前端迭代严格遵循 [`docs/superpowers/specs/2026-08-24-interaction-layer-next-design.md`](docs/superpowers/specs/2026-08-24-interaction-layer-next-design.md)，仅升级交互层，不改变业务能力。
+
+- `resume-miniprogram` H5 保留全部既有页面、路由、API 接口、Mock 数据、中文文案和业务流程，不新增业务页面或业务能力。
+- `web-frontend` 完整保留登录与会话、数据看板、简历草稿与完整编辑器、岗位机会与搜索、职业规划、投递管理、经历证据、职业测评、岗位对比、会员与订单、Insights、账户隐私、暗色模式和响应式布局。
+- 两套前端统一使用可复用 Loading Spinner、按钮内置加载、请求期间禁用重复点击、稳定 Skeleton 区块以及路由/内容区过渡。
+- 所有 pending 状态通过 `finally` 清理，覆盖失败、Abort 和 timeout 形式的请求异常；现有 API 适配器、请求参数和后端对接方式保持不变。
+- 动画变量集中管理，仅使用原生 CSS transform/transition，并支持减少动态效果。只为提交、保存、查询、筛选、开关和岗位对比等高频操作提供克制反馈；粒子爆发、全局卡片翻转、滑出删除和底部抽屉按场景暂不启用。
+- Web 的未来能力占位 Shell 仅负责展示，不替换任何已交付业务模块，也不调用业务 API。
+
+验证命令：
+
+```powershell
+cd web-frontend
+npm run test
+npm run build
+
+cd ../resume-miniprogram
+npm run test:unit
+npm run build:h5
+```
