@@ -15,7 +15,7 @@
 - Keep the existing CSS-token architecture; add no dependency, third-party UI kit, external asset, decorative gradient, glass panel, or animation library.
 - Use warm-white/blue-gray surfaces, graphite text, cobalt as the sole general action color, coral only for attention or destructive emphasis, and semantic success/warning/danger tokens.
 - Keep 8px-or-smaller operational radii, focus visibility, reduced motion, disabled/loading/error states, dark mode, progressive lists, wide-table scrolling, and mobile stacked layouts.
-- Add static visual-contract tests only for presentation hooks. Existing API/domain/workflow tests remain mandatory regression evidence.
+- Presentation-only CSS and additive markup hooks use browser visual QA rather than source-text assertions, by explicit user decision. Existing API/domain/workflow tests remain mandatory regression evidence.
 - Before handoff run `npm.cmd test -- --reporter=dot`, `npm.cmd run build`, `git diff --check`, and one bounded browser review at 1440px, 1024px, and 390px.
 
 ---
@@ -31,7 +31,6 @@
 | `web-frontend/src/views/{Career,Assessment,Comparison,Insights,Membership}View.vue` | Existing analytical and entitlement sections receive decision-surface hooks. |
 | `web-frontend/src/views/{Resume,ResumeEditor,Jobs,Applications,Evidence,Account}View.vue` | Existing editor, form, and record groups receive workbench hooks. |
 | `web-frontend/src/components/{AsyncButton,ErrorNotice,LoadingSpinner,MembershipPackageCard,OrderRow,AssessmentQuestionCard,FutureCapabilityShell,EvidenceForm}.vue` | Shared components consume only presentational selectors already supported by their public contracts. |
-| `web-frontend/src/tests/visual-system.spec.ts` | Static regression contracts for tokens and view hooks. |
 | `docs/interaction-upgrade-changelog.md` | Records scope and final verification evidence. |
 
 ---
@@ -39,7 +38,6 @@
 ### Task 1: Establish Semantic Cobalt Tokens and a Light Workspace Shell
 
 **Files:**
-- Create: `web-frontend/src/tests/visual-system.spec.ts`
 - Modify: `web-frontend/src/styles/base.css`
 - Modify: `web-frontend/src/components/WebSidebar.vue`
 - Modify: `web-frontend/src/components/WebTopbar.vue`
@@ -48,47 +46,14 @@
 - Consumes: existing CSS variable consumers, `WorkspaceView`, `SessionUser`, and existing navigation/logout/theme events unchanged.
 - Produces: `--primary`, `--primary-strong`, `--primary-tint`, `--accent`, `--success`, and `--warning` tokens in both themes. No TypeScript public interface changes.
 
-- [ ] **Step 1: Write the failing visual-system contract**
+- [ ] **Step 1: Capture the current shell baseline in the browser**
 
-Create `web-frontend/src/tests/visual-system.spec.ts`:
+Use the existing Vite server at `http://127.0.0.1:5174/` and record the
+current shell at 1440px and 390px in both themes. The baseline must cover
+sidebar, topbar, keyboard focus, disabled button, and a view transition. This
+is visual reference only; no CSS source-text test is added.
 
-```ts
-import { readFileSync } from "node:fs"
-import { describe, expect, it } from "vitest"
-
-const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8")
-
-describe("bright Web visual system", () => {
-  it("defines semantic cobalt tokens and a light workspace shell", () => {
-    const css = read("../styles/base.css")
-    const sidebar = read("../components/WebSidebar.vue")
-    const topbar = read("../components/WebTopbar.vue")
-
-    expect(css).toContain("--primary: #2563eb")
-    expect(css).toContain("--primary-strong: #1d4ed8")
-    expect(css).toContain("--primary-tint: #e8efff")
-    expect(css).toContain("--accent: #e96b4c")
-    expect(css).toContain(":root[data-theme=\"dark\"]")
-    expect(css).toContain(".navigation-item.is-active")
-    expect(css).toContain(".web-topbar")
-    expect(sidebar).toContain('class="workspace-navigation"')
-    expect(topbar).toContain('class="web-topbar"')
-  })
-})
-```
-
-- [ ] **Step 2: Run the test to verify RED**
-
-Run:
-
-```powershell
-cd web-frontend
-npm.cmd test -- src/tests/visual-system.spec.ts --reporter=dot
-```
-
-Expected: FAIL because the cobalt semantic tokens do not exist.
-
-- [ ] **Step 3: Implement the semantic light/dark palette**
+- [ ] **Step 2: Implement the semantic light/dark palette**
 
 In the existing root token blocks, retain all current motion/loading/size
 variables and add this semantic baseline:
@@ -133,7 +98,7 @@ Update existing action, focus, selected-navigation, checkbox, active-tab,
 spinner, and success selectors to consume semantic tokens. Keep existing CSS
 class names and `data-theme` behavior.
 
-- [ ] **Step 4: Reframe shell presentation with existing markup**
+- [ ] **Step 3: Reframe shell presentation with existing markup**
 
 Use the current desktop grid and mobile behavior. Make `.web-sidebar` a light
 surface with a right separator; make the active item cobalt-tinted with an
@@ -152,28 +117,17 @@ read as follows:
 Add an extra class only if a current element cannot be selected. Do not alter
 navigation labels, order, click handlers, emits, titles, or ARIA attributes.
 
-- [ ] **Step 5: Run the focused test to verify GREEN**
-
-Run:
-
-```powershell
-cd web-frontend
-npm.cmd test -- src/tests/visual-system.spec.ts --reporter=dot
-```
-
-Expected: PASS with one visual-system contract test.
-
-- [ ] **Step 6: Check the shell in the browser**
+- [ ] **Step 4: Check the shell in the browser**
 
 Start the existing Vite server and inspect light/dark shell behavior at 1440px,
 1024px, and 390px. Confirm that navigation, account utilities, theme toggle,
 and logout remain visible/clickable; the transition produces no white or old
 forest-green flash.
 
-- [ ] **Step 7: Commit Task 1**
+- [ ] **Step 5: Commit Task 1**
 
 ```powershell
-git add web-frontend/src/styles/base.css web-frontend/src/components/WebSidebar.vue web-frontend/src/components/WebTopbar.vue web-frontend/src/tests/visual-system.spec.ts
+git add web-frontend/src/styles/base.css web-frontend/src/components/WebSidebar.vue web-frontend/src/components/WebTopbar.vue
 git commit -m "style(web): establish bright workspace shell"
 ```
 
@@ -196,7 +150,6 @@ git commit -m "style(web): establish bright workspace shell"
 - Modify: `web-frontend/src/components/LoadingSpinner.vue`
 - Modify: `web-frontend/src/components/AssessmentQuestionCard.vue`
 - Modify: `web-frontend/src/components/FutureCapabilityShell.vue`
-- Modify: `web-frontend/src/tests/visual-system.spec.ts`
 
 **Interfaces:**
 - Consumes: Task 1 tokens and each view's existing refs, request functions,
@@ -204,41 +157,7 @@ git commit -m "style(web): establish bright workspace shell"
 - Produces: CSS-only `decision-surface` hooks; no new state, prop, event,
   route, request, or membership capability.
 
-- [ ] **Step 1: Extend the visual contract for bounded decision layouts**
-
-Append this test:
-
-```ts
-it("bounds KPI, decision, membership, and shared feedback hierarchy", () => {
-  const css = read("../styles/base.css")
-  const overview = read("../views/OverviewView.vue")
-  const assessment = read("../views/AssessmentView.vue")
-  const comparison = read("../views/ComparisonView.vue")
-  const membershipPackage = read("../components/MembershipPackageCard.vue")
-
-  expect(css).toContain(".metric-block:first-child")
-  expect(css).toContain(".decision-surface")
-  expect(css).toContain(".membership-package.is-current")
-  expect(css).toContain(".notice-error")
-  expect(overview).toContain('class="overview-strip"')
-  expect(assessment).toContain("decision-surface")
-  expect(comparison).toContain("decision-surface")
-  expect(membershipPackage).toContain("membership-package")
-})
-```
-
-- [ ] **Step 2: Run the focused test to verify RED**
-
-Run:
-
-```powershell
-cd web-frontend
-npm.cmd test -- src/tests/visual-system.spec.ts --reporter=dot
-```
-
-Expected: FAIL because `decision-surface` is absent.
-
-- [ ] **Step 3: Add only additive hooks at existing decision boundaries**
+- [ ] **Step 1: Add only additive hooks at existing decision boundaries**
 
 Use `decision-surface` on existing panels/results, never on a new wrapper or
 new branch:
@@ -256,7 +175,7 @@ Add the same class to existing career, insight, and membership decision
 containers. Do not change conditions, text, imports, requests, emits, or
 membership-gating behavior.
 
-- [ ] **Step 4: Style only overview as an asymmetric KPI composition**
+- [ ] **Step 2: Style only overview as an asymmetric KPI composition**
 
 Keep the existing three values/skeletons and style them without a new data
 source or chart:
@@ -272,7 +191,7 @@ source or chart:
 At the current mobile breakpoint restore a one-column metric stack. Do not
 apply this asymmetry to lists, forms, or every analytical section.
 
-- [ ] **Step 5: Apply semantic analysis, membership, and feedback styling**
+- [ ] **Step 3: Apply semantic analysis, membership, and feedback styling**
 
 Keep question invalid state on `--danger`; make score and selected report-mode
 states cobalt; make `.membership-package.is-current` cobalt-tinted; keep other
@@ -282,23 +201,23 @@ tokens. Keep all existing loading cleanup, error roles, ARIA labels, and
 component public props/emits unchanged. Keep `FutureCapabilityShell` neutral
 and dashed without adding text, links, routes, or actions.
 
-- [ ] **Step 6: Run focused workflows and inspect decision surfaces**
+- [ ] **Step 4: Run existing focused workflows and inspect decision surfaces**
 
 Run:
 
 ```powershell
 cd web-frontend
-npm.cmd test -- src/tests/visual-system.spec.ts src/tests/assessment-workflow.spec.ts src/tests/comparison-workflow.spec.ts src/tests/membership-workflow.spec.ts src/tests/interaction-state.spec.ts --reporter=dot
+npm.cmd test -- src/tests/assessment-workflow.spec.ts src/tests/comparison-workflow.spec.ts src/tests/membership-workflow.spec.ts src/tests/interaction-state.spec.ts --reporter=dot
 ```
 
 Expected: PASS. Inspect overview, career, assessment, comparison, insights,
 and membership in light/dark modes. Confirm report-mode, submit, purchase,
 loading, error, and empty branches still work without clipped text.
 
-- [ ] **Step 7: Commit Task 2**
+- [ ] **Step 5: Commit Task 2**
 
 ```powershell
-git add web-frontend/src/styles/base.css web-frontend/src/views/OverviewView.vue web-frontend/src/views/CareerView.vue web-frontend/src/views/AssessmentView.vue web-frontend/src/views/ComparisonView.vue web-frontend/src/views/InsightsView.vue web-frontend/src/views/MembershipView.vue web-frontend/src/components/MembershipPackageCard.vue web-frontend/src/components/OrderRow.vue web-frontend/src/components/AsyncButton.vue web-frontend/src/components/ErrorNotice.vue web-frontend/src/components/LoadingSpinner.vue web-frontend/src/components/AssessmentQuestionCard.vue web-frontend/src/components/FutureCapabilityShell.vue web-frontend/src/tests/visual-system.spec.ts
+git add web-frontend/src/styles/base.css web-frontend/src/views/OverviewView.vue web-frontend/src/views/CareerView.vue web-frontend/src/views/AssessmentView.vue web-frontend/src/views/ComparisonView.vue web-frontend/src/views/InsightsView.vue web-frontend/src/views/MembershipView.vue web-frontend/src/components/MembershipPackageCard.vue web-frontend/src/components/OrderRow.vue web-frontend/src/components/AsyncButton.vue web-frontend/src/components/ErrorNotice.vue web-frontend/src/components/LoadingSpinner.vue web-frontend/src/components/AssessmentQuestionCard.vue web-frontend/src/components/FutureCapabilityShell.vue
 git commit -m "style(web): clarify decision and membership surfaces"
 ```
 
@@ -315,7 +234,6 @@ git commit -m "style(web): clarify decision and membership surfaces"
 - Modify: `web-frontend/src/views/EvidenceView.vue`
 - Modify: `web-frontend/src/views/AccountView.vue`
 - Modify: `web-frontend/src/components/EvidenceForm.vue`
-- Modify: `web-frontend/src/tests/visual-system.spec.ts`
 
 **Interfaces:**
 - Consumes: Task 1 tokens and existing form validation, local checkpoint,
@@ -323,38 +241,7 @@ git commit -m "style(web): clarify decision and membership surfaces"
 - Produces: CSS-only `workbench-form` and `record-surface` hooks. No request
   or event contract changes.
 
-- [ ] **Step 1: Add failing contracts for operational density**
-
-Append this test:
-
-```ts
-it("keeps forms and records dense without replacing workflow components", () => {
-  const css = read("../styles/base.css")
-  const editor = read("../views/ResumeEditorView.vue")
-  const applications = read("../views/ApplicationsView.vue")
-  const evidence = read("../views/EvidenceView.vue")
-
-  expect(css).toContain(".workbench-form")
-  expect(css).toContain(".record-surface")
-  expect(css).toContain("overscroll-behavior-x: contain")
-  expect(editor).toContain("workbench-form")
-  expect(applications).toContain("record-surface")
-  expect(evidence).toContain("record-surface")
-})
-```
-
-- [ ] **Step 2: Run the focused test to verify RED**
-
-Run:
-
-```powershell
-cd web-frontend
-npm.cmd test -- src/tests/visual-system.spec.ts --reporter=dot
-```
-
-Expected: FAIL because the new hooks do not exist.
-
-- [ ] **Step 3: Attach hooks only to existing form and record boundaries**
+- [ ] **Step 1: Attach hooks only to existing form and record boundaries**
 
 Use additive markup such as:
 
@@ -371,7 +258,7 @@ Apply the corresponding hooks to existing resume, job, evidence, and account
 containers. Do not move fields, change IDs, remove ARIA bindings, alter
 `@submit`, modify pending guards, or touch checkpoint/validation functions.
 
-- [ ] **Step 4: Implement flat scan-friendly operational styling**
+- [ ] **Step 2: Implement flat scan-friendly operational styling**
 
 Add CSS shaped like:
 
@@ -387,30 +274,30 @@ Keep `content-visibility`, intrinsic sizes, `application-row` minimum width,
 horizontal scroll, and the existing `max-width: 840px` stacked table rules.
 Danger/error/disabled states stay semantic exceptions and do not become blue.
 
-- [ ] **Step 5: Reduce nested-panel weight without changing tools**
+- [ ] **Step 3: Reduce nested-panel weight without changing tools**
 
 Use separators and one elevated tool surface for the existing evidence form,
 suggestion/readiness sections, and account privacy actions. Keep the existing
 evidence two-column layout, selects, buttons, and handler functions. Keep the
 account consent/export/deletion operations and ARIA behavior unchanged.
 
-- [ ] **Step 6: Run focused workflows and inspect key paths**
+- [ ] **Step 4: Run focused workflows and inspect key paths**
 
 Run:
 
 ```powershell
 cd web-frontend
-npm.cmd test -- src/tests/visual-system.spec.ts src/tests/resume-workflow.spec.ts src/tests/resume-editor-orchestration.spec.ts src/tests/applications-workflow.spec.ts src/tests/evidence-workflow.spec.ts --reporter=dot
+npm.cmd test -- src/tests/resume-workflow.spec.ts src/tests/resume-editor-orchestration.spec.ts src/tests/applications-workflow.spec.ts src/tests/evidence-workflow.spec.ts --reporter=dot
 ```
 
 Expected: PASS. In the browser verify editor save/error focus, job query error,
 application create/edit/timeline, evidence create/delete/suggestions, and
 account destructive action states at all required widths.
 
-- [ ] **Step 7: Commit Task 3**
+- [ ] **Step 5: Commit Task 3**
 
 ```powershell
-git add web-frontend/src/styles/base.css web-frontend/src/views/ResumeView.vue web-frontend/src/views/ResumeEditorView.vue web-frontend/src/views/JobsView.vue web-frontend/src/views/ApplicationsView.vue web-frontend/src/views/EvidenceView.vue web-frontend/src/views/AccountView.vue web-frontend/src/components/EvidenceForm.vue web-frontend/src/tests/visual-system.spec.ts
+git add web-frontend/src/styles/base.css web-frontend/src/views/ResumeView.vue web-frontend/src/views/ResumeEditorView.vue web-frontend/src/views/JobsView.vue web-frontend/src/views/ApplicationsView.vue web-frontend/src/views/EvidenceView.vue web-frontend/src/views/AccountView.vue web-frontend/src/components/EvidenceForm.vue
 git commit -m "style(web): refine operational workbench surfaces"
 ```
 
@@ -420,29 +307,12 @@ git commit -m "style(web): refine operational workbench surfaces"
 
 **Files:**
 - Modify: `docs/interaction-upgrade-changelog.md`
-- Modify: `web-frontend/src/tests/visual-system.spec.ts` only when an important Task 1-3 presentation hook has no direct assertion.
 
 **Interfaces:**
 - Consumes: semantic tokens and additive classes from Tasks 1-3.
 - Produces: verification evidence and changelog documentation only; no production capability.
 
-- [ ] **Step 1: Add one final missing direct visual contract only when needed**
-
-If a critical responsive hook was added without coverage, add the smallest
-assertion. For example:
-
-```ts
-it("keeps the responsive workspace bounded", () => {
-  const css = read("../styles/base.css")
-  expect(css).toContain("@media (max-width: 840px)")
-  expect(css).toContain(".application-row")
-  expect(css).toContain("grid-template-columns: 1fr")
-})
-```
-
-If Tasks 1-3 already protect every new hook, do not add a count-only test.
-
-- [ ] **Step 2: Run the complete Web regression suite**
+- [ ] **Step 1: Run the complete Web regression suite**
 
 Run:
 
@@ -452,9 +322,9 @@ npm.cmd test -- --reporter=dot
 ```
 
 Expected: all API, domain, workflow, interaction, checkpoint, keyboard, and
-visual-system tests pass.
+tests pass.
 
-- [ ] **Step 3: Run the production build**
+- [ ] **Step 2: Run the production build**
 
 Run:
 
@@ -465,7 +335,7 @@ npm.cmd run build
 
 Expected: Vite exits 0 without adding a new dependency.
 
-- [ ] **Step 4: Run one bounded visual QA batch**
+- [ ] **Step 3: Run one bounded visual QA batch**
 
 Inspect the local Web app using the existing session/mock path:
 
@@ -481,7 +351,7 @@ this exact checklist once. Confirm no clipped text, overlapping controls,
 body horizontal overflow, low-contrast focus/disabled state, layout jitter,
 or theme flash.
 
-- [ ] **Step 5: Audit scope and append verified changelog evidence**
+- [ ] **Step 4: Audit scope and append verified changelog evidence**
 
 Run:
 
@@ -491,17 +361,18 @@ git diff --name-only 98cb6c6..HEAD
 git status --short
 ```
 
-Confirm changed paths are limited to `web-frontend/` and the changelog;
-existing view imports still point to the original domain/API/workflow modules;
-and no Chinese business string or mock fixture changed. Append a dated entry
+Confirm changed paths are limited to `web-frontend/` and this iteration's
+documentation under `docs/`; existing view imports still point to the
+original domain/API/workflow modules; and no Chinese business string or mock
+fixture changed. Append a dated entry
 to `docs/interaction-upgrade-changelog.md` recording the cobalt/warm-white
 reframe, charcoal/navy dark mode, shell/KPI/record hierarchy, exact Web test
 count, build result, visual QA widths/themes, and frontend-only path audit.
 
-- [ ] **Step 6: Commit Task 4**
+- [ ] **Step 5: Commit Task 4**
 
 ```powershell
-git add web-frontend/src/tests/visual-system.spec.ts docs/interaction-upgrade-changelog.md
+git add docs/interaction-upgrade-changelog.md
 git commit -m "docs: record web visual reframe"
 ```
 
@@ -521,7 +392,7 @@ git commit -m "docs: record web visual reframe"
 
 ### Placeholder scan
 
-Every task has exact files, a concrete failing assertion, commands, implementation shape, verification criteria, and a commit command. Task 4's conditional test rule prevents meaningless test-count churn; it does not defer implementation.
+Every task has exact files, implementation boundaries, verification commands, browser acceptance criteria, and a commit command. The user explicitly chose real-browser visual QA over source-text presentation tests; existing behavioral suites continue to protect the unchanged business layer.
 
 ### Type and contract consistency
 
