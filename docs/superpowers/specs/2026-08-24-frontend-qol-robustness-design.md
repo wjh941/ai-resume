@@ -72,7 +72,7 @@ Use small native helpers and existing component patterns. H5 and Web follow the 
 ### H5 units
 
 - Extend existing resume validation mapping rather than adding a form framework.
-- Keep the resume form's debounce timer and local save status page-local because it has one consumer.
+- Add a small framework-free debounced-task helper so timer coalescing and flush behavior are independently testable; keep local save status and checkpoint business decisions page-local.
 - Add a small focus-restoration utility for existing H5 modal callers.
 - Add `useIncrementalList` under H5 composables and reuse it in the scoped long-list pages.
 - Reuse `FormField`, `ui-error-tip`, `LoadingSpinner`, Pinia checkpoint, and native `scroll-view` events.
@@ -80,6 +80,7 @@ Use small native helpers and existing component patterns. H5 and Web follow the 
 ### Web units
 
 - Add a focused local draft checkpoint helper with parse, freshness, save, and clear operations.
+- Add the same small framework-free debounced-task contract under Web utilities rather than introducing a timing dependency.
 - Add a focused resume validation helper aligned to H5 name, phone, email, and target-role rules, plus the existing Web draft-title requirement.
 - Add a scoped keyboard listener in `ResumeEditorView`; add Escape handling only to views with a real closable edit/expanded state.
 - Add `useIncrementalList` under Web composables and reuse it in the scoped record views.
