@@ -90,6 +90,7 @@ git commit -m "feat(web): add typed functional domain adapters"
 - Modify: web-frontend/src/App.vue
 - Modify: web-frontend/src/components/WebSidebar.vue
 - Modify: web-frontend/src/styles/base.css
+- Create: web-frontend/src/lib/draft-workflow.ts
 - Test: web-frontend/src/tests/resume-workflow.spec.ts
 
 **Interfaces:**
@@ -97,17 +98,14 @@ git commit -m "feat(web): add typed functional domain adapters"
 - ResumeEditorView receives draftId: string, loads getDraft(draftId), and saves saveDraft({ ...draft, id: draftId }).
 - App.vue holds editingDraftId: string | null; when set, it renders ResumeEditorView in the existing transition shell and returns to ResumeView after save/cancel.
 
-- [ ] **Step 1: Write failing view tests**
+- [ ] **Step 1: Write failing workflow tests**
 
-Cover Open selecting a draft, copy prepending the returned draft, delete removing only the confirmed draft, editor loading, save disabling while pending, and rejected save clearing pending while preserving edited fields.
+Because this repository has no Vue component test runtime, cover the pure workflow helpers used by the view: Open selection, copy prepending, delete filtering, and save payload preservation. Existing AsyncButton/useAsyncAction tests cover pending cleanup; the production build verifies the SFC wiring.
 
 ~~~ts
-it("clears editor save pending state after a rejected request", async () => {
-  saveDraftMock.mockRejectedValueOnce(new Error("offline"))
-  const wrapper = mount(ResumeEditorView, { props: { draftId: "d-1" } })
-  await flushPromises()
-  await wrapper.get("form").trigger("submit")
-  expect(wrapper.get("button[type=submit]").attributes("disabled")).toBeUndefined()
+it("removes only the confirmed draft", () => {
+  expect(removeDraftById([{ id: "d-1" }, { id: "d-2" }] as DraftRecord[], "d-1"))
+    .toEqual([{ id: "d-2" }])
 })
 ~~~
 
@@ -116,7 +114,7 @@ Expected: FAIL because the editor view and actions are not wired.
 
 - [ ] **Step 2: Implement draft adapter wiring and editor state**
 
-Use a local editable DraftRecord, preserve all backend resume sections, and expose add/remove controls for education, employment, projects, skills, and certificates. Keep the first editor version form-based and deterministic; do not introduce a second draft store. Use AsyncButton for save/cancel/open/copy/delete and LoadingSpinner for the stable editor loading block.
+Implement draft-workflow.ts with removeDraftById, prependDraft, and toDraftSaveInput helpers. Use a local editable DraftRecord, preserve all backend resume sections, and expose add/remove controls for education, employment, projects, skills, and certificates. Keep the first editor version form-based and deterministic; do not introduce a second draft store. Use AsyncButton for save/cancel/open/copy/delete and LoadingSpinner for the stable editor loading block.
 
 - [ ] **Step 3: Add responsive editor styles**
 
@@ -130,7 +128,7 @@ Expected: focused tests and production build pass.
 - [ ] **Step 5: Commit**
 
 ~~~bash
-git add web-frontend/src/views/ResumeView.vue web-frontend/src/views/ResumeEditorView.vue web-frontend/src/App.vue web-frontend/src/components/WebSidebar.vue web-frontend/src/styles/base.css web-frontend/src/tests/resume-workflow.spec.ts
+git add web-frontend/src/views/ResumeView.vue web-frontend/src/views/ResumeEditorView.vue web-frontend/src/App.vue web-frontend/src/components/WebSidebar.vue web-frontend/src/styles/base.css web-frontend/src/lib/draft-workflow.ts web-frontend/src/tests/resume-workflow.spec.ts
 git commit -m "feat(web): complete draft management workflow"
 ~~~
 
