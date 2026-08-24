@@ -8,6 +8,7 @@ import { requestApi } from "./lib/api"
 import { clearSession, readSession, type Session } from "./lib/session"
 import AccountView from "./views/AccountView.vue"
 import ApplicationsView from "./views/ApplicationsView.vue"
+import EvidenceView from "./views/EvidenceView.vue"
 import CareerView from "./views/CareerView.vue"
 import InsightsView from "./views/InsightsView.vue"
 import JobsView from "./views/JobsView.vue"
@@ -26,6 +27,7 @@ const activeComponent = computed(() => ({
   career: CareerView,
   jobs: JobsView,
   applications: ApplicationsView,
+  evidence: EvidenceView,
   insights: InsightsView,
   account: AccountView,
 }[activeView.value]))

@@ -266,6 +266,40 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .upgrade-notice { color: #765f11; }
 .account-scope > section { display: flex; align-items: flex-start; gap: 13px; color: var(--forest); }.account-scope h2 { margin: 0; color: var(--ink); font-size: 21px; }.account-scope p { margin: 7px 0 0; color: var(--muted); }.account-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 
+.evidence-view { gap: 26px; }
+.evidence-form { display: grid; gap: 18px; padding: 22px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.evidence-form .editor-grid { gap: 14px 16px; }
+.evidence-form label span, .evidence-panel label span { color: var(--muted); font-size: 12px; font-weight: 700; }
+.evidence-verified { display: inline-flex; gap: 8px; align-items: center; color: var(--ink); font-size: 13px; font-weight: 700; }
+.evidence-verified input { width: 17px; height: 17px; accent-color: var(--forest); }
+.evidence-workspace-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(300px, .75fr); gap: 34px; }
+.evidence-side-panels { display: grid; align-content: start; gap: 20px; }
+.evidence-panel { display: grid; gap: 16px; padding: 22px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.panel-heading h2 { margin: 0; font-size: 21px; }
+.evidence-row-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.evidence-list article { padding: 17px 0; }
+.evidence-list article:first-child { padding-top: 0; }
+.evidence-list article:last-child { padding-bottom: 0; }
+.evidence-list strong { display: block; color: var(--ink); font-size: 15px; }
+.evidence-list small { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; }
+.evidence-list p { margin: 10px 0 0; }
+.suggestion-query { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px; }
+.suggestion-query label, .readiness-select { display: grid; gap: 7px; }
+.suggestion-query input, .readiness-select select { width: 100%; min-height: 40px; padding: 0 9px; color: var(--ink); border: 1px solid var(--line); border-radius: 6px; background: var(--surface-raised); }
+.suggestion-list { display: grid; gap: 0; border-top: 1px solid var(--line); }
+.suggestion-list article { padding: 13px 0; border-bottom: 1px solid var(--line); }
+.suggestion-list strong { font-size: 13px; }
+.suggestion-list small { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
+.suggestion-list p { margin: 7px 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.readiness-select select { min-height: 42px; }
+.readiness-result { padding: 14px; border-radius: var(--radius); color: #765f11; background: #f8edbd; font-size: 13px; line-height: 1.5; }
+.readiness-result.is-ready { color: #14583d; background: #dff4e9; }
+.readiness-result strong { display: block; }
+.readiness-result ul { display: grid; gap: 5px; padding-left: 18px; margin: 9px 0 0; }
+.readiness-result p { margin: 9px 0 0; }
+.evidence-loading { min-height: 360px; }
+
 .resume-editor-view { gap: 26px; }
 .resume-editor-form { display: grid; gap: 18px; }
 .editor-section { display: grid; gap: 16px; padding: 22px 0; border-top: 1px solid var(--line); }
@@ -329,6 +363,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .application-toolbar { align-items: flex-start; flex-direction: column; }
   .application-followup { padding-left: 0; }
   .followup-grid { grid-template-columns: 1fr; padding: 16px 0; background: transparent; }
+  .evidence-workspace-grid { grid-template-columns: 1fr; }
+  .suggestion-query { grid-template-columns: 1fr; }
 }
 @media (max-width: 480px) {
   .login-form-area { padding: 36px 20px; }

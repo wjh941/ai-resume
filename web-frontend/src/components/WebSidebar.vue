@@ -3,6 +3,7 @@ import {
   BarChart3,
   BriefcaseBusiness,
   ChartNoAxesCombined,
+  ClipboardCheck,
   FilePenLine,
   Home,
   KanbanSquare,
@@ -16,6 +17,7 @@ export type WorkspaceView =
   | "career"
   | "jobs"
   | "applications"
+  | "evidence"
   | "insights"
   | "account"
 
@@ -33,6 +35,7 @@ const navigation = [
   { key: "career", label: "职业规划", icon: Map },
   { key: "jobs", label: "岗位机会", icon: BriefcaseBusiness },
   { key: "applications", label: "投递管理", icon: KanbanSquare },
+  { key: "evidence", label: "经历证据", icon: ClipboardCheck },
   { key: "insights", label: "年度洞察", icon: ChartNoAxesCombined },
   { key: "account", label: "账户设置", icon: UserRound },
 ] as const
