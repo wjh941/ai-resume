@@ -32,6 +32,7 @@ const {
   reset: resetVisibleItems,
 } = useIncrementalList(evidence)
 const loading = ref(false)
+const pageScrollTop = ref(0)
 const saving = ref(false)
 const pendingDeleteId = ref<string | null>(null)
 const form = ref<ResumeEvidenceInput>(emptyForm())
@@ -99,7 +100,7 @@ function edit(item: ResumeEvidence) {
     proofNote: item.proofNote,
     verified: item.verified,
   }
-  uni.pageScrollTo({ scrollTop: 0, duration: 180 })
+  pageScrollTop.value = 0
 }
 
 async function remove(item: ResumeEvidence) {
@@ -127,7 +128,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <scroll-view class="page progressive-scroll-page" scroll-y @scrolltolower="showMore">
+  <scroll-view class="page progressive-scroll-page" scroll-y :scroll-top="pageScrollTop" @scroll="pageScrollTop = $event.detail.scrollTop" @scrolltolower="showMore">
     <view class="content">
       <view class="hero">
         <text class="eyebrow">FACT-BASED RESUME</text>

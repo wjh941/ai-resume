@@ -223,9 +223,15 @@ describe("runWithLoading", () => {
     const collection = readFileSync(new URL("../pages/job-collection/index.vue", import.meta.url), "utf8")
     const jobSearch = readFileSync(new URL("../pages/job-search/index.vue", import.meta.url), "utf8")
     const progressiveScrollRoot = '<scroll-view class="page progressive-scroll-page" scroll-y @scrolltolower="showMore">'
-    for (const page of [drafts, applications, evidence, collection]) {
+    const editableProgressiveScrollRoot = '<scroll-view class="page progressive-scroll-page" scroll-y :scroll-top="pageScrollTop" @scroll="pageScrollTop = $event.detail.scrollTop" @scrolltolower="showMore">'
+    for (const page of [drafts, collection]) {
       expect(page).toContain("useIncrementalList")
       expect(page).toContain(progressiveScrollRoot)
+      expect(page).toContain('v-for="item in renderedItems"')
+    }
+    for (const page of [applications, evidence]) {
+      expect(page).toContain("useIncrementalList")
+      expect(page).toContain(editableProgressiveScrollRoot)
       expect(page).toContain('v-for="item in renderedItems"')
     }
     expect(drafts).not.toContain('v-for="item in drafts"')
@@ -241,5 +247,16 @@ describe("runWithLoading", () => {
     expect(applications).toContain("可先查询岗位，再回到这里记录进度。")
     expect(applications).toContain('/pages/job-search/index')
     expect(jobSearch).toContain("暂未找到匹配岗位，可换一个更具体的岗位名称。")
+  })
+
+  it("returns fixed-scroll H5 editors to their forms", () => {
+    const applications = readFileSync(new URL("../pages/applications/index.vue", import.meta.url), "utf8")
+    const evidence = readFileSync(new URL("../pages/evidence/index.vue", import.meta.url), "utf8")
+    for (const page of [applications, evidence]) {
+      const editSection = page.match(/function edit\([^]*?\r?\n}\r?\n/)?.[0] ?? ""
+      expect(page).toContain("const pageScrollTop = ref(0)")
+      expect(editSection).toContain("pageScrollTop.value = 0")
+      expect(editSection).not.toContain("uni.pageScrollTo")
+    }
   })
 })

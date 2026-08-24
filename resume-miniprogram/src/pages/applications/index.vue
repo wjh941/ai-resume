@@ -46,6 +46,7 @@ const pendingDeleteId = ref("")
 const error = ref("")
 const form = ref<ApplicationInput>(emptyForm())
 const interviewDate = ref("")
+const pageScrollTop = ref(0)
 const timelineDraft = ref({ applicationId: "", title: "", description: "", occurredAt: "" })
 const reminderAt = ref("")
 
@@ -145,7 +146,7 @@ function edit(item: ApplicationRecord) {
     attachmentRef: item.attachmentRef || "",
     nextInterviewAt: item.nextInterviewAt || null,
   }
-  uni.pageScrollTo({ scrollTop: 0, duration: 180 })
+  pageScrollTop.value = 0
 }
 
 function resetForm() {
@@ -259,7 +260,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <scroll-view class="page progressive-scroll-page" scroll-y @scrolltolower="showMore">
+  <scroll-view class="page progressive-scroll-page" scroll-y :scroll-top="pageScrollTop" @scroll="pageScrollTop = $event.detail.scrollTop" @scrolltolower="showMore">
     <view class="content">
       <view class="hero">
         <text class="title">投递行动台</text>
