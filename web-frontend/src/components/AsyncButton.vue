@@ -19,6 +19,7 @@ withDefaults(defineProps<{
     :disabled="disabled || loading"
     :aria-busy="loading || undefined"
     class="async-button"
+    :class="{ 'is-loading': loading }"
   >
     <span class="async-button-spinner" aria-hidden="true">
       <LoadingSpinner v-if="loading" size="sm" aria-hidden="true" />

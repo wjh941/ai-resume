@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest"
+import { readFileSync } from "node:fs"
 
 import { useAsyncAction } from "../composables/useAsyncAction"
 
 describe("useAsyncAction", () => {
+  it("keeps the future capability shell presentation-only", () => {
+    const source = readFileSync(new URL("../components/FutureCapabilityShell.vue", import.meta.url), "utf8")
+    expect(source).not.toContain("requestApi")
+    expect(source).not.toContain("fetch(")
+  })
+
   it("clears pending after a successful operation", async () => {
     const action = useAsyncAction()
     const result = await action.run(async () => "saved")
