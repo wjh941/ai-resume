@@ -366,12 +366,14 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .assessment-panel, .assessment-result { display: grid; gap: 22px; padding: 22px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .assessment-question-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .assessment-question { display: grid; gap: 12px; min-height: 158px; padding: 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-raised); }
+.assessment-question.is-invalid { border-color: color-mix(in srgb, var(--danger) 60%, var(--line)); box-shadow: inset 3px 0 0 var(--danger); }
 .question-group { color: var(--coral-strong); font-size: 11px; font-weight: 800; }
 .assessment-question h3 { margin: 0; font-size: 15px; line-height: 1.45; }
 .answer-scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; margin-top: auto; }
 .answer-scale button { min-height: 36px; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font-weight: 750; }
 .answer-scale button:hover:not(:disabled), .answer-scale button.is-selected { color: var(--forest-strong); border-color: var(--forest); background: var(--mint); }
 .scale-hint { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; }
+.question-error { color: var(--danger); font-size: 12px; line-height: 1.45; }
 .assessment-result-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .assessment-result-grid section { min-width: 0; padding: 18px; }
 .assessment-result-grid section + section { border-left: 1px solid var(--line); }

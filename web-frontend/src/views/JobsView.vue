@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { BookmarkPlus, BriefcaseBusiness, Search } from "lucide-vue-next"
-import { computed, ref } from "vue"
+import { computed, ref, watch } from "vue"
 
 import { requestApi } from "../lib/api"
 import AsyncButton from "../components/AsyncButton.vue"
@@ -22,17 +22,24 @@ const result = ref<JobResult | null>(null)
 const loading = ref(false)
 const saving = ref(false)
 const error = ref("")
+const roleFieldError = ref("")
 const skills = computed(() => [...(result.value?.required_skills || []), ...(result.value?.hard_requirements || [])].slice(0, 8))
 const emit = defineEmits<{ navigate: [view: WorkspaceView] }>()
+
+watch(roleName, (value) => {
+  if (value.trim()) roleFieldError.value = ""
+})
 
 async function queryRole() {
   if (loading.value) return
   if (!roleName.value.trim()) {
-    error.value = "请输入要查询的目标岗位"
+    roleFieldError.value = "请输入要查询的目标岗位"
+    error.value = ""
     return
   }
 
   loading.value = true
+  roleFieldError.value = ""
   error.value = ""
   try {
     result.value = await requestApi<JobResult>("/api/job/query", {
@@ -66,7 +73,7 @@ async function favorite() {
   <section class="view-layout">
     <div class="view-heading"><div><h1 id="jobs-title">岗位机会</h1><p>围绕一个明确的岗位梳理能力要求，再回到真实经历补齐准备。</p></div></div>
     <form class="role-query" :aria-describedby="error ? 'jobs-error' : undefined" @submit.prevent="queryRole">
-      <label><span>目标岗位</span><input v-model.trim="roleName" maxlength="200" placeholder="例如：数据分析师" :aria-invalid="Boolean(error && !roleName.trim())" /></label>
+      <label><span>目标岗位</span><input v-model.trim="roleName" maxlength="200" placeholder="例如：数据分析师" :aria-invalid="Boolean(roleFieldError)" :aria-describedby="roleFieldError ? 'jobs-role-error' : undefined" /><small v-if="roleFieldError" id="jobs-role-error" class="form-error">{{ roleFieldError }}</small></label>
       <div class="mode-switch" role="group" aria-label="报告表达方式">
         <button type="button" :disabled="loading" :class="{ 'is-selected': reportMode === 'simplified' }" @click="reportMode = 'simplified'">精简版</button>
         <button type="button" :disabled="loading" :class="{ 'is-selected': reportMode === 'professional' }" @click="reportMode = 'professional'">专业版</button>

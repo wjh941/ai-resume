@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { Building2, CalendarClock, ChevronDown, ChevronUp, Clock3, Pencil, Plus, RefreshCw, Save, Trash2, X } from "lucide-vue-next"
-import { computed, onMounted, ref } from "vue"
+import { computed, onBeforeUnmount, onMounted, ref } from "vue"
 
 import AsyncButton from "../components/AsyncButton.vue"
 import ExpandableText from "../components/ExpandableText.vue"
 import LoadingSpinner from "../components/LoadingSpinner.vue"
 import { addTimelineEvent, deleteApplication, listApplications, listTimeline, saveApplication, saveReminder, type ApplicationInput, type ApplicationRecord, type ApplicationStatus } from "../lib/applications"
 import { appendTimelineEvent, removeApplication, replaceApplication } from "../lib/application-workflow"
+import { resolveApplicationsCloseAction, resolveWorkspaceShortcut } from "../lib/keyboard-shortcuts"
 
 const statusLabels: Record<ApplicationStatus, string> = { saved: "待投递", applied: "已投递", screening: "筛选中", interview: "面试中", offer: "已获录用", rejected: "未通过", closed: "已结束" }
 const items = ref<ApplicationRecord[]>([])
@@ -69,7 +70,24 @@ async function remove(item: ApplicationRecord): Promise<void> {
   pendingKey.value = `delete:${item.id}`
   try { await deleteApplication(item.id); items.value = removeApplication(items.value, item.id); if (expandedId.value === item.id) expandedId.value = null } catch { error.value = "投递记录暂未删除，请稍后重试" } finally { pendingKey.value = "" }
 }
-onMounted(refresh)
+function handleShortcut(event: KeyboardEvent): void {
+  const action = resolveApplicationsCloseAction(
+    resolveWorkspaceShortcut(event),
+    loading.value || Boolean(pendingKey.value),
+    editing.value,
+    expandedId.value !== null,
+  )
+  if (!action) return
+  event.preventDefault()
+  if (action === "reset") resetForm()
+  else expandedId.value = null
+}
+
+onMounted(() => {
+  window.addEventListener("keydown", handleShortcut)
+  void refresh()
+})
+onBeforeUnmount(() => window.removeEventListener("keydown", handleShortcut))
 </script>
 
 <template>

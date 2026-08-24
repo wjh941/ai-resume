@@ -11,6 +11,10 @@ import {
 } from "../lib/draft-checkpoint"
 import { getDraft, saveDraft, type DraftRecord } from "../lib/drafts"
 import { toDraftSaveInput } from "../lib/draft-workflow"
+import {
+  resolveResumeEditorShortcutAction,
+  resolveWorkspaceShortcut,
+} from "../lib/keyboard-shortcuts"
 import { createResumeEditorOrchestration } from "../lib/resume-editor-orchestration"
 import { validateDraft } from "../lib/resume-validation"
 
@@ -98,7 +102,19 @@ async function save(): Promise<void> {
   await saveEditor()
 }
 
-onMounted(load)
+function handleShortcut(event: KeyboardEvent): void {
+  const action = resolveResumeEditorShortcutAction(resolveWorkspaceShortcut(event), saving.value)
+  if (!action) return
+  event.preventDefault()
+  if (action === "save") void save()
+  else if (action === "back") emit("cancel")
+}
+
+onMounted(() => {
+  window.addEventListener("keydown", handleShortcut)
+  void load()
+})
+onBeforeUnmount(() => window.removeEventListener("keydown", handleShortcut))
 </script>
 
 <template>

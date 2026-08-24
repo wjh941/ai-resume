@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest"
 
-import { flattenActionPlan, isAssessmentComplete, mergeAssessmentAnswers } from "../lib/assessment-workflow"
+import {
+  ASSESSMENT_INCOMPLETE_ERROR,
+  clearAssessmentValidationError,
+  flattenActionPlan,
+  isAssessmentComplete,
+  mergeAssessmentAnswers,
+  resolveAssessmentSubmitAction,
+} from "../lib/assessment-workflow"
 import type { AssessmentQuestion, AssessmentReport } from "../lib/assessment"
 
 const questions: AssessmentQuestion[] = [{ key: "q1", group: "interest", dimension: "analysis", title: "题目" }, { key: "q2", group: "constraints", dimension: "time", title: "题目二" }]
@@ -18,5 +25,17 @@ describe("assessment workflow helpers", () => {
 
   it("keeps the three action-plan horizons in order", () => {
     expect(flattenActionPlan(report)).toEqual(["七天", "三十天", "九十天"])
+  })
+
+  it("blocks incomplete and duplicate submissions before the API boundary", () => {
+    expect(resolveAssessmentSubmitAction(false, false)).toBe("show-validation")
+    expect(resolveAssessmentSubmitAction(true, true)).toBe("ignore")
+    expect(resolveAssessmentSubmitAction(true, false)).toBe("submit")
+  })
+
+  it("clears only the local incomplete-form error after all answers are supplied", () => {
+    expect(clearAssessmentValidationError(true, ASSESSMENT_INCOMPLETE_ERROR)).toBe("")
+    expect(clearAssessmentValidationError(true, "测评服务暂不可用")).toBe("测评服务暂不可用")
+    expect(clearAssessmentValidationError(false, ASSESSMENT_INCOMPLETE_ERROR)).toBe(ASSESSMENT_INCOMPLETE_ERROR)
   })
 })

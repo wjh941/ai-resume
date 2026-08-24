@@ -152,4 +152,23 @@ describe("useAsyncAction", () => {
     expect(orchestration).toContain("checkpointPaused")
     expect(editor).toContain('aria-live="polite"')
   })
+
+  it("wires scoped shortcuts and inline business-form feedback", () => {
+    const editor = readFileSync(new URL("../views/ResumeEditorView.vue", import.meta.url), "utf8")
+    const applications = readFileSync(new URL("../views/ApplicationsView.vue", import.meta.url), "utf8")
+    const jobs = readFileSync(new URL("../views/JobsView.vue", import.meta.url), "utf8")
+    const assessment = readFileSync(new URL("../views/AssessmentView.vue", import.meta.url), "utf8")
+    const questionCard = readFileSync(new URL("../components/AssessmentQuestionCard.vue", import.meta.url), "utf8")
+
+    expect(editor).toContain("resolveWorkspaceShortcut")
+    expect(editor).toContain('window.addEventListener("keydown"')
+    expect(editor).toContain('window.removeEventListener("keydown"')
+    expect(applications).toContain("resolveWorkspaceShortcut")
+    expect(applications).toContain("resolveApplicationsCloseAction")
+    expect(jobs).toContain('const roleFieldError = ref("")')
+    expect(jobs).toContain('id="jobs-role-error"')
+    expect(assessment).toContain(":invalid=\"validationActive && !Number.isInteger(answers[question.key])\"")
+    expect(assessment).toContain("resolveAssessmentSubmitAction")
+    expect(questionCard).toContain(':aria-invalid="invalid || undefined"')
+  })
 })
