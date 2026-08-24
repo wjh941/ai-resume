@@ -110,7 +110,7 @@ read as follows:
 .brand-symbol { color: #fff; background: var(--primary); }
 .navigation-item { color: var(--muted); }
 .navigation-item:hover { color: var(--ink); background: var(--surface-muted); }
-.navigation-item.is-active { color: var(--primary-strong); background: var(--primary-tint); box-shadow: inset 3px 0 0 var(--primary); }
+.navigation-item.is-active { color: var(--primary-strong); background: var(--primary-tint); box-shadow: inset 1px 0 0 var(--primary); }
 .web-topbar { background: color-mix(in srgb, var(--surface) 94%, transparent); }
 ```
 
@@ -263,16 +263,18 @@ containers. Do not move fields, change IDs, remove ARIA bindings, alter
 Add CSS shaped like:
 
 ```css
-.workbench-form { padding: 22px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: 0 10px 28px rgb(22 34 56 / 7%); }
+.workbench-form { padding: 22px; border: 0; border-radius: var(--radius); background: var(--surface); box-shadow: 0 10px 28px rgb(22 34 56 / 7%); }
 .workbench-form :is(input, select, textarea):focus { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent); }
-.record-surface { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.record-surface { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: none; }
 .record-row:hover, .task-row:hover, .application-row:hover { background: var(--primary-tint); }
 .status-tag, .record-tag { color: var(--primary-strong); background: var(--primary-tint); }
 ```
 
 Keep `content-visibility`, intrinsic sizes, `application-row` minimum width,
 horizontal scroll, and the existing `max-width: 840px` stacked table rules.
-Danger/error/disabled states stay semantic exceptions and do not become blue.
+Each surface uses one elevation cue: soft shadow for an editor/form tool and a
+fine border for records. Danger/error/disabled states stay semantic exceptions
+and do not become blue.
 
 - [ ] **Step 3: Reduce nested-panel weight without changing tools**
 
