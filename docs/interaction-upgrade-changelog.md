@@ -142,3 +142,26 @@ This follow-up preserves every existing page, route, API contract, request paylo
 
 - Web unit tests: 41 passed across 12 files; production build passed.
 - H5 unit tests: 89 passed across 37 files; `npm run build:h5` passed.
+
+## 2026-08-24 accessibility and UX polish
+
+This iteration preserves every existing route, API contract, request payload, mock record, Chinese business string, and completed business module. Changes are limited to accessibility semantics, duplicate-action guards, and read-only text presentation.
+
+### `resume-miniprogram` H5
+
+- Added accessible labels, validation relationships, keyboard semantics, and expanded-state metadata to existing form fields, job-search suggestions, market-source rows, analysis rows, application actions, and onboarding controls.
+- Changed the onboarding mask to close only when the mask itself is tapped; taps inside the content panel stop propagation. Existing native `uni.showModal` confirmations remain unchanged.
+- Added function-level pending guards to high-frequency application, assessment, job-search, membership, checkout, upload, and analysis actions so rapid taps cannot start duplicate requests. Existing `finally` cleanup remains responsible for clearing all pending states after success, failure, cancellation, or timeout.
+- Added a lightweight `ExpandableText` component to existing application, collection, job-search, and resume-preview content. Long role/company names use one-line truncation; resume descriptions use four-line truncation with keyboard-accessible expand/collapse controls.
+
+### `web-frontend`
+
+- Added form error relationships, invalid-field state, pressed-state metadata, and contextual action labels across login, topbar, applications, jobs, insights, and resume management without changing submissions or navigation.
+- Added function-level pending guards to logout, login/code delivery, career task creation, evidence readiness, insights, job search, and job favorite actions. Buttons and mode tabs remain disabled while the corresponding request is active.
+- Added the same lightweight `ExpandableText` contract to application role/company rows, job result titles and summaries, resume draft titles, and evidence action descriptions. Editor textareas continue to expose full content.
+- The Web workbench has no custom tooltip, modal, drawer, or mask implementation. Existing native `title` tooltips retain browser-managed viewport positioning, and destructive actions continue to use native `window.confirm` behavior.
+
+### Verification for this iteration
+
+- Web unit tests: 44 passed across 13 files; production build passed.
+- H5 unit tests: 92 passed across 38 files; `npm run build:h5` passed.
