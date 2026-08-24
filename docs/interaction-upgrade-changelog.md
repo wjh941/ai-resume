@@ -189,7 +189,7 @@ This iteration keeps all existing routes, API contracts, request payloads, mock 
 
 ### Verification for this iteration
 
-- Impeccable UI detector: the single run over the command's listed target set returned `[]`; no detector remediation was required. The command did not include the changed H5 `App.vue` or Web `AssessmentQuestionCard.vue`; their scoped static interaction contracts and code review were used as alternative evidence, not detector coverage.
+- Impeccable UI detector: the single run over the command's listed target set returned `[]`; no detector remediation was required. The command did not include the changed H5 `App.vue`, H5 `pages/resume-editor/index.vue`, or Web `AssessmentQuestionCard.vue`. Scoped static interaction contracts cover the H5 progressive-scroll/containment rules, both resume-editor modal focus-restoration hooks, and the Web assessment-card invalid-state wiring; task code review covered all three files. This is alternative evidence, not detector coverage.
 - H5 unit tests: 115 passed across 42 files, including the existing API and phase-service contract suites. `npm.cmd run build:h5` completed with `DONE  Build complete.`
 - Web unit tests: 83 passed across 19 files, including `api.spec.ts` and `domain-api.spec.ts`. The production build transformed 1800 modules and completed successfully.
 - Scope audit against the authoritative execution base `69e26d86fe1613b3b8be0bcf5684852735ff092f` and the plan reference `b0dbe20` found no changes under backend, service, API, router, mock, or fixture paths and no lockfile changes. `git diff --check` passed for both ranges and the working tree.
