@@ -1,23 +1,29 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue"
 
+import LoadingSpinner from "../../components/LoadingSpinner.vue"
 import { listKnowledgeSources, startOfficialKnowledgeSync } from "../../services/knowledge-sync-api"
 import type { KnowledgeSource, KnowledgeSyncSummary } from "../../types/knowledge-sync"
 
 const sources = ref<KnowledgeSource[]>([])
 const lastRun = ref<KnowledgeSyncSummary | null>(null)
 const loading = ref(false)
+const sourceLoading = ref(false)
 const error = ref("")
 
 async function loadSources() {
+  sourceLoading.value = true
   try {
     sources.value = await listKnowledgeSources()
   } catch (reason) {
     error.value = reason instanceof Error ? reason.message : "无法读取知识库数据源状态"
+  } finally {
+    sourceLoading.value = false
   }
 }
 
 async function initializeKnowledgebase() {
+  if (loading.value) return
   error.value = ""
   loading.value = true
   try {
@@ -47,7 +53,7 @@ onMounted(loadSources)
           <text class="section-title">初始化完整岗位库</text>
           <text class="hint">自动下载、解析并增量写入已启用的合规官方数据源，用户手动维护的岗位不会被覆盖。</text>
         </view>
-        <button class="primary" :loading="loading" @click="initializeKnowledgebase">一键初始化完整岗位库</button>
+        <button class="primary" :loading="loading" :disabled="loading" @click="initializeKnowledgebase">一键初始化完整岗位库</button>
         <text v-if="error" class="error">{{ error }}</text>
       </view>
 
@@ -66,6 +72,7 @@ onMounted(loadSources)
           <text class="section-title">数据源状态</text>
           <text class="hint">仅支持 HTTPS 直链及 CSV、JSON、ZIP 内 CSV/JSON</text>
         </view>
+        <LoadingSpinner v-if="sourceLoading" size="sm" label="正在读取数据源状态" />
         <view v-for="source in sources" :key="source.sourceKey" class="source-row">
           <view>
             <text class="source-name">{{ source.displayName }}</text>

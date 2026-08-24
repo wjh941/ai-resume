@@ -1,10 +1,14 @@
 <script setup lang="ts">
+import { ref } from "vue"
+
+import LoadingSpinner from "../../components/LoadingSpinner.vue"
 import { checkResumeReadiness } from "../../services/evidence-api"
 import { useResumeStore } from "../../stores/resume"
 import type { TemplateId } from "../../types/resume"
 import { decideTemplateSelection } from "../../utils/template-selection"
 
 const store = useResumeStore()
+const loadingTemplateId = ref<TemplateId | null>(null)
 
 const templates: Array<{ id: TemplateId; name: string; description: string }> = [
   { id: "business", name: "简约商务版", description: "适合综合岗位与通用求职场景" },
@@ -27,6 +31,8 @@ function confirmWarnings(warnings: string[]): Promise<boolean> {
 }
 
 async function chooseTemplate(templateId: TemplateId) {
+  if (loadingTemplateId.value) return
+  loadingTemplateId.value = templateId
   try {
     const report = await checkResumeReadiness(store.draft.resume)
     const decision = decideTemplateSelection(report)
@@ -40,6 +46,8 @@ async function chooseTemplate(templateId: TemplateId) {
   } catch {
     uni.showToast({ title: "简历检查失败，请稍后重试", icon: "none" })
     return
+  } finally {
+    loadingTemplateId.value = null
   }
   store.draft.templateId = templateId
   store.checkpoint()
@@ -62,7 +70,8 @@ async function chooseTemplate(templateId: TemplateId) {
         <text class="template-name">{{ template.name }}</text>
         <text class="description">{{ template.description }}</text>
         <view class="mini-lines"><view /><view /><view /></view>
-        <button class="primary" size="mini" @click.stop="chooseTemplate(template.id)">使用此模板</button>
+        <LoadingSpinner v-if="loadingTemplateId === template.id" size="sm" label="正在检查简历准备度" />
+        <button class="primary" size="mini" :loading="loadingTemplateId === template.id" :disabled="Boolean(loadingTemplateId)" @click.stop="chooseTemplate(template.id)">使用此模板</button>
       </view>
     </view>
   </scroll-view>

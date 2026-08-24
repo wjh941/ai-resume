@@ -6,6 +6,7 @@ import {
   listEvidence,
   saveEvidence,
 } from "../../services/evidence-api"
+import LoadingSpinner from "../../components/LoadingSpinner.vue"
 import { getClientId } from "../../stores/session"
 import type {
   EvidenceKind,
@@ -24,6 +25,7 @@ const kindOptions: Array<{ value: EvidenceKind; label: string }> = [
 const evidence = ref<ResumeEvidence[]>([])
 const loading = ref(false)
 const saving = ref(false)
+const pendingDeleteId = ref<string | null>(null)
 const form = ref<ResumeEvidenceInput>(emptyForm())
 
 function emptyForm(): ResumeEvidenceInput {
@@ -59,6 +61,7 @@ async function load() {
 }
 
 async function save() {
+  if (saving.value) return
   if (!form.value.title.trim() || !form.value.actions.trim()) {
     uni.showToast({ title: "请填写经历标题和真实行动", icon: "none" })
     return
@@ -97,6 +100,8 @@ function edit(item: ResumeEvidence) {
 }
 
 async function remove(item: ResumeEvidence) {
+  if (pendingDeleteId.value) return
+  pendingDeleteId.value = item.id
   try {
     await deleteEvidence(getClientId(), item.id)
     evidence.value = evidence.value.filter((current) => current.id !== item.id)
@@ -107,6 +112,8 @@ async function remove(item: ResumeEvidence) {
       title: reason instanceof Error ? reason.message : "删除失败",
       icon: "none",
     })
+  } finally {
+    pendingDeleteId.value = null
   }
 }
 
@@ -154,13 +161,14 @@ onMounted(() => {
           <view><text class="verified-title">我确认以上信息真实准确</text><text class="verified-hint">确认后会优先用于岗位相关建议。</text></view>
           <switch :checked="form.verified" color="#1677ff" @change="form.verified = $event.detail.value" />
         </view>
-        <button class="primary" :loading="saving" @click="save">{{ form.id ? "保存修改" : "保存经历证据" }}</button>
+        <button class="primary" :loading="saving" :disabled="saving" @click="save">{{ form.id ? "保存修改" : "保存经历证据" }}</button>
       </view>
 
       <view class="list-heading">
         <text>已保存经历</text>
         <text>{{ loading ? "加载中" : `${evidence.length} 条` }}</text>
       </view>
+      <LoadingSpinner v-if="loading" size="sm" label="正在加载经历证据" />
       <view v-if="!loading && !evidence.length" class="empty">
         <text>先录入一条真实经历，后续可按目标岗位生成可确认的简历草案。</text>
       </view>
@@ -178,7 +186,7 @@ onMounted(() => {
         <text v-if="item.proofNote" class="proof">证据：{{ item.proofNote }}</text>
         <view class="actions">
           <button size="mini" class="secondary" @click="edit(item)">编辑</button>
-          <button size="mini" class="danger" @click="remove(item)">删除</button>
+          <button size="mini" class="danger" :loading="pendingDeleteId === item.id" :disabled="Boolean(pendingDeleteId)" @click="remove(item)">删除</button>
         </view>
       </view>
     </view>

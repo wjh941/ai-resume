@@ -2,6 +2,7 @@
 import { computed, ref, watch } from "vue"
 
 import FormField from "../../components/FormField.vue"
+import LoadingSpinner from "../../components/LoadingSpinner.vue"
 import { getEvidenceSuggestions } from "../../services/evidence-api"
 import { saveDraft } from "../../services/resume-api"
 import { useResumeStore } from "../../stores/resume"
@@ -18,7 +19,9 @@ const store = useResumeStore()
 const resume = computed(() => store.draft.resume)
 const activeJob = computed(() => store.activeJob ?? store.draft.jobIntelligence)
 const evidenceSuggestions = ref<EvidenceSuggestion[]>([])
+const suggestionsLoading = ref(false)
 const fieldErrors = ref<Record<string, string>>({})
+const saving = ref(false)
 
 watch(() => store.draft, () => store.checkpoint(), { deep: true })
 watch(activeJob, (job) => {
@@ -59,10 +62,13 @@ function addSuggestedInternship() {
 }
 
 async function loadEvidenceSuggestions(roleName: string) {
+  suggestionsLoading.value = true
   try {
     evidenceSuggestions.value = await getEvidenceSuggestions(getClientId(), roleName)
   } catch {
     evidenceSuggestions.value = []
+  } finally {
+    suggestionsLoading.value = false
   }
 }
 
@@ -79,10 +85,12 @@ function applyEvidenceSuggestion(suggestion: EvidenceSuggestion) {
 }
 
 async function save() {
+  if (saving.value) return
   const errors = validateResume(resume.value)
   fieldErrors.value = toValidationErrorMap(errors)
   if (errors.length) return
   if (errors.length) return uni.showToast({ title: errors[0].message, icon: "none" })
+  saving.value = true
   try {
     const saved = await saveDraft(getClientId(), store.draft)
     store.draft.id = saved.id
@@ -91,6 +99,8 @@ async function save() {
   } catch {
     store.checkpoint()
     uni.showToast({ title: "网络异常，已保留本地草稿", icon: "none" })
+  } finally {
+    saving.value = false
   }
 }
 
@@ -140,7 +150,8 @@ function prepareAndChooseTemplate() {
         </view>
         <button size="mini" class="secondary" @click="openEvidenceLibrary">管理经历</button>
       </view>
-      <view v-if="evidenceSuggestions.length" class="suggestion-list">
+      <LoadingSpinner v-if="suggestionsLoading" size="sm" label="正在读取经历建议" />
+      <view v-else-if="evidenceSuggestions.length" class="suggestion-list">
         <view
           v-for="suggestion in evidenceSuggestions"
           :key="suggestion.sourceEvidenceId"
@@ -205,7 +216,7 @@ function prepareAndChooseTemplate() {
     </view>
 
     <view class="actions">
-      <button @click="save">保存草稿</button>
+      <button :loading="saving" :disabled="saving" @click="save">保存草稿</button>
       <button class="primary" @click="prepareAndChooseTemplate">智能补全并选择模板</button>
     </view>
   </scroll-view>
