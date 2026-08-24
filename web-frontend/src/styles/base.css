@@ -110,7 +110,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .form-link { justify-self: start; padding: 0; color: var(--forest); border: 0; background: transparent; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
 .form-hint, .form-error { margin: -3px 0 0; font-size: 13px; line-height: 1.5; }
 .form-hint { color: var(--forest); }
-.form-error { color: var(--danger); }
+.form-error { display: block; margin-top: 6px; color: var(--danger); font-size: 12px; line-height: 1.45; }
+.local-save-status { min-height: 18px; color: var(--muted); font-size: 12px; }
 .primary-button { position: relative; display: inline-flex; min-height: 48px; align-items: center; justify-content: center; gap: 8px; overflow: hidden; isolation: isolate; padding: 0 18px; color: #fff; border: 0; border-radius: var(--radius); background: var(--coral); font-weight: 750; box-shadow: var(--shadow-tight); }
 .primary-button::after { position: absolute; z-index: -1; top: 50%; left: 50%; width: 18px; height: 18px; content: ""; border-radius: 50%; background: color-mix(in srgb, #fff 34%, transparent); opacity: 0; pointer-events: none; transform: translate(-50%, -50%) scale(0); }
 .primary-button:active:not(:disabled)::after { animation: button-ripple var(--motion-ripple) var(--motion-ease) both; }

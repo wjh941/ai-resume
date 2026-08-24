@@ -1,11 +1,18 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue"
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue"
 import { Plus, Save, X } from "lucide-vue-next"
 
 import AsyncButton from "../components/AsyncButton.vue"
 import LoadingSpinner from "../components/LoadingSpinner.vue"
+import {
+  clearDraftCheckpoint,
+  readDraftCheckpoint,
+  writeDraftCheckpoint,
+} from "../lib/draft-checkpoint"
 import { getDraft, saveDraft, type DraftRecord } from "../lib/drafts"
 import { toDraftSaveInput } from "../lib/draft-workflow"
+import { createResumeEditorOrchestration } from "../lib/resume-editor-orchestration"
+import { validateDraft } from "../lib/resume-validation"
 
 const props = defineProps<{ draftId: string }>()
 const emit = defineEmits<{
@@ -13,10 +20,28 @@ const emit = defineEmits<{
   saved: [draft: DraftRecord]
 }>()
 
-const draft = ref<DraftRecord | null>(null)
 const loading = ref(true)
-const saving = ref(false)
 const error = ref("")
+
+const {
+  draft,
+  fieldErrors,
+  localSaveState,
+  saving,
+  hydrate,
+  save: saveEditor,
+} = createResumeEditorOrchestration({
+  checkpoint: (currentDraft) => writeDraftCheckpoint(window.localStorage, currentDraft),
+  clearCheckpoint: (draftId) => clearDraftCheckpoint(window.localStorage, draftId),
+  restoreCheckpoint: (serverDraft) => readDraftCheckpoint(window.localStorage, props.draftId, serverDraft.updatedAt),
+  validate: validateDraft,
+  saveRemote: (currentDraft) => saveDraft(toDraftSaveInput(currentDraft)),
+  settleDraft: nextTick,
+  onSaveStart: () => { error.value = "" },
+  onSaved: (saved) => emit("saved", saved),
+  onRemoteError: () => { error.value = "简历草稿暂未保存，请检查登录状态后重试" },
+  registerBeforeUnmount: onBeforeUnmount,
+})
 
 const skillsText = computed({
   get: () => draft.value?.resume.skills.skills.join(", ") || "",
@@ -30,7 +55,8 @@ async function load(): Promise<void> {
   error.value = ""
   try {
     const loaded = await getDraft(props.draftId)
-    draft.value = JSON.parse(JSON.stringify(loaded)) as DraftRecord
+    const serverDraft = JSON.parse(JSON.stringify(loaded)) as DraftRecord
+    await hydrate(serverDraft)
   } catch {
     error.value = "暂时无法打开简历草稿，请稍后重试"
   } finally {
@@ -69,18 +95,7 @@ function updateCertificates(event: Event): void {
 }
 
 async function save(): Promise<void> {
-  if (!draft.value || saving.value) return
-  saving.value = true
-  error.value = ""
-  try {
-    const saved = await saveDraft(toDraftSaveInput(draft.value))
-    draft.value = saved
-    emit("saved", saved)
-  } catch {
-    error.value = "简历草稿暂未保存，请检查登录状态后重试"
-  } finally {
-    saving.value = false
-  }
+  await saveEditor()
 }
 
 onMounted(load)
@@ -104,18 +119,38 @@ onMounted(load)
       <span /><span /><span /><span />
     </div>
     <ErrorNotice v-else-if="error && !draft" :message="error" />
-    <form v-else-if="draft" class="resume-editor-form" @submit.prevent="save">
+    <form v-else-if="draft" class="resume-editor-form" novalidate @submit.prevent="save">
       <ErrorNotice v-if="error" :message="error" />
       <section class="editor-section">
         <h2>基本信息</h2>
         <div class="editor-grid">
-          <label><span>草稿名称</span><input v-model.trim="draft.jobTitle" maxlength="160" required /></label>
+          <label>
+            <span>草稿名称</span>
+            <input v-model.trim="draft.jobTitle" maxlength="160" :aria-invalid="Boolean(fieldErrors.jobTitle)" :aria-describedby="fieldErrors.jobTitle ? 'resume-job-title-error' : undefined" />
+            <small v-if="fieldErrors.jobTitle" id="resume-job-title-error" class="form-error">{{ fieldErrors.jobTitle }}</small>
+          </label>
           <label><span>简历模板</span><select v-model="draft.templateId"><option value="business">商务模板</option><option value="technology">技术模板</option><option value="graduate">毕业生模板</option><option value="analytics">分析模板</option></select></label>
-          <label><span>姓名</span><input v-model.trim="draft.resume.basic.name" maxlength="80" /></label>
-          <label><span>手机号</span><input v-model.trim="draft.resume.basic.phone" maxlength="30" /></label>
-          <label><span>邮箱</span><input v-model.trim="draft.resume.basic.email" type="email" maxlength="160" /></label>
+          <label>
+            <span>姓名</span>
+            <input v-model.trim="draft.resume.basic.name" maxlength="80" :aria-invalid="Boolean(fieldErrors['basic.name'])" :aria-describedby="fieldErrors['basic.name'] ? 'resume-basic-name-error' : undefined" />
+            <small v-if="fieldErrors['basic.name']" id="resume-basic-name-error" class="form-error">{{ fieldErrors["basic.name"] }}</small>
+          </label>
+          <label>
+            <span>手机号</span>
+            <input v-model.trim="draft.resume.basic.phone" maxlength="30" :aria-invalid="Boolean(fieldErrors['basic.phone'])" :aria-describedby="fieldErrors['basic.phone'] ? 'resume-basic-phone-error' : undefined" />
+            <small v-if="fieldErrors['basic.phone']" id="resume-basic-phone-error" class="form-error">{{ fieldErrors["basic.phone"] }}</small>
+          </label>
+          <label>
+            <span>邮箱</span>
+            <input v-model.trim="draft.resume.basic.email" type="email" maxlength="160" :aria-invalid="Boolean(fieldErrors['basic.email'])" :aria-describedby="fieldErrors['basic.email'] ? 'resume-basic-email-error' : undefined" />
+            <small v-if="fieldErrors['basic.email']" id="resume-basic-email-error" class="form-error">{{ fieldErrors["basic.email"] }}</small>
+          </label>
           <label><span>城市</span><input v-model.trim="draft.resume.basic.city" maxlength="80" /></label>
-          <label><span>目标岗位</span><input v-model.trim="draft.resume.job.targetRole" maxlength="120" /></label>
+          <label>
+            <span>目标岗位</span>
+            <input v-model.trim="draft.resume.job.targetRole" maxlength="120" :aria-invalid="Boolean(fieldErrors['job.targetRole'])" :aria-describedby="fieldErrors['job.targetRole'] ? 'resume-target-role-error' : undefined" />
+            <small v-if="fieldErrors['job.targetRole']" id="resume-target-role-error" class="form-error">{{ fieldErrors["job.targetRole"] }}</small>
+          </label>
           <label><span>期望薪资</span><input v-model.trim="draft.resume.job.expectedSalary" maxlength="80" /></label>
           <label><span>工作形式</span><input v-model.trim="draft.resume.job.employmentType" maxlength="80" /></label>
         </div>
@@ -166,6 +201,9 @@ onMounted(load)
         <label><span>自我评价</span><textarea v-model.trim="draft.resume.selfEvaluation" rows="5" /></label>
       </section>
 
+      <div class="local-save-status" aria-live="polite">
+        {{ localSaveState === "saving" ? "正在保存到本机" : localSaveState === "saved" ? "已保存到本机" : localSaveState === "error" ? "本机自动保存失败，请手动保存" : "" }}
+      </div>
       <AsyncButton class="primary-button" type="submit" :loading="saving"><Save :size="17" aria-hidden="true" />保存草稿</AsyncButton>
     </form>
   </section>
