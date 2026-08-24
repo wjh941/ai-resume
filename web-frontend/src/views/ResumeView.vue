@@ -5,6 +5,7 @@ import { onMounted, ref } from "vue"
 import { copyDraft, deleteDraft, listDrafts, type DraftRecord } from "../lib/drafts"
 import { prependDraft, removeDraftById } from "../lib/draft-workflow"
 import AsyncButton from "../components/AsyncButton.vue"
+import ExpandableText from "../components/ExpandableText.vue"
 import LoadingSpinner from "../components/LoadingSpinner.vue"
 
 const emit = defineEmits<{
@@ -75,7 +76,7 @@ onMounted(refresh)
     <div v-else-if="drafts.length" class="record-list">
       <article v-for="draft in drafts" :key="draft.id" class="record-row">
         <span class="record-symbol record-coral"><FilePenLine :size="21" aria-hidden="true" /></span>
-        <div><h2>{{ draft.jobTitle || "未命名简历" }}</h2><p>模板：{{ draft.templateId || "默认模板" }} · 最近保存：{{ draft.updatedAt || "时间待同步" }}</p></div>
+        <div><h2><ExpandableText :text="draft.jobTitle || '未命名简历'" :lines="1" :expand-at="36" label="简历名称" /></h2><p>模板：{{ draft.templateId || "默认模板" }} · 最近保存：{{ draft.updatedAt || "时间待同步" }}</p></div>
         <div class="record-actions">
           <AsyncButton class="text-action compact" type="button" :title="`编辑 ${draft.jobTitle || '未命名简历'}`" :aria-label="`编辑 ${draft.jobTitle || '未命名简历'}`" @click="emit('open-draft', draft.id)"><Pencil :size="15" aria-hidden="true" />编辑</AsyncButton>
           <AsyncButton class="text-action compact" type="button" :loading="pendingAction === 'copy' && pendingDraftId === draft.id" :disabled="Boolean(pendingAction)" :title="`复制 ${draft.jobTitle || '未命名简历'}`" :aria-label="`复制 ${draft.jobTitle || '未命名简历'}`" @click="copy(draft)"><Copy :size="15" aria-hidden="true" />复制</AsyncButton>

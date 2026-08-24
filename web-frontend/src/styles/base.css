@@ -161,6 +161,13 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .view-heading p { max-width: 650px; margin: 12px 0 0; color: var(--muted); line-height: 1.65; }
 .text-action, .danger-action { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; gap: 7px; padding: 0 11px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-raised); color: var(--ink); font-size: 13px; font-weight: 720; white-space: nowrap; }
 .text-action:hover { color: var(--forest); border-color: var(--forest); transform: translateY(-1px); }
+.expandable-text { display: block; min-width: 0; }
+.expandable-copy { display: block; min-width: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.expandable-copy.is-collapsed { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; }
+.expandable-text.is-1-line .expandable-copy.is-collapsed { -webkit-line-clamp: 1; }
+.expandable-text.is-4-line .expandable-copy.is-collapsed { -webkit-line-clamp: 4; }
+.expandable-toggle { min-height: 30px; margin: 4px 0 0; padding: 0; border: 0; background: transparent; color: var(--forest); font: inherit; font-size: 12px; font-weight: 760; line-height: 1.2; cursor: pointer; transition: color var(--motion-fast) var(--ease-standard), opacity var(--motion-fast) var(--ease-standard); }
+.expandable-toggle:hover { color: var(--coral); }
 .danger-action { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, var(--line)); }
 .danger-action:hover { color: #fff; border-color: var(--danger); background: var(--danger); }
 .notice-error, .notice-success { padding: 13px 15px; margin: 0; border-radius: var(--radius); font-size: 14px; line-height: 1.55; }

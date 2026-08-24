@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { readFileSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
+import { fileURLToPath } from "node:url"
 
 import { useAsyncAction } from "../composables/useAsyncAction"
 
@@ -114,5 +115,26 @@ describe("useAsyncAction", () => {
     expect(topbar).toContain(':aria-pressed="dark"')
     expect(applications).toContain(":aria-label=")
     expect(resume).toContain(":aria-label=")
+  })
+
+  it("provides accessible long-text expansion in read-only business content", () => {
+    const componentUrl = new URL("../components/ExpandableText.vue", import.meta.url)
+    expect(existsSync(fileURLToPath(componentUrl))).toBe(true)
+
+    const component = readFileSync(componentUrl, "utf8")
+    const styles = readFileSync(new URL("../styles/base.css", import.meta.url), "utf8")
+    const applications = readFileSync(new URL("../views/ApplicationsView.vue", import.meta.url), "utf8")
+    const jobs = readFileSync(new URL("../views/JobsView.vue", import.meta.url), "utf8")
+    const resume = readFileSync(new URL("../views/ResumeView.vue", import.meta.url), "utf8")
+    const evidence = readFileSync(new URL("../views/EvidenceView.vue", import.meta.url), "utf8")
+
+    expect(component).toContain('aria-expanded')
+    expect(component).toContain('aria-controls')
+    expect(styles).toContain('.expandable-copy.is-collapsed')
+    expect(styles).toContain('-webkit-line-clamp')
+    expect(applications).toContain('<ExpandableText')
+    expect(jobs).toContain('<ExpandableText')
+    expect(resume).toContain('<ExpandableText')
+    expect(evidence).toContain('<ExpandableText')
   })
 })
