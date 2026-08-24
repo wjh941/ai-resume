@@ -6,6 +6,7 @@ import {
   ClipboardCheck,
   FilePenLine,
   Home,
+  Crown,
   KanbanSquare,
   Map,
   UserRound,
@@ -18,6 +19,7 @@ export type WorkspaceView =
   | "jobs"
   | "applications"
   | "evidence"
+  | "membership"
   | "insights"
   | "account"
 
@@ -36,6 +38,7 @@ const navigation = [
   { key: "jobs", label: "岗位机会", icon: BriefcaseBusiness },
   { key: "applications", label: "投递管理", icon: KanbanSquare },
   { key: "evidence", label: "经历证据", icon: ClipboardCheck },
+  { key: "membership", label: "会员与订单", icon: Crown },
   { key: "insights", label: "年度洞察", icon: ChartNoAxesCombined },
   { key: "account", label: "账户设置", icon: UserRound },
 ] as const

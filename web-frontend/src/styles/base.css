@@ -300,6 +300,29 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .readiness-result p { margin: 9px 0 0; }
 .evidence-loading { min-height: 360px; }
 
+.membership-view { gap: 26px; }
+.membership-entitlement { display: flex; align-items: flex-start; gap: 16px; padding: 22px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.membership-entitlement h2 { margin: 0; font-size: 25px; }
+.membership-entitlement p { margin: 7px 0 0; color: var(--muted); font-size: 13px; }
+.membership-packages, .order-panel { display: grid; gap: 18px; }
+.package-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.membership-package { display: grid; gap: 16px; min-height: 250px; padding: 20px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-raised); box-shadow: var(--shadow); }
+.membership-package.is-current { border-color: var(--coral); }
+.package-heading { display: flex; gap: 11px; align-items: center; }
+.package-heading h3 { margin: 0; font-size: 16px; }
+.package-heading p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+.package-price { color: var(--forest); font-size: 31px; line-height: 1; }
+.package-benefits { display: grid; gap: 7px; padding: 0; margin: 0; color: var(--muted); list-style: none; font-size: 13px; }
+.package-benefits li { display: flex; gap: 7px; align-items: center; }
+.payment-pending { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 18px; border: 1px solid color-mix(in srgb, var(--citron) 70%, var(--line)); border-radius: var(--radius); background: #f8edbd; }
+.payment-pending h2 { margin: 0; font-size: 18px; }
+.payment-pending p { margin: 6px 0 0; color: #765f11; font-size: 13px; }
+.order-list { display: grid; border-top: 1px solid var(--line); }
+.order-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto minmax(140px, auto); gap: 16px; align-items: center; padding: 15px 4px; border-bottom: 1px solid var(--line); }
+.order-row strong, .order-row small { display: block; }
+.order-row small { margin-top: 4px; color: var(--muted); font-size: 11px; }
+.membership-loading { min-height: 300px; }
+
 .resume-editor-view { gap: 26px; }
 .resume-editor-form { display: grid; gap: 18px; }
 .editor-section { display: grid; gap: 16px; padding: 22px 0; border-top: 1px solid var(--line); }
@@ -365,6 +388,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .followup-grid { grid-template-columns: 1fr; padding: 16px 0; background: transparent; }
   .evidence-workspace-grid { grid-template-columns: 1fr; }
   .suggestion-query { grid-template-columns: 1fr; }
+  .package-grid { grid-template-columns: 1fr; }
+  .payment-pending { align-items: flex-start; flex-direction: column; }
+  .order-row { grid-template-columns: 1fr auto; gap: 8px 12px; }
+  .order-row > :nth-child(3), .order-row > :nth-child(4) { grid-column: 1 / -1; }
 }
 @media (max-width: 480px) {
   .login-form-area { padding: 36px 20px; }

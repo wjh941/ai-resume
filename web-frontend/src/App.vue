@@ -11,6 +11,7 @@ import ApplicationsView from "./views/ApplicationsView.vue"
 import EvidenceView from "./views/EvidenceView.vue"
 import CareerView from "./views/CareerView.vue"
 import InsightsView from "./views/InsightsView.vue"
+import MembershipView from "./views/MembershipView.vue"
 import JobsView from "./views/JobsView.vue"
 import OverviewView from "./views/OverviewView.vue"
 import ResumeView from "./views/ResumeView.vue"
@@ -28,6 +29,7 @@ const activeComponent = computed(() => ({
   jobs: JobsView,
   applications: ApplicationsView,
   evidence: EvidenceView,
+  membership: MembershipView,
   insights: InsightsView,
   account: AccountView,
 }[activeView.value]))
