@@ -24,6 +24,7 @@ import type {
 } from "../../types/consultation"
 import { prepareResumeForJob } from "../../utils/resume-autofill"
 import { completeOnboarding, hasCompletedOnboarding } from "../../utils/onboarding"
+import { getRoleFieldError } from "../../utils/h5-feedback"
 
 const roleName = ref("")
 const selectedRoles = ref<string[]>([])
@@ -39,6 +40,7 @@ const adviceLoading = ref(false)
 const pdfLoading = ref(false)
 const marketSearchLoading = ref(false)
 const error = ref("")
+const roleFieldError = ref("")
 const reviewError = ref("")
 const adviceError = ref("")
 const jobConsultations = ref<JobConsultation[]>([])
@@ -82,6 +84,7 @@ const selectedAdviceTopic = computed(() => adviceTopics[selectedAdviceIndex.valu
 let suggestionRequestId = 0
 
 watch(roleName, (value) => {
+  if (value.trim()) roleFieldError.value = ""
   void refreshSuggestions(value)
 })
 
@@ -148,11 +151,14 @@ function resetResults() {
 
 async function beginConsultation() {
   const roles = selectedOrTypedRoles()
-  if (!roles.length) {
-    error.value = "请输入岗位名称，或从下方联想岗位中选择。"
+  const nextRoleFieldError = getRoleFieldError(roles)
+  if (nextRoleFieldError) {
+    roleFieldError.value = nextRoleFieldError
+    error.value = ""
     return
   }
 
+  roleFieldError.value = ""
   error.value = ""
   resetResults()
   const nextStep = consultation.beginRoleConsultation(roles[0])
@@ -426,6 +432,8 @@ onMounted(() => {
             placeholder="输入“数据”“工程师”或具体岗位"
             confirm-type="search"
             aria-label="目标岗位"
+            :aria-invalid="Boolean(roleFieldError)"
+            aria-describedby="job-role-error"
             @confirm="beginConsultation"
           />
           <text class="search-icon" aria-hidden="true">⌕</text>
@@ -448,6 +456,7 @@ onMounted(() => {
             </transition-group>
           </view>
         </view>
+        <text v-if="roleFieldError" id="job-role-error" class="ui-error-tip">{{ roleFieldError }}</text>
 
         <view v-if="selectedRoles.length" class="selected-role-area">
           <text class="selected-role-title">已选岗位</text>

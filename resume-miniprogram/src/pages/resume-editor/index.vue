@@ -20,6 +20,7 @@ import { validateResume } from "../../utils/validators"
 import { downloadExport } from "../../utils/download-export"
 import { notify } from "../../utils/notifications"
 import { showErrorToast } from "../../utils/error-feedback"
+import { captureFocusRestore } from "../../utils/focus-restore"
 import type { ResumePayload } from "../../types/resume"
 
 const store = useResumeStore()
@@ -139,6 +140,9 @@ async function importResume(): Promise<void> {
 
 function applyImportPreview(): void {
   if (!importPreview.value) return
+  const restoreFocus = captureFocusRestore(
+    typeof document === "undefined" ? undefined : document,
+  )
   uni.showModal({
     title: "应用解析预览",
     content: "应用后会替换当前简历内容。请确认已核对需要保留的信息。",
@@ -150,6 +154,7 @@ function applyImportPreview(): void {
       importPreview.value = null
       uni.showToast({ title: "已应用解析预览，请继续补充内容", icon: "success" })
     },
+    complete: restoreFocus,
   })
 }
 
@@ -212,6 +217,9 @@ async function saveVersion() {
 
 function restoreVersion(version: ResumeVersion) {
   if (!store.draft.id || versionLoading.value || versionComparingId.value || restoringVersionId.value || importLoading.value || exporting.value) return
+  const restoreFocus = captureFocusRestore(
+    typeof document === "undefined" ? undefined : document,
+  )
   uni.showModal({
     title: "恢复版本",
     content: "恢复后将覆盖当前草稿内容，请确认已保存需要保留的修改。",
@@ -231,6 +239,7 @@ function restoreVersion(version: ResumeVersion) {
         restoringVersionId.value = ""
       }
     },
+    complete: restoreFocus,
   })
 }
 

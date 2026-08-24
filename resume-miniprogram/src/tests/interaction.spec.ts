@@ -3,6 +3,10 @@ import { existsSync, readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 
 import { runWithLoading } from "../utils/async-state"
+import {
+  getAssessmentStepTransition,
+  getRoleFieldError,
+} from "../utils/h5-feedback"
 
 describe("runWithLoading", () => {
   it("clears loading after resolve", async () => {
@@ -24,6 +28,32 @@ describe("runWithLoading", () => {
       throw new DOMException("The operation was aborted", "AbortError")
     })).rejects.toMatchObject({ name: "AbortError" })
     expect(states).toEqual([true, false])
+  })
+
+  it("returns field feedback only when no role was selected", () => {
+    expect(getRoleFieldError([])).toBe("请输入岗位名称，或从下方联想岗位中选择。")
+    expect(getRoleFieldError(["数据工程师"])).toBe("")
+  })
+
+  it("keeps unanswered assessment steps non-blocking", () => {
+    expect(getAssessmentStepTransition(0, 4, false)).toEqual({
+      stepHint: "本步骤尚未作答，可继续并稍后补充",
+      nextStep: 1,
+      shouldSubmit: false,
+    })
+    expect(getAssessmentStepTransition(3, 4, false)).toEqual({
+      stepHint: "本步骤尚未作答，可继续并稍后补充",
+      nextStep: 3,
+      shouldSubmit: true,
+    })
+  })
+
+  it("clears assessment guidance after an answered step", () => {
+    expect(getAssessmentStepTransition(1, 4, true)).toEqual({
+      stepHint: "",
+      nextStep: 2,
+      shouldSubmit: false,
+    })
   })
 
   it("keeps existing H5 async controls disabled while pending", () => {
@@ -160,5 +190,18 @@ describe("runWithLoading", () => {
     expect(collection).toContain('<ExpandableText class="role"')
     expect(jobs).toContain('<ExpandableText class="role"')
     expect(preview).toContain(':expand-at="96"')
+  })
+
+  it("separates H5 field feedback and restores focus after native modals", () => {
+    const jobSearch = readFileSync(new URL("../pages/job-search/index.vue", import.meta.url), "utf8")
+    const assessment = readFileSync(new URL("../pages/career-assessment/index.vue", import.meta.url), "utf8")
+    const editor = readFileSync(new URL("../pages/resume-editor/index.vue", import.meta.url), "utf8")
+    expect(jobSearch).toContain('const roleFieldError = ref("")')
+    expect(jobSearch).toContain(':aria-invalid="Boolean(roleFieldError)"')
+    expect(jobSearch).toContain('id="job-role-error"')
+    expect(assessment).toContain('const stepHint = ref("")')
+    expect(assessment).toContain('aria-live="polite"')
+    expect(editor).toContain("captureFocusRestore")
+    expect(editor).toContain("complete: restoreFocus")
   })
 })

@@ -10,12 +10,14 @@ import {
 import { getClientId } from "../../stores/session"
 import { useAssessmentStore } from "../../stores/assessment"
 import type { AssessmentQuestionGroup } from "../../types/assessment"
+import { getAssessmentStepTransition } from "../../utils/h5-feedback"
 
 const store = useAssessmentStore()
 const currentStep = ref(0)
 const loading = ref(false)
 const submitting = ref(false)
 const error = ref("")
+const stepHint = ref("")
 
 const steps: Array<{ group: AssessmentQuestionGroup; title: string; hint: string }> = [
   { group: "interest", title: "兴趣偏好", hint: "更愿意投入哪类任务" },
@@ -40,11 +42,22 @@ const result = computed(() => store.result?.result ?? null)
 
 function answer(key: string, value: number) {
   store.answer(key, value)
+  stepHint.value = ""
+}
+
+function currentStepHasAnswer(): boolean {
+  return currentQuestions.value.some((question) => Number.isInteger(store.answers[question.key]))
 }
 
 function goNext() {
-  if (currentStep.value < steps.length - 1) currentStep.value += 1
-  else void submit()
+  const transition = getAssessmentStepTransition(
+    currentStep.value,
+    steps.length,
+    currentStepHasAnswer(),
+  )
+  stepHint.value = transition.stepHint
+  if (transition.shouldSubmit) void submit()
+  else currentStep.value = transition.nextStep
 }
 
 function goPrevious() {
@@ -141,6 +154,7 @@ onMounted(() => {
             </text>
           </view>
 
+          <text v-if="stepHint" class="ui-error-tip" aria-live="polite">{{ stepHint }}</text>
           <view class="button-row">
             <button class="secondary" :disabled="currentStep === 0" @click="goPrevious">上一步</button>
             <button class="primary" :loading="submitting" :disabled="submitting" @click="goNext">
