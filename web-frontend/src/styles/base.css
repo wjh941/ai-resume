@@ -217,6 +217,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 .record-list, .task-list, .application-table { display: grid; border-top: 1px solid var(--line); }
 .application-record, .evidence-list > article, .record-list > .record-row, .task-list > .task-row, .order-list > .order-row { content-visibility: auto; contain: layout paint style; contain-intrinsic-size: auto 82px; }
+.application-record { contain-intrinsic-size: auto 124px; }
+.evidence-list > article { contain-intrinsic-size: auto 132px; }
+.record-list > .record-row { contain-intrinsic-size: auto 82px; }
+.order-list > .order-row { contain-intrinsic-size: auto 72px; }
 .record-row, .task-row, .application-row { display: grid; align-items: center; gap: 16px; padding: 18px 4px; border-bottom: 1px solid var(--line); }
 .record-row:hover, .task-row:hover, .application-row:hover { background: color-mix(in srgb, var(--mint) 13%, transparent); }
 .record-row { grid-template-columns: 42px minmax(0, 1fr) auto; }
@@ -231,6 +235,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .empty-board { display: flex; align-items: flex-start; gap: 16px; max-width: 680px; padding: 36px 0; color: var(--forest); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .empty-board h2 { margin: 0; color: var(--ink); font-size: 19px; }
 .empty-board p { margin: 8px 0 0; color: var(--muted); line-height: 1.65; }
+.empty-board-icon { display: grid; flex: 0 0 44px; width: 44px; height: 44px; place-items: center; color: var(--forest); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-muted); }
+.progressive-list-sentinel { justify-self: center; min-height: 38px; margin: 16px 0 4px; padding: 0 14px; color: var(--forest); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-raised); font-size: 13px; font-weight: 700; }
+.progressive-list-sentinel:hover { border-color: var(--forest); background: var(--surface-muted); }
 
 .inline-form, .application-form, .role-query, .insight-query { display: grid; align-items: end; gap: 12px; padding: 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-raised); box-shadow: var(--shadow); }
 .inline-form { grid-template-columns: minmax(0, 1fr) 168px auto; }
@@ -268,7 +275,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .salary-list dt { color: var(--muted); }.salary-list dd { margin: 0; color: var(--ink); text-align: right; }
 .report-actions { padding: 18px; border-radius: var(--radius); background: #f8edbd; }
 .report-actions p { margin: 15px 0 0; color: #6f5b12; font-size: 12px; line-height: 1.55; }
-.application-row { grid-template-columns: 40px minmax(0, 1fr) auto minmax(130px, auto); }
+.application-table { overflow-x: auto; overscroll-behavior-x: contain; scrollbar-gutter: stable; -webkit-overflow-scrolling: touch; }
+.application-row { min-width: 980px; grid-template-columns: 40px minmax(220px, 1fr) 128px 170px minmax(250px, auto); }
 .application-row small { color: var(--muted); font-size: 12px; text-align: right; }
 .application-record { border-bottom: 1px solid var(--line); }
 .application-record .application-row { border-bottom: 0; }
@@ -456,8 +464,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .action-route { grid-template-columns: 1fr; gap: 18px; }
   .inline-form, .application-form, .role-query, .insight-query { grid-template-columns: 1fr 1fr; }
   .inline-form > :first-child, .application-form > :first-child, .role-query > :first-child, .insight-query > :first-child { grid-column: 1 / -1; }
-  .application-row { grid-template-columns: 40px minmax(0, 1fr) auto; }.application-row small { grid-column: 2 / -1; text-align: left; }
+  .application-table { overflow-x: visible; scrollbar-gutter: auto; }
+  .application-row { min-width: 0; grid-template-columns: 40px minmax(0, 1fr) auto; }
+  .application-row small { grid-column: 2 / -1; text-align: left; }
   .record-actions { grid-column: 2 / -1; justify-content: flex-start; }
+  .application-row .record-actions { grid-column: 2 / -1; justify-content: flex-start; }
   .editor-grid { grid-template-columns: 1fr; }
   .editor-wide { grid-column: auto; }
   .application-toolbar { align-items: flex-start; flex-direction: column; }

@@ -171,4 +171,33 @@ describe("useAsyncAction", () => {
     expect(assessment).toContain("resolveAssessmentSubmitAction")
     expect(questionCard).toContain(':aria-invalid="invalid || undefined"')
   })
+
+  it("observes a late-mounted progressive list sentinel with a manual fallback", () => {
+    const sentinel = readFileSync(new URL("../components/ProgressiveListSentinel.vue", import.meta.url), "utf8")
+
+    expect(sentinel).toContain("IntersectionObserver")
+    expect(sentinel).toContain("watch(target")
+    expect(sentinel).toContain("observer?.disconnect()")
+    expect(sentinel).toContain('type="button"')
+    expect(sentinel).toContain("emit('more')")
+  })
+
+  it("bounds large Web lists and stabilizes the wide application grid", () => {
+    const resume = readFileSync(new URL("../views/ResumeView.vue", import.meta.url), "utf8")
+    const applications = readFileSync(new URL("../views/ApplicationsView.vue", import.meta.url), "utf8")
+    const evidence = readFileSync(new URL("../views/EvidenceView.vue", import.meta.url), "utf8")
+    const membership = readFileSync(new URL("../views/MembershipView.vue", import.meta.url), "utf8")
+    const jobs = readFileSync(new URL("../views/JobsView.vue", import.meta.url), "utf8")
+    const styles = readFileSync(new URL("../styles/base.css", import.meta.url), "utf8")
+
+    for (const source of [resume, applications, evidence, membership]) {
+      expect(source).toContain("useIncrementalList")
+      expect(source).toContain("ProgressiveListSentinel")
+    }
+    expect(styles).toContain("overflow-x: auto")
+    expect(styles).toContain("grid-template-columns: 40px minmax(220px, 1fr) 128px 170px minmax(250px, auto)")
+    expect(resume).toContain("本机编辑内容会自动保留，手动保存后同步到服务端。")
+    expect(applications).toContain("可直接使用上方表单新增第一条记录。")
+    expect(jobs).toContain("输入具体岗位名称后开始整理能力要求。")
+  })
 })

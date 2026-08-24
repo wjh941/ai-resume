@@ -6,6 +6,8 @@ import AsyncButton from "../components/AsyncButton.vue"
 import LoadingSpinner from "../components/LoadingSpinner.vue"
 import MembershipPackageCard from "../components/MembershipPackageCard.vue"
 import OrderRow from "../components/OrderRow.vue"
+import ProgressiveListSentinel from "../components/ProgressiveListSentinel.vue"
+import { useIncrementalList } from "../composables/useIncrementalList"
 import { completeDemoPayment, createMembershipOrder, getVipStatus, listMembershipPackages, listOrders, type MembershipOrder, type MembershipPackage, type VipStatus } from "../lib/membership"
 import { prependOrder, replaceOrder } from "../lib/membership-workflow"
 
@@ -19,10 +21,16 @@ const pendingPackage = ref("")
 const payingOrderId = ref("")
 const phase = ref<"idle" | "creating" | "awaiting-payment" | "paying" | "paid" | "error">("idle")
 const pendingOrder = ref<MembershipOrder | null>(null)
+const {
+  visibleItems: renderedOrders,
+  hasMore: hasMoreOrders,
+  showMore: showMoreOrders,
+  reset: resetVisibleOrders,
+} = useIncrementalList(orders)
 
 async function refresh(): Promise<void> {
   loading.value = true; error.value = ""
-  try { const [currentVip, available, orderList] = await Promise.all([getVipStatus(), listMembershipPackages(), listOrders()]); vip.value = currentVip; packages.value = available; orders.value = orderList; phase.value = "idle" } catch { error.value = "暂时无法读取会员信息，请稍后重试" } finally { loading.value = false }
+  try { const [currentVip, available, orderList] = await Promise.all([getVipStatus(), listMembershipPackages(), listOrders()]); vip.value = currentVip; packages.value = available; orders.value = orderList; resetVisibleOrders(); phase.value = "idle" } catch { error.value = "暂时无法读取会员信息，请稍后重试" } finally { loading.value = false }
 }
 async function purchase(packageType: MembershipPackage["packageType"], autoRenew: boolean): Promise<void> {
   if (pendingPackage.value) return
@@ -47,7 +55,7 @@ onMounted(refresh)
       <section class="membership-packages"><div class="panel-heading"><div><span class="section-kicker">服务套餐</span><h2>选择适合你的成长节奏</h2></div></div><div class="package-grid"><MembershipPackageCard v-for="item in packages" :key="item.packageType" :package="item" :current-vip="vip" :pending="pendingPackage === item.packageType" @purchase="purchase" /></div></section>
       <section v-if="phase === 'awaiting-payment' && pendingOrder" class="payment-pending"><div><h2>订单待支付</h2><p>{{ pendingOrder.orderId }} · ¥{{ pendingOrder.totalAmount }} · 当前状态：{{ pendingOrder.paymentStatus }}</p></div><AsyncButton class="primary-button compact" type="button" :loading="phase === 'paying'" @click="payDemo">完成演示支付</AsyncButton></section>
       <section v-if="phase === 'paid'" class="notice-success"><CheckCircle2 :size="17" aria-hidden="true" />订单已支付，权益状态已更新。</section>
-      <section class="order-panel"><div class="panel-heading"><div><span class="section-kicker">订单记录</span><h2>支付状态</h2></div></div><div v-if="orders.length" class="order-list"><OrderRow v-for="order in orders" :key="order.orderId" :order="order" /></div><p v-else class="source-notice">还没有订单记录。</p></section>
+      <section class="order-panel"><div class="panel-heading"><div><span class="section-kicker">订单记录</span><h2>支付状态</h2></div></div><div v-if="orders.length" class="order-list"><OrderRow v-for="order in renderedOrders" :key="order.orderId" :order="order" /><ProgressiveListSentinel :has-more="hasMoreOrders" @more="showMoreOrders" /></div><p v-else class="source-notice">还没有订单记录。</p></section>
     </template>
   </section>
 </template>

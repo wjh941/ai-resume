@@ -5,6 +5,8 @@ import { computed, onBeforeUnmount, onMounted, ref } from "vue"
 import AsyncButton from "../components/AsyncButton.vue"
 import ExpandableText from "../components/ExpandableText.vue"
 import LoadingSpinner from "../components/LoadingSpinner.vue"
+import ProgressiveListSentinel from "../components/ProgressiveListSentinel.vue"
+import { useIncrementalList } from "../composables/useIncrementalList"
 import { addTimelineEvent, deleteApplication, listApplications, listTimeline, saveApplication, saveReminder, type ApplicationInput, type ApplicationRecord, type ApplicationStatus } from "../lib/applications"
 import { appendTimelineEvent, removeApplication, replaceApplication } from "../lib/application-workflow"
 import { resolveApplicationsCloseAction, resolveWorkspaceShortcut } from "../lib/keyboard-shortcuts"
@@ -21,6 +23,12 @@ const form = ref({ company: "", roleName: "", city: "", status: "saved" as Appli
 const timelineForm = ref({ title: "", description: "", occurredAt: "" })
 const reminderAt = ref("")
 const editing = computed(() => editingId.value !== null)
+const {
+  visibleItems: renderedApplications,
+  hasMore: hasMoreApplications,
+  showMore: showMoreApplications,
+  reset: resetVisibleApplications,
+} = useIncrementalList(items)
 
 function resetForm(): void { editingId.value = null; form.value = { company: "", roleName: "", city: "", status: "saved", source: "", appliedAt: "", nextActionAt: "", nextInterviewAt: "", interviewNotes: "", notes: "", contactInfo: "", attachmentRef: "", draftId: "" } }
 function toIso(value: string): string | null { return value ? new Date(value).toISOString() : null }
@@ -31,7 +39,7 @@ function startEdit(item: ApplicationRecord): void {
   form.value = { company: item.company, roleName: item.roleName, city: item.city, status: item.status, source: item.source, appliedAt: toDate(item.appliedAt), nextActionAt: toDate(item.nextActionAt), nextInterviewAt: toDateTime(item.nextInterviewAt), interviewNotes: item.interviewNotes, notes: item.notes, contactInfo: item.contactInfo, attachmentRef: item.attachmentRef, draftId: item.draftId || "" }
   window.scrollTo({ top: 0, behavior: "smooth" })
 }
-async function refresh(): Promise<void> { loading.value = true; error.value = ""; try { items.value = await listApplications(filterStatus.value ? { status: filterStatus.value } : {}) } catch { error.value = "暂时无法读取投递记录，请稍后重试" } finally { loading.value = false } }
+async function refresh(): Promise<void> { loading.value = true; error.value = ""; try { items.value = await listApplications(filterStatus.value ? { status: filterStatus.value } : {}); resetVisibleApplications() } catch { error.value = "暂时无法读取投递记录，请稍后重试" } finally { loading.value = false } }
 async function submit(): Promise<void> {
   if (!form.value.roleName.trim() || pendingKey.value) return
   pendingKey.value = editingId.value ? `save:${editingId.value}` : "create"; error.value = ""
@@ -105,11 +113,12 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleShortcut))
     <ErrorNotice v-if="error" id="applications-error" :message="error"><AsyncButton class="notice-action" type="button" :loading="loading" @click="refresh">重试</AsyncButton></ErrorNotice>
     <div v-else-if="loading" class="content-skeleton application-loading" aria-busy="true"><LoadingSpinner class="content-loading-spinner" label="正在读取投递记录" /><span /><span /></div>
     <div v-else-if="items.length" class="application-table">
-      <article v-for="item in items" :key="item.id" class="application-record">
+      <article v-for="item in renderedApplications" :key="item.id" class="application-record">
         <div class="application-row"><span class="record-symbol record-sky"><Building2 :size="20" aria-hidden="true" /></span><div><h2><ExpandableText :text="item.roleName" :lines="1" :expand-at="36" label="岗位名称" /></h2><p><ExpandableText :text="[item.company, item.city].filter(Boolean).join(' · ')" :lines="1" :expand-at="44" label="公司与城市" /></p></div><select class="status-select" :value="item.status" :disabled="Boolean(pendingKey)" @change="handleStatusChange(item, $event)"><option v-for="(label, value) in statusLabels" :key="value" :value="value">{{ label }}</option></select><small>{{ item.nextInterviewAt || item.nextActionAt || "尚未设置下一步" }}</small><div class="record-actions"><AsyncButton class="text-action compact" type="button" :disabled="Boolean(pendingKey)" :title="`编辑 ${item.company} 的 ${item.roleName}`" :aria-label="`编辑 ${item.company} 的 ${item.roleName}`" @click="startEdit(item)"><Pencil :size="15" aria-hidden="true" />编辑</AsyncButton><AsyncButton class="text-action compact" type="button" :loading="pendingKey === `timeline-load:${item.id}`" :disabled="Boolean(pendingKey)" :title="`查看 ${item.company} 的 ${item.roleName} 时间线`" :aria-label="`查看 ${item.company} 的 ${item.roleName} 时间线`" @click="toggleTimeline(item)"><ChevronUp v-if="expandedId === item.id" :size="15" aria-hidden="true" /><ChevronDown v-else :size="15" aria-hidden="true" />时间线</AsyncButton><AsyncButton class="danger-action compact" type="button" :loading="pendingKey === `delete:${item.id}`" :disabled="Boolean(pendingKey)" :title="`删除 ${item.company} 的 ${item.roleName}`" :aria-label="`删除 ${item.company} 的 ${item.roleName}`" @click="remove(item)"><Trash2 :size="15" aria-hidden="true" />删除</AsyncButton></div></div>
         <div v-if="expandedId === item.id" class="application-followup"><div class="followup-grid"><div><h3>跟进记录</h3><ol v-if="item.timeline.length" class="timeline-list"><li v-for="event in item.timeline" :key="event.id"><strong>{{ event.title }}</strong><small>{{ event.occurredAt }}</small><p v-if="event.description">{{ event.description }}</p></li></ol><p v-else class="source-notice">暂时没有时间线记录。</p></div><div class="followup-actions"><h3>添加跟进</h3><label><span>标题</span><input v-model.trim="timelineForm.title" maxlength="240" placeholder="例如：完成一面" /></label><label><span>时间</span><input v-model="timelineForm.occurredAt" type="datetime-local" /></label><label><span>说明</span><textarea v-model.trim="timelineForm.description" rows="2" maxlength="4000" /></label><AsyncButton class="primary-button compact" type="button" :loading="pendingKey === `timeline-add:${item.id}`" :disabled="Boolean(pendingKey)" @click="addEvent(item)"><Clock3 :size="15" aria-hidden="true" />添加事件</AsyncButton><h3>设置提醒</h3><label><span>提醒时间</span><input v-model="reminderAt" type="datetime-local" /></label><AsyncButton class="text-action compact" type="button" :loading="pendingKey === `reminder:${item.id}`" :disabled="Boolean(pendingKey)" @click="setReminder(item)"><CalendarClock :size="15" aria-hidden="true" />保存提醒</AsyncButton></div></div></div>
       </article>
+      <ProgressiveListSentinel :has-more="hasMoreApplications" @more="showMoreApplications" />
     </div>
-    <div v-else class="empty-board"><Building2 :size="30" aria-hidden="true" /><div><h2>还没有投递记录</h2><p>在确认岗位与公司信息后，先保存一条待投递记录，再持续补充状态和复盘信息。</p></div></div>
+    <div v-else class="empty-board"><span class="empty-board-icon" aria-hidden="true"><Building2 :size="24" aria-hidden="true" /></span><div><h2>还没有投递记录</h2><p>在确认岗位与公司信息后，先保存一条待投递记录，再持续补充状态和复盘信息。</p><p>可直接使用上方表单新增第一条记录。</p></div></div>
   </section>
 </template>

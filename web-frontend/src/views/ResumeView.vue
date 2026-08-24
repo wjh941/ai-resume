@@ -7,6 +7,8 @@ import { prependDraft, removeDraftById } from "../lib/draft-workflow"
 import AsyncButton from "../components/AsyncButton.vue"
 import ExpandableText from "../components/ExpandableText.vue"
 import LoadingSpinner from "../components/LoadingSpinner.vue"
+import ProgressiveListSentinel from "../components/ProgressiveListSentinel.vue"
+import { useIncrementalList } from "../composables/useIncrementalList"
 
 const emit = defineEmits<{
   "open-draft": [draftId: string]
@@ -17,12 +19,19 @@ const loading = ref(true)
 const error = ref("")
 const pendingAction = ref<"copy" | "delete" | "">("")
 const pendingDraftId = ref("")
+const {
+  visibleItems: renderedDrafts,
+  hasMore: hasMoreDrafts,
+  showMore: showMoreDrafts,
+  reset: resetVisibleDrafts,
+} = useIncrementalList(drafts)
 
 async function refresh() {
   loading.value = true
   error.value = ""
   try {
     drafts.value = await listDrafts()
+    resetVisibleDrafts()
   } catch {
     error.value = "暂时无法读取简历草稿，请稍后重试"
   } finally {
@@ -74,7 +83,7 @@ onMounted(refresh)
     <ErrorNotice v-if="error" :message="error" />
     <div v-else-if="loading" class="content-skeleton" aria-busy="true"><LoadingSpinner class="content-loading-spinner" label="正在读取简历草稿" /><span /><span /><span /></div>
     <div v-else-if="drafts.length" class="record-list">
-      <article v-for="draft in drafts" :key="draft.id" class="record-row">
+      <article v-for="draft in renderedDrafts" :key="draft.id" class="record-row">
         <span class="record-symbol record-coral"><FilePenLine :size="21" aria-hidden="true" /></span>
         <div><h2><ExpandableText :text="draft.jobTitle || '未命名简历'" :lines="1" :expand-at="36" label="简历名称" /></h2><p>模板：{{ draft.templateId || "默认模板" }} · 最近保存：{{ draft.updatedAt || "时间待同步" }}</p></div>
         <div class="record-actions">
@@ -83,10 +92,11 @@ onMounted(refresh)
           <AsyncButton class="danger-action compact" type="button" :loading="pendingAction === 'delete' && pendingDraftId === draft.id" :disabled="Boolean(pendingAction)" :title="`删除 ${draft.jobTitle || '未命名简历'}`" :aria-label="`删除 ${draft.jobTitle || '未命名简历'}`" @click="remove(draft)"><Trash2 :size="15" aria-hidden="true" />删除</AsyncButton>
         </div>
       </article>
+      <ProgressiveListSentinel :has-more="hasMoreDrafts" @more="showMoreDrafts" />
     </div>
     <div v-else class="empty-board">
-      <FilePenLine :size="30" aria-hidden="true" />
-      <div><h2>还没有简历草稿</h2><p>请先在小程序的“简历中心”创建第一份草稿。独立 Web 工作台会在这里同步展示和管理它。</p></div>
+      <span class="empty-board-icon" aria-hidden="true"><FilePenLine :size="24" aria-hidden="true" /></span>
+      <div><h2>还没有简历草稿</h2><p>请先在小程序的“简历中心”创建第一份草稿。独立 Web 工作台会在这里同步展示和管理它。</p><p>本机编辑内容会自动保留，手动保存后同步到服务端。</p></div>
     </div>
   </section>
 </template>

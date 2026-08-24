@@ -91,6 +91,6 @@ async function favorite() {
       </div>
       <section class="report-actions"><h3>下一步建议</h3><ol><li v-for="action in result.report?.actions" :key="action">{{ action }}</li></ol><p>{{ result.report?.source_notice }}</p></section>
     </article>
-    <div v-else-if="!loading" class="empty-board"><BriefcaseBusiness :size="30" aria-hidden="true" /><div><h2>从一个目标岗位开始</h2><p>查询结果用于组织准备和核验方向，不代表实时岗位数量、薪资区间或录用概率。</p></div></div>
+    <div v-else-if="!loading" class="empty-board"><span class="empty-board-icon" aria-hidden="true"><BriefcaseBusiness :size="24" aria-hidden="true" /></span><div><h2>从一个目标岗位开始</h2><p>查询结果用于组织准备和核验方向，不代表实时岗位数量、薪资区间或录用概率。</p><p>输入具体岗位名称后开始整理能力要求。</p></div></div>
   </section>
 </template>
