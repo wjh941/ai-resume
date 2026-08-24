@@ -178,6 +178,8 @@ describe("useAsyncAction", () => {
 
     expect(editor).toContain('result === "invalid"')
     expect(editor).toContain("focusFirstInvalidResumeField")
+    expect(editor).toContain("resolveResumeInvalidSummary")
+    expect(editor).toContain("invalidSummaryActive")
     expect(editor).toContain('role="alert"')
     expect(editor).toContain('@click="cancel"')
     expect(editor).toContain('else if (action === "back") cancel()')

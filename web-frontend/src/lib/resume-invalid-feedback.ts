@@ -15,6 +15,13 @@ type InvalidFeedbackRoot = {
   getElementById(id: string): InvalidControl | null
 }
 
+export function resolveResumeInvalidSummary(
+  active: boolean,
+  errors: Record<string, string>,
+): string {
+  return active ? Object.values(errors)[0] || "" : ""
+}
+
 export function focusFirstInvalidResumeField(
   errors: Record<string, string>,
   root: InvalidFeedbackRoot = document,

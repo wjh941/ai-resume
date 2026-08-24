@@ -16,7 +16,7 @@ import {
   resolveResumeEditorShortcutAction,
   resolveWorkspaceShortcut,
 } from "../lib/keyboard-shortcuts"
-import { focusFirstInvalidResumeField } from "../lib/resume-invalid-feedback"
+import { focusFirstInvalidResumeField, resolveResumeInvalidSummary } from "../lib/resume-invalid-feedback"
 import { createResumeEditorOrchestration } from "../lib/resume-editor-orchestration"
 import { validateDraft } from "../lib/resume-validation"
 
@@ -29,6 +29,7 @@ const emit = defineEmits<{
 const loading = ref(true)
 const error = ref("")
 const invalidSummary = ref("")
+const invalidSummaryActive = ref(false)
 
 const {
   draft,
@@ -102,10 +103,12 @@ function updateCertificates(event: Event): void {
 }
 
 async function save(): Promise<void> {
-  invalidSummary.value = ""
+  invalidSummaryActive.value = false
+  invalidSummary.value = resolveResumeInvalidSummary(false, fieldErrors.value)
   const result = await saveEditor()
   if (result === "invalid") {
-    invalidSummary.value = Object.values(fieldErrors.value)[0] || ""
+    invalidSummaryActive.value = true
+    invalidSummary.value = resolveResumeInvalidSummary(true, fieldErrors.value)
     await nextTick()
     focusFirstInvalidResumeField(fieldErrors.value)
   }
@@ -124,7 +127,7 @@ function handleShortcut(event: KeyboardEvent): void {
 }
 
 watch(fieldErrors, (currentErrors) => {
-  if (!Object.keys(currentErrors).length) invalidSummary.value = ""
+  invalidSummary.value = resolveResumeInvalidSummary(invalidSummaryActive.value, currentErrors)
 }, { deep: true })
 
 onMounted(() => {

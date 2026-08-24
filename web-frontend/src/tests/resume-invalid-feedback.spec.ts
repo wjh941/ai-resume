@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { focusFirstInvalidResumeField } from "../lib/resume-invalid-feedback"
+import { focusFirstInvalidResumeField, resolveResumeInvalidSummary } from "../lib/resume-invalid-feedback"
 
 describe("focusFirstInvalidResumeField", () => {
   it("focuses and centers the first invalid resume control in form order", () => {
@@ -21,5 +21,16 @@ describe("focusFirstInvalidResumeField", () => {
 
     expect(focusFirstInvalidResumeField({ unknown: "invalid" }, root)).toBe(false)
     expect(root.getElementById).not.toHaveBeenCalled()
+  })
+})
+
+describe("resolveResumeInvalidSummary", () => {
+  it("stays silent before submit, follows the current first error, and clears after correction", () => {
+    const multipleErrors = { "basic.name": "name required", "basic.phone": "phone invalid" }
+
+    expect(resolveResumeInvalidSummary(false, multipleErrors)).toBe("")
+    expect(resolveResumeInvalidSummary(true, multipleErrors)).toBe("name required")
+    expect(resolveResumeInvalidSummary(true, { "basic.phone": "phone invalid" })).toBe("phone invalid")
+    expect(resolveResumeInvalidSummary(true, {})).toBe("")
   })
 })
