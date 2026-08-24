@@ -164,7 +164,7 @@ onMounted(() => {
       <view v-if="!loading && !evidence.length" class="empty">
         <text>先录入一条真实经历，后续可按目标岗位生成可确认的简历草案。</text>
       </view>
-      <view v-for="item in evidence" :key="item.id" class="card evidence-card">
+      <view v-for="item in evidence" :key="item.id" class="card evidence-card ui-long-list-item">
         <view class="evidence-top">
           <view>
             <text class="evidence-title">{{ item.title }}</text>

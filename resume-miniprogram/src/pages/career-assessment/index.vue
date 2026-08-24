@@ -106,7 +106,7 @@ onMounted(() => {
       </view>
 
       <view v-if="loading" class="card loading-card"><LoadingSpinner size="sm" label="正在加载测评题目" /><text>正在加载测评题目…</text></view>
-      <text v-if="error" class="error">{{ error }}</text>
+      <text v-if="error" class="ui-error-tip">{{ error }}</text>
 
       <template v-if="!loading && !result">
         <view class="stepper">

@@ -90,7 +90,7 @@ onMounted(() => {
       <input v-model="title" placeholder="知识标题" maxlength="200" />
       <textarea v-model="content" placeholder="知识内容" maxlength="20000" auto-height />
       <view class="form-footer"><picker :range="statusOptions.map((item) => statusLabels[item])" :value="statusOptions.indexOf(status)" @change="changeStatus"><view class="status-picker">状态：{{ statusLabels[status] }}</view></picker><view class="form-actions"><button size="mini" :disabled="saving || Boolean(versionsLoading) || restoringVersion !== null" @click="clearForm">新建内容</button><button size="mini" class="primary" :loading="saving" :disabled="saving" @click="saveItem">保存</button></view></view>
-      <text v-if="error" class="error">{{ error }}</text>
+      <text v-if="error" class="ui-error-tip">{{ error }}</text>
     </view>
     <view class="list-heading"><text>知识条目</text><button size="mini" :loading="loading" :disabled="loading || Boolean(versionsLoading) || restoringVersion !== null" @click="loadItems">刷新</button></view>
     <view v-if="loading" class="state"><LoadingSpinner size="sm" label="正在加载知识条目" /><text>正在加载知识条目…</text></view>

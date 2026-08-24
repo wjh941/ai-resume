@@ -27,7 +27,7 @@ onMounted(() => { void load() })
   <scroll-view class="page" scroll-y>
     <view class="hero"><text class="eyebrow">ORDERS</text><text class="title">Membership order history</text><text class="copy">Demo orders are retained here for the signed-in account.</text></view>
     <text v-if="loading" class="notice">Loading order history...</text>
-    <text v-else-if="error" class="error">{{ error }}</text>
+      <text v-else-if="error" class="ui-error-tip">{{ error }}</text>
     <view v-for="item in orders" :key="item.orderId" class="order-card"><view><text class="order-id">{{ item.orderId }}</text><text class="copy">{{ item.packageType }} · {{ item.paymentStatus }} · {{ item.createTime }}</text></view><text class="amount">{{ (item.totalAmount / 100).toFixed(2) }}</text></view>
     <view v-if="!loading && !error && !orders.length" class="empty-state"><view class="empty-illustration"><view></view><view></view><view></view></view><text>No membership orders yet</text></view>
   </scroll-view>

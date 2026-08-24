@@ -7,7 +7,7 @@ defineEmits<{ "update:modelValue": [value: string] }>()
   <view class="field">
     <text class="label">{{ label }}</text>
     <input :class="{ invalid: error }" :value="modelValue" :placeholder="placeholder" @input="$emit('update:modelValue', $event.detail.value)" />
-    <text v-if="error" class="error">{{ error }}</text>
+    <text v-if="error" class="ui-error-tip ui-error-tip--inline">{{ error }}</text>
   </view>
 </template>
 

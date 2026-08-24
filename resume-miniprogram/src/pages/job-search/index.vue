@@ -461,7 +461,7 @@ onMounted(() => {
           auto-height
         />
         <button class="primary primary-action" :loading="loading" :disabled="loading" @click="beginConsultation">查询岗位情报</button>
-        <text v-if="error" class="error">{{ error }}</text>
+      <text v-if="error" class="ui-error-tip">{{ error }}</text>
       </view>
 
       <view v-if="loading" class="result loading-skeleton" aria-live="polite">
@@ -544,7 +544,7 @@ onMounted(() => {
           <view
             v-for="source in marketSearchReport?.results"
             :key="source.url"
-            class="market-source"
+            class="market-source ui-long-list-item"
             @click="copySourceUrl(source.url)"
           >
             <view>
@@ -560,7 +560,7 @@ onMounted(() => {
         <view
           v-for="section in jobConsultation.jobAnalysisSections"
           :key="section.order"
-          class="analysis-section"
+          class="analysis-section ui-long-list-item"
         >
           <view class="analysis-section-header" @click="toggleAnalysisSection(section.order)">
             <view>
@@ -582,7 +582,7 @@ onMounted(() => {
         <view
           v-for="stage in jobConsultation.careerGrowthRoute.stages"
           :key="stage.stage"
-          class="growth-stage"
+          class="growth-stage ui-long-list-item"
         >
           <text class="growth-stage-title">{{ stage.stage }} · {{ stage.roleName }}</text>
           <text class="growth-meta">{{ stage.yearsReference }}</text>
@@ -593,7 +593,7 @@ onMounted(() => {
 
         <text class="result-title">身份适配求职方案</text>
         <text class="identity-plan-title">{{ jobConsultation.identityPlan.title }}</text>
-        <view v-for="section in jobConsultation.identityPlan.sections" :key="section.order" class="plan-block">
+        <view v-for="section in jobConsultation.identityPlan.sections" :key="section.order" class="plan-block ui-long-list-item">
           <text class="block-title">{{ section.title }}</text>
           <text v-for="item in section.items" :key="item" class="list-item">- {{ item }}</text>
         </view>
@@ -631,7 +631,7 @@ onMounted(() => {
           <button class="secondary" :loading="pdfLoading" :disabled="pdfLoading || reviewLoading" @click="chooseResumePdf">上传 PDF 提取文字</button>
           <button class="primary inline-primary" :loading="reviewLoading" :disabled="reviewLoading || pdfLoading" @click="reviewResume">开始批改</button>
         </view>
-        <text v-if="reviewError" class="error">{{ reviewError }}</text>
+      <text v-if="reviewError" class="ui-error-tip">{{ reviewError }}</text>
       </view>
 
       <view v-if="resumeReview" class="result review-result">
@@ -660,7 +660,7 @@ onMounted(() => {
         <text v-for="item in resumeReview.jobMatchReport.matchingAdvantages" :key="item" class="list-item">- {{ item }}</text>
         <text class="block-title">缺失技能清单</text>
         <text v-for="item in resumeReview.jobMatchReport.missingSkills" :key="item" class="list-item">- {{ item }}</text>
-        <view v-for="gap in resumeReview.jobMatchReport.priorityGaps" :key="gap.skillName" class="priority-gap">
+        <view v-for="gap in resumeReview.jobMatchReport.priorityGaps" :key="gap.skillName" class="priority-gap ui-long-list-item">
           <text class="priority-gap-title">【需要提升】{{ gap.skillName }}</text>
           <text class="list-item">- 学习方向：{{ gap.learningDirection }}</text>
           <text class="list-item">- 项目练习：{{ gap.projectPractice }}</text>
@@ -681,12 +681,12 @@ onMounted(() => {
           auto-height
         />
         <button class="primary primary-action" :loading="adviceLoading" :disabled="adviceLoading" @click="requestCareerAdvice">获取针对性建议</button>
-        <text v-if="adviceError" class="error">{{ adviceError }}</text>
+      <text v-if="adviceError" class="ui-error-tip">{{ adviceError }}</text>
       </view>
 
       <view v-if="careerAdvice" class="result">
         <text class="result-title">{{ careerAdvice.title }}</text>
-        <view v-for="section in careerAdvice.sections" :key="section.order" class="plan-block">
+        <view v-for="section in careerAdvice.sections" :key="section.order" class="plan-block ui-long-list-item">
           <text class="block-title">{{ section.title }}</text>
           <text v-for="item in section.items" :key="item" class="list-item">- {{ item }}</text>
         </view>
@@ -812,5 +812,5 @@ onMounted(() => {
 .planner-entry { margin-top: 0; padding: 0 24rpx; line-height: 62rpx; border: 1rpx solid #9bc8ff; border-radius: 999rpx; background: rgba(255,255,255,.76); color: #1677ff; font-size: 24rpx; }
 .loading-skeleton { min-height: 250rpx; }.skeleton-title,.skeleton-line { height: 24rpx; margin-top: 20rpx; border-radius: 8rpx; background: linear-gradient(90deg, #edf2f7 25%, #f8fafc 40%, #edf2f7 65%); background-size: 400% 100%; animation: shimmer 1.2s ease-in-out infinite; }.skeleton-title { width: 52%; height: 36rpx; margin-top: 0; }.skeleton-line.short { width: 48%; }@keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
 .account-entry { display: flex; justify-content: flex-end; margin-top: -8rpx; }
-@media (prefers-reduced-motion: reduce) { .suggestion-list-enter-active,.suggestion-list-leave-active { transition: opacity var(--ui-motion-fast) ease; }.suggestion-list-enter-from,.suggestion-list-leave-to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .suggestion-list-enter-active,.suggestion-list-leave-active { transition: none; }.suggestion-list-enter-from,.suggestion-list-leave-to { transform: none; } }
 </style>

@@ -54,7 +54,7 @@ onMounted(loadSources)
           <text class="hint">自动下载、解析并增量写入已启用的合规官方数据源，用户手动维护的岗位不会被覆盖。</text>
         </view>
         <button class="primary" :loading="loading" :disabled="loading" @click="initializeKnowledgebase">一键初始化完整岗位库</button>
-        <text v-if="error" class="error">{{ error }}</text>
+      <text v-if="error" class="ui-error-tip">{{ error }}</text>
       </view>
 
       <view v-if="lastRun" class="card summary">
@@ -64,7 +64,7 @@ onMounted(loadSources)
           <view><text>{{ lastRun.addedMajors }}</text><text>新增专业</text></view>
           <view><text>{{ lastRun.skippedRows }}</text><text>跳过记录</text></view>
         </view>
-        <text v-for="item in lastRun.errors" :key="item" class="error">{{ item }}</text>
+        <text v-for="item in lastRun.errors" :key="item" class="ui-error-tip">{{ item }}</text>
       </view>
 
       <view class="card">

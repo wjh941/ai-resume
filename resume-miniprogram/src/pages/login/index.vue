@@ -128,7 +128,7 @@ function showWechatSetup(): void {
         <view class="field"><text>密码</text><input v-model="password" password maxlength="72" placeholder="10-72 个字符" /></view>
         <text class="field-hint">账号仅支持小写英文字母、数字和 ._-；密码至少 10 个字符。</text>
       </template>
-      <text v-if="error" class="error">{{ error }}</text>
+      <text v-if="error" class="ui-error-tip">{{ error }}</text>
       <button v-if="loginMode === 'phone'" class="primary" :loading="loggingIn" :disabled="loggingIn || sending" @click="signIn">登录</button>
       <template v-else>
         <button class="primary" :loading="passwordAction === 'login'" :disabled="passwordAction !== null || sending || loggingIn" @click="submitPassword('login')">账号登录</button>

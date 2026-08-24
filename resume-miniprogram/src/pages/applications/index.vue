@@ -321,7 +321,7 @@ onMounted(async () => {
       <view v-else-if="loading" class="empty"><LoadingSpinner size="sm" label="正在加载投递记录…" /><text>正在加载投递记录…</text></view>
       <view v-else-if="!visibleApplications.length" class="empty">还没有投递计划。确认岗位与公司后，在上方手动保存第一条记录。</view>
 
-      <view v-for="item in visibleApplications" :key="item.id" class="card record-card">
+      <view v-for="item in visibleApplications" :key="item.id" class="card record-card ui-long-list-item">
         <view class="record-top">
           <view><text class="record-role">{{ item.roleName }}</text><text class="record-company">{{ item.company }}</text></view>
           <text class="status">{{ statuses.find((status) => status.value === item.status)?.label }}</text>

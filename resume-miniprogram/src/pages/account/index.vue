@@ -147,7 +147,7 @@ onMounted(async () => {
       <text class="meta">{{ user?.account || user?.phone || "需要登录后查看" }}</text>
       <text class="meta">{{ loading ? "正在刷新账户信息…" : user ? `账户标识：${user.userId}` : "当前登录状态不可用。" }}</text>
       <LoadingSpinner v-if="loading" class="profile-loading" size="sm" label="正在刷新账户信息" />
-      <text v-if="error" class="error">{{ error }}</text>
+    <text v-if="error" class="ui-error-tip">{{ error }}</text>
     </view>
     <view class="section">
       <button @click="showOnboarding = true">重新查看新手引导</button>
