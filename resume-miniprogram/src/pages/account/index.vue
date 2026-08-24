@@ -2,12 +2,14 @@
 import { computed, onMounted, ref } from "vue"
 
 import OnboardingTour from "../../components/OnboardingTour.vue"
+import LoadingSpinner from "../../components/LoadingSpinner.vue"
 import { getCurrentUser, logout } from "../../services/auth-api"
 import { recordPrivacyConsent, requestAccountDataExport, requestAccountDeletion, requestAccountPrivacyDetails, type AccountPrivacyDetails } from "../../services/account-api"
 import { apiUrl, toUserMessage } from "../../services/http"
 import { clearAuthSession, getAuthToken, getAuthUser } from "../../stores/session"
 import type { AuthUser } from "../../types/auth"
 import { completeOnboarding } from "../../utils/onboarding"
+import { runWithLoading } from "../../utils/async-state"
 
 const user = ref<AuthUser | null>(getAuthUser())
 const loading = ref(false)
@@ -15,6 +17,7 @@ const error = ref("")
 const dataScope = ref<AccountPrivacyDetails | null>(null)
 const lifecycleMessage = ref("")
 const consentRecorded = ref(false)
+const accountAction = ref<"consent" | "export" | "delete" | "signout" | "">("")
 const showOnboarding = ref(false)
 const isOperator = computed(() => user.value?.role === "operator")
 
@@ -26,7 +29,10 @@ async function loadUser(): Promise<void> {
   loading.value = true
   error.value = ""
   try {
-    user.value = await getCurrentUser()
+    user.value = await runWithLoading(
+      (pending) => { loading.value = pending },
+      () => getCurrentUser(),
+    )
   } catch (reason) {
     error.value = toUserMessage(reason, "无法加载账户信息，请稍后重试。")
   } finally {
@@ -40,9 +46,11 @@ function signOut(): void {
     content: "确定退出当前设备吗？下次登录后仍可继续使用已保存的数据。",
     success: async (result) => {
       if (!result.confirm) return
+      accountAction.value = "signout"
       try {
         await logout()
       } finally {
+        accountAction.value = ""
         clearAuthSession()
         uni.reLaunch({ url: "/pages/login/index" })
       }
@@ -78,6 +86,7 @@ async function loadScope(): Promise<void> {
 }
 
 async function requestDataExport(): Promise<void> {
+  accountAction.value = "export"
   try {
     const result = await requestAccountDataExport()
     lifecycleMessage.value = result.message
@@ -89,16 +98,21 @@ async function requestDataExport(): Promise<void> {
     })
   } catch (reason) {
     error.value = toUserMessage(reason, "无法创建数据导出，请稍后重试。")
+  } finally {
+    accountAction.value = ""
   }
 }
 
 async function acknowledgePrivacyPolicy(): Promise<void> {
+  accountAction.value = "consent"
   try {
     await recordPrivacyConsent()
     consentRecorded.value = true
     lifecycleMessage.value = "已记录隐私政策确认。"
   } catch (reason) {
     error.value = toUserMessage(reason, "无法记录隐私偏好，请稍后重试。")
+  } finally {
+    accountAction.value = ""
   }
 }
 
@@ -108,10 +122,13 @@ function requestDeletion(): void {
     content: "确认后将退出登录，并匿名化简历与职业规划数据。此操作无法撤销。",
     success: async (result) => {
       if (!result.confirm) return
+      accountAction.value = "delete"
       try {
         lifecycleMessage.value = (await requestAccountDeletion()).message
       } catch (reason) {
         error.value = toUserMessage(reason, "无法提交注销申请，请稍后重试。")
+      } finally {
+        accountAction.value = ""
       }
     },
   })
@@ -129,6 +146,7 @@ onMounted(async () => {
       <text class="title">账户中心</text>
       <text class="meta">{{ user?.account || user?.phone || "需要登录后查看" }}</text>
       <text class="meta">{{ loading ? "正在刷新账户信息…" : user ? `账户标识：${user.userId}` : "当前登录状态不可用。" }}</text>
+      <LoadingSpinner v-if="loading" class="profile-loading" size="sm" label="正在刷新账户信息" />
       <text v-if="error" class="error">{{ error }}</text>
     </view>
     <view class="section">
@@ -146,12 +164,12 @@ onMounted(async () => {
       <text class="scope-copy">{{ dataScope?.categories.join("、") || "正在加载数据范围…" }}</text>
       <text class="scope-copy">{{ dataScope?.retentionNote }}</text>
       <text class="policy-hint">{{ dataScope?.privacyPolicyHint }}</text>
-      <button :disabled="consentRecorded" @click="acknowledgePrivacyPolicy">{{ consentRecorded ? "已确认隐私政策" : "确认隐私政策" }}</button>
-      <button @click="requestDataExport">导出我的数据</button>
-      <button class="danger-inline" @click="requestDeletion">申请注销账户</button>
+      <button :loading="accountAction === 'consent'" :disabled="consentRecorded || Boolean(accountAction)" @click="acknowledgePrivacyPolicy">{{ consentRecorded ? "已确认隐私政策" : "确认隐私政策" }}</button>
+      <button :loading="accountAction === 'export'" :disabled="Boolean(accountAction)" @click="requestDataExport">导出我的数据</button>
+      <button class="danger-inline" :loading="accountAction === 'delete'" :disabled="Boolean(accountAction)" @click="requestDeletion">申请注销账户</button>
       <text v-if="lifecycleMessage" class="acknowledgement">{{ lifecycleMessage }}</text>
     </view>
-    <button class="danger" @click="signOut">退出登录</button>
+    <button class="danger" :loading="accountAction === 'signout'" :disabled="Boolean(accountAction)" @click="signOut">退出登录</button>
   </scroll-view>
   <OnboardingTour
     :visible="showOnboarding"
@@ -164,4 +182,5 @@ onMounted(async () => {
 .page { min-height: 100vh; box-sizing: border-box; padding: 28rpx; background: #f4f7fb; }.profile-card,.section { padding: 26rpx; background: #fff; border: 1rpx solid #e1eaf4; border-radius: 18rpx; box-shadow: 0 8rpx 22rpx rgba(35, 78, 130, .06); }.title,.meta,.section-title,.error,.scope-copy,.policy-hint,.acknowledgement { display: block; }.title { color: #1f2937; font-size: 38rpx; font-weight: 700; }.meta { margin-top: 10rpx; color: #718096; font-size: 23rpx; word-break: break-all; }.error { margin-top: 12rpx; color: #c2410c; font-size: 23rpx; }.section { margin-top: 20rpx; }.section-title { color: #334155; font-size: 29rpx; font-weight: 700; }.section button { margin-top: 14rpx; color: #245b99; background: #edf6ff; border: 1rpx solid #cfe4fb; text-align: left; font-size: 25rpx; }.scope-copy,.policy-hint { margin-top: 10rpx; color: #64748b; font-size: 23rpx; line-height: 1.55; }.policy-hint { color: #3b6389; overflow-wrap: anywhere; }.danger-inline { color: #c2410c !important; background: #fff7f0 !important; border-color: #ffccc7 !important; }.acknowledgement { margin-top: 14rpx; color: #26735c; font-size: 23rpx; }.danger { margin-top: 24rpx; color: #c2410c; background: #fff7f0; border: 1rpx solid #ffccc7; }
 .profile-card { border-radius: var(--ui-card-radius); }
 .section button { transition: background-color var(--ui-motion-fast) var(--ui-motion-ease), color var(--ui-motion-fast) var(--ui-motion-ease), border-color var(--ui-motion-fast) var(--ui-motion-ease); }
+.profile-loading { margin-top: 16rpx; }
 </style>

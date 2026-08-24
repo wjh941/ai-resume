@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from "vue"
 
 import ResumePreview from "../../components/ResumePreview.vue"
+import LoadingSpinner from "../../components/LoadingSpinner.vue"
 import { requestPdfExport, requestWordExport } from "../../services/export-api"
 import { saveDraft } from "../../services/resume-api"
 import { uploadResumeImport } from "../../services/resume-import-api"
@@ -28,6 +29,7 @@ const versionNote = ref("")
 const versionDiff = ref<string[]>([])
 const versionLoading = ref(false)
 const importLoading = ref(false)
+const saveLoading = ref(false)
 const importFilename = ref("")
 const importPreview = ref<ResumePayload | null>(null)
 const hasResumeContent = computed(() => Boolean(
@@ -56,6 +58,7 @@ async function save(): Promise<boolean> {
     uni.showToast({ title: errors[0].message, icon: "none" })
     return false
   }
+  saveLoading.value = true
   try {
     const saved = await saveDraft(getClientId(), store.draft)
     store.draft.id = saved.id
@@ -66,6 +69,8 @@ async function save(): Promise<boolean> {
   } catch {
     store.checkpoint()
     uni.showToast({ title: "网络异常，已保留本地草稿", icon: "none" })
+  } finally {
+    saveLoading.value = false
   }
   return false
 }
@@ -242,10 +247,10 @@ onMounted(loadVersions)
       <view class="toolbar-actions">
         <button size="mini" @click="backToForm">返回填写</button>
         <button size="mini" @click="openApplicationTracker">加入投递计划</button>
-        <button size="mini" class="primary" @click="save">保存草稿</button>
+        <button size="mini" class="primary" :loading="saveLoading" :disabled="saveLoading || Boolean(exporting)" @click="save">保存草稿</button>
         <button size="mini" :loading="importLoading" @click="importResume">导入简历</button>
-        <button size="mini" @click="exportResume('word')">导出 Word</button>
-        <button size="mini" @click="exportResume('pdf')">导出 PDF</button>
+        <button size="mini" :loading="exporting === 'word'" :disabled="Boolean(exporting)" @click="exportResume('word')">导出 Word</button>
+        <button size="mini" :loading="exporting === 'pdf'" :disabled="Boolean(exporting)" @click="exportResume('pdf')">导出 PDF</button>
       </view>
     </view>
     <view v-if="importPreview" class="import-panel">
@@ -275,6 +280,7 @@ onMounted(loadVersions)
       <text v-if="versionDiff.length" class="version-diff">差异字段：{{ versionDiff.join("、") }}</text>
     </view>
     <view v-if="exporting" class="export-skeleton" aria-live="polite">
+      <LoadingSpinner label="正在准备导出文件" />
       <view class="skeleton-heading"></view>
       <view class="skeleton-line"></view>
       <view class="skeleton-line"></view>

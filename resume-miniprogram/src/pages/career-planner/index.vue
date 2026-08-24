@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue"
 
+import LoadingSpinner from "../../components/LoadingSpinner.vue"
 import {
   generateCareerRecommendations,
   loadCareerProfile,
@@ -395,6 +396,7 @@ onUnmounted(() => {
       </view>
 
       <view v-if="loading" class="loading-skeletons" aria-live="polite">
+        <LoadingSpinner class="career-loading-spinner" label="正在生成求职方案" />
         <view v-for="item in 3" :key="item" class="card skeleton-card">
           <view class="skeleton-line wide"></view>
           <view class="skeleton-line"></view>
@@ -524,7 +526,7 @@ button { margin-top: 24rpx; border-radius: 12rpx; font-size: 28rpx; }
 .roadmap-stage text { display: block; color: #61758a; font-size: 21rpx; line-height: 1.4; }.roadmap-stage text:first-child { margin-bottom: 7rpx; color: #35516f; font-size: 28rpx; font-weight: 700; }
 .roadmap-stage.active { border-color: #91caff; background: #edf6ff; box-shadow: 0 10rpx 24rpx rgba(22, 119, 255, .15); transform: translateY(-3rpx); }.roadmap-stage.active text:first-child { color: #1677ff; }
 .role-card { transition: opacity .22s ease, transform .22s ease, box-shadow .22s ease; }.role-card.tier-transitioning { opacity: .6; transform: translateY(6rpx); }
-.loading-skeletons { margin-top: 20rpx; }.skeleton-card { overflow: hidden; }.skeleton-line { height: 22rpx; margin-top: 16rpx; border-radius: 8rpx; background: linear-gradient(90deg, #edf2f7 25%, #f8fafc 40%, #edf2f7 65%); background-size: 400% 100%; animation: shimmer 1.2s ease-in-out infinite; }.skeleton-line:first-child { margin-top: 0; }.skeleton-line.wide { width: 72%; height: 32rpx; }.skeleton-line.short { width: 42%; }@keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+.loading-skeletons { min-height: 420rpx; margin-top: 20rpx; position: relative; }.career-loading-spinner { margin-bottom: 20rpx; }.skeleton-card { overflow: hidden; }.skeleton-line { height: 22rpx; margin-top: 16rpx; border-radius: 8rpx; background: linear-gradient(90deg, #edf2f7 25%, #f8fafc 40%, #edf2f7 65%); background-size: 400% 100%; animation: shimmer 1.2s ease-in-out infinite; }.skeleton-line:first-child { margin-top: 0; }.skeleton-line.wide { width: 72%; height: 32rpx; }.skeleton-line.short { width: 42%; }@keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
 @media (prefers-reduced-motion: reduce) { .roadmap-stage,.role-card { transition: none; } }
 .hero { border-radius: var(--ui-card-radius); }
 .tier-tab { transition: background-color var(--ui-motion-fast) var(--ui-motion-ease), color var(--ui-motion-fast) var(--ui-motion-ease), box-shadow var(--ui-motion-fast) var(--ui-motion-ease), transform var(--ui-motion-fast) var(--ui-motion-ease); }

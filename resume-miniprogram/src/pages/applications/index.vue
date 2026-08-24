@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue"
 
+import LoadingSpinner from "../../components/LoadingSpinner.vue"
 import {
   createApplicationTimelineEvent,
   deleteApplication,
@@ -136,16 +137,19 @@ async function save() {
     return
   }
   saving.value = true
-  const result = await applicationsStore.saveOrQueue({ ...form.value, clientId: getClientId() })
-  saving.value = false
-  if (result.queued) {
-    uni.showToast({ title: "网络不可用，已保存到本机待同步", icon: "none" })
+  try {
+    const result = await applicationsStore.saveOrQueue({ ...form.value, clientId: getClientId() })
+    if (result.queued) {
+      uni.showToast({ title: "网络不可用，已保存到本机待同步", icon: "none" })
+      resetForm()
+      return
+    }
+    await load()
     resetForm()
-    return
+    uni.showToast({ title: "投递计划已保存", icon: "success" })
+  } finally {
+    saving.value = false
   }
-  await load()
-  resetForm()
-  uni.showToast({ title: "投递计划已保存", icon: "success" })
 }
 
 function beginTimeline(item: ApplicationRecord) {
@@ -294,7 +298,7 @@ onMounted(async () => {
       </view>
 
       <text v-if="error" class="error">{{ error }}</text>
-      <view v-else-if="loading" class="empty">正在加载投递记录…</view>
+      <view v-else-if="loading" class="empty"><LoadingSpinner size="sm" label="正在加载投递记录…" /><text>正在加载投递记录…</text></view>
       <view v-else-if="!visibleApplications.length" class="empty">还没有投递计划。确认岗位与公司后，在上方手动保存第一条记录。</view>
 
       <view v-for="item in visibleApplications" :key="item.id" class="card record-card">

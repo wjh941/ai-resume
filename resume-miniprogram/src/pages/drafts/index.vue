@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue"
 
+import LoadingSpinner from "../../components/LoadingSpinner.vue"
 import {
   copyDraft,
   deleteDraft,
@@ -16,6 +17,8 @@ const resumeStore = useResumeStore()
 const drafts = ref<DraftRecord[]>([])
 const loading = ref(false)
 const error = ref("")
+const pendingAction = ref<"open" | "copy" | "delete" | "">("")
+const pendingDraftId = ref("")
 
 async function load(): Promise<void> {
   loading.value = true
@@ -30,6 +33,8 @@ async function load(): Promise<void> {
 }
 
 async function openDraft(item: DraftRecord): Promise<void> {
+  pendingAction.value = "open"
+  pendingDraftId.value = item.id
   try {
     const draft = await getDraft(getClientId(), item.id)
     resumeStore.draft = toResumeDraft(draft)
@@ -38,16 +43,24 @@ async function openDraft(item: DraftRecord): Promise<void> {
     uni.navigateTo({ url: "/pages/resume-editor/index" })
   } catch (reason) {
     uni.showToast({ title: reason instanceof Error ? reason.message : "Unable to open draft", icon: "none" })
+  } finally {
+    pendingAction.value = ""
+    pendingDraftId.value = ""
   }
 }
 
 async function copy(item: DraftRecord): Promise<void> {
+  pendingAction.value = "copy"
+  pendingDraftId.value = item.id
   try {
     const copied = await copyDraft(getClientId(), item.id)
     drafts.value.unshift(copied)
     uni.showToast({ title: "Draft copied", icon: "success" })
   } catch (reason) {
     uni.showToast({ title: reason instanceof Error ? reason.message : "Unable to copy draft", icon: "none" })
+  } finally {
+    pendingAction.value = ""
+    pendingDraftId.value = ""
   }
 }
 
@@ -57,12 +70,17 @@ function remove(item: DraftRecord): void {
     content: `Delete ${item.jobTitle || "this draft"}?`,
     success: async (result) => {
       if (!result.confirm) return
+      pendingAction.value = "delete"
+      pendingDraftId.value = item.id
       try {
         await deleteDraft(getClientId(), item.id)
         drafts.value = drafts.value.filter((draft) => draft.id !== item.id)
         uni.showToast({ title: "Draft deleted", icon: "success" })
       } catch (reason) {
         uni.showToast({ title: reason instanceof Error ? reason.message : "Unable to delete draft", icon: "none" })
+      } finally {
+        pendingAction.value = ""
+        pendingDraftId.value = ""
       }
     },
   })
@@ -83,9 +101,9 @@ onMounted(load)
   <scroll-view class="page" scroll-y>
     <view class="heading-row">
       <view><text class="title">Drafts</text><text class="subtitle">Open, copy, or prepare a tracker entry.</text></view>
-      <button size="mini" @click="load">Refresh</button>
+      <button size="mini" :loading="loading" :disabled="loading" @click="load">Refresh</button>
     </view>
-    <text v-if="loading" class="notice">Loading drafts...</text>
+    <view v-if="loading" class="notice"><LoadingSpinner size="sm" label="Loading drafts..." /><text>Loading drafts...</text></view>
     <text v-else-if="error" class="error">{{ error }}</text>
     <view v-else-if="!drafts.length" class="empty-state">
       <view class="empty-illustration" aria-hidden="true"><view></view><view></view><view></view></view>
@@ -96,10 +114,10 @@ onMounted(load)
       <text class="draft-title">{{ item.jobTitle || item.resume.job.targetRole || "Untitled draft" }}</text>
       <text class="draft-meta">Updated {{ item.updatedAt }}</text>
       <view class="actions">
-        <button size="mini" class="primary" @click="openDraft(item)">Open</button>
-        <button size="mini" @click="copy(item)">Copy</button>
+        <button size="mini" class="primary" :loading="pendingAction === 'open' && pendingDraftId === item.id" :disabled="Boolean(pendingAction)" @click="openDraft(item)">Open</button>
+        <button size="mini" :loading="pendingAction === 'copy' && pendingDraftId === item.id" :disabled="Boolean(pendingAction)" @click="copy(item)">Copy</button>
         <button size="mini" @click="createTrackerPrefill(item)">Tracker</button>
-        <button size="mini" class="danger" @click="remove(item)">Delete</button>
+        <button size="mini" class="danger" :loading="pendingAction === 'delete' && pendingDraftId === item.id" :disabled="Boolean(pendingAction)" @click="remove(item)">Delete</button>
       </view>
     </view>
   </scroll-view>
