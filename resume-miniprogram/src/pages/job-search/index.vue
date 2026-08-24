@@ -420,9 +420,10 @@ onMounted(() => {
             class="role-input"
             placeholder="输入“数据”“工程师”或具体岗位"
             confirm-type="search"
+            aria-label="目标岗位"
             @confirm="beginConsultation"
           />
-          <text class="search-icon">⌕</text>
+          <text class="search-icon" aria-hidden="true">⌕</text>
           <view v-if="roleName.trim() && (suggestionLoading || visibleSuggestions.length)" class="suggestion-popover">
             <text class="popover-title">{{ suggestionLoading ? "正在匹配岗位…" : "匹配岗位" }}</text>
             <transition-group name="suggestion-list" tag="view" class="suggestion-list">
@@ -430,6 +431,7 @@ onMounted(() => {
               v-for="suggestion in visibleSuggestions"
               :key="suggestion.roleName"
               class="suggestion-button"
+              :aria-label="`添加岗位 ${suggestion.roleName}`"
               @click="selectSuggestion(suggestion)"
             >
               <view>
@@ -449,6 +451,7 @@ onMounted(() => {
               v-for="role in selectedRoles"
               :key="role"
               class="role-chip"
+              :aria-label="`移除已选岗位 ${role}`"
               @click="removeSelectedRole(role)"
             >{{ role }} ×</button>
           </view>
@@ -460,7 +463,7 @@ onMounted(() => {
           placeholder="可选：补充目标城市、公司类型、薪资或行业偏好"
           auto-height
         />
-        <button class="primary primary-action" :loading="loading" :disabled="loading" @click="beginConsultation">查询岗位情报</button>
+        <button class="primary primary-action" :loading="loading" :disabled="loading" aria-label="查询岗位情报" @click="beginConsultation">查询岗位情报</button>
       <text v-if="error" class="ui-error-tip">{{ error }}</text>
       </view>
 
@@ -545,7 +548,12 @@ onMounted(() => {
             v-for="source in marketSearchReport?.results"
             :key="source.url"
             class="market-source ui-long-list-item"
+            role="button"
+            tabindex="0"
+            :aria-label="`复制来源链接 ${source.title}`"
             @click="copySourceUrl(source.url)"
+            @keydown.enter="copySourceUrl(source.url)"
+            @keydown.space.prevent="copySourceUrl(source.url)"
           >
             <view>
               <text class="market-source-title">{{ source.title }}</text>
@@ -562,7 +570,16 @@ onMounted(() => {
           :key="section.order"
           class="analysis-section ui-long-list-item"
         >
-          <view class="analysis-section-header" @click="toggleAnalysisSection(section.order)">
+          <view
+            class="analysis-section-header"
+            role="button"
+            tabindex="0"
+            :aria-expanded="isAnalysisSectionOpen(section.order)"
+            :aria-label="`${section.title}，${isAnalysisSectionOpen(section.order) ? '收起' : '展开'}`"
+            @click="toggleAnalysisSection(section.order)"
+            @keydown.enter="toggleAnalysisSection(section.order)"
+            @keydown.space.prevent="toggleAnalysisSection(section.order)"
+          >
             <view>
               <text class="analysis-index">{{ String(section.order).padStart(2, "0") }}</text>
               <text class="block-title">{{ section.title }}</text>

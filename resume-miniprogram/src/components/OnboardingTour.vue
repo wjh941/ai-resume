@@ -52,12 +52,16 @@ function next(): void {
 function goToCurrentStep(): void {
   emit("navigate", currentStep.value.destination)
 }
+
+function closeFromMask(): void {
+  emit("complete")
+}
 </script>
 
 <template>
   <transition name="onboarding">
-    <view v-if="visible" class="onboarding-mask" @click.self="emit('complete')">
-      <view class="onboarding-dialog" role="dialog" aria-modal="true" aria-label="新手引导">
+    <view v-if="visible" class="onboarding-mask" @tap="closeFromMask">
+      <view class="onboarding-dialog" role="dialog" aria-modal="true" aria-label="新手引导" @tap.stop>
         <view class="onboarding-progress" aria-hidden="true">
           <view
             v-for="(_, index) in steps"
@@ -70,10 +74,10 @@ function goToCurrentStep(): void {
         <text class="onboarding-title">{{ currentStep.title }}</text>
         <text class="onboarding-description">{{ currentStep.description }}</text>
         <view class="onboarding-actions">
-          <button class="onboarding-secondary" @click="emit('complete')">跳过引导</button>
-          <button class="onboarding-primary" @click="next">{{ isLastStep ? "完成引导" : "下一步" }}</button>
+          <button class="onboarding-secondary" aria-label="跳过引导" @click="emit('complete')">跳过引导</button>
+          <button class="onboarding-primary" :aria-label="isLastStep ? '完成引导' : '下一步'" @click="next">{{ isLastStep ? "完成引导" : "下一步" }}</button>
         </view>
-        <button class="onboarding-link" @click="goToCurrentStep">{{ currentStep.action }}</button>
+        <button class="onboarding-link" :aria-label="currentStep.action" @click="goToCurrentStep">{{ currentStep.action }}</button>
       </view>
     </view>
   </transition>

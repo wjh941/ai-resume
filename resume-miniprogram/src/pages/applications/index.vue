@@ -344,7 +344,11 @@ onMounted(async () => {
           <textarea v-model="timelineDraft.description" placeholder="补充说明（可空）" />
           <button size="mini" class="secondary" :loading="timelineSaving" :disabled="timelineSaving" @click="saveTimeline">添加时间线</button>
         </view>
-        <view class="actions"><button size="mini" class="secondary" :disabled="Boolean(syncing || timelineSaving || reminderSaving || pendingDeleteId)" @click="edit(item)">编辑</button><button size="mini" class="secondary" :disabled="Boolean(syncing || timelineSaving || reminderSaving || pendingDeleteId)" @click="beginTimeline(item)">添加时间线</button><button size="mini" class="danger" :loading="pendingDeleteId === item.id" :disabled="Boolean(pendingDeleteId)" @click="remove(item)">删除</button></view>
+        <view class="actions">
+          <button size="mini" class="secondary" :disabled="Boolean(syncing || timelineSaving || reminderSaving || pendingDeleteId)" :aria-label="`编辑 ${item.company} 的 ${item.roleName} 投递记录`" @click="edit(item)">编辑</button>
+          <button size="mini" class="secondary" :disabled="Boolean(syncing || timelineSaving || reminderSaving || pendingDeleteId)" :aria-label="`为 ${item.company} 的 ${item.roleName} 添加时间线`" @click="beginTimeline(item)">添加时间线</button>
+          <button size="mini" class="danger" :loading="pendingDeleteId === item.id" :disabled="Boolean(pendingDeleteId)" :aria-label="`删除 ${item.company} 的 ${item.roleName} 投递记录`" @click="remove(item)">删除</button>
+        </view>
       </view>
     </view>
   </scroll-view>

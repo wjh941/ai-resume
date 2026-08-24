@@ -98,4 +98,21 @@ describe("runWithLoading", () => {
     expect(evidence).toContain("ui-long-list-item")
     expect(jobs).toContain("ui-long-list-item")
   })
+
+  it("exposes H5 form, action, and overlay accessibility semantics", () => {
+    const field = readFileSync(new URL("../components/FormField.vue", import.meta.url), "utf8")
+    const onboarding = readFileSync(new URL("../components/OnboardingTour.vue", import.meta.url), "utf8")
+    const jobs = readFileSync(new URL("../pages/job-search/index.vue", import.meta.url), "utf8")
+    const applications = readFileSync(new URL("../pages/applications/index.vue", import.meta.url), "utf8")
+
+    expect(field).toContain(':aria-label="label"')
+    expect(field).toContain(':aria-invalid="Boolean(error)"')
+    expect(field).toContain(':aria-describedby="error ? errorId : undefined"')
+    expect(onboarding).toContain('@tap="closeFromMask"')
+    expect(onboarding).toContain("@tap.stop")
+    expect(jobs).toContain('role="button"')
+    expect(jobs).toContain('tabindex="0"')
+    expect(jobs).toContain(':aria-expanded="isAnalysisSectionOpen(section.order)"')
+    expect(applications).toContain(':aria-label="`删除 ${item.company} 的 ${item.roleName} 投递记录`"')
+  })
 })
