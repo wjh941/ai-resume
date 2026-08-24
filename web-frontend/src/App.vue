@@ -50,7 +50,11 @@ async function logout() {
     <main class="web-workspace">
       <WebTopbar :user="session.user" :dark="dark" @logout="logout" @toggle-theme="dark = !dark" />
       <section class="workspace-stage" :aria-labelledby="`${activeView}-title`">
-        <component :is="activeComponent" @navigate="activeView = $event" />
+        <Transition name="view-swap" mode="out-in">
+          <div :key="activeView" class="view-transition-shell">
+            <component :is="activeComponent" @navigate="activeView = $event" />
+          </div>
+        </Transition>
       </section>
     </main>
   </div>
