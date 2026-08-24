@@ -175,13 +175,13 @@ describe("useAsyncAction", () => {
   it("routes invalid resume saves and visible cancel controls through accessible shared handlers", () => {
     const editor = readFileSync(new URL("../views/ResumeEditorView.vue", import.meta.url), "utf8")
     const applications = readFileSync(new URL("../views/ApplicationsView.vue", import.meta.url), "utf8")
+    const normalizedEditor = editor.replace(/\s+/g, " ")
 
-    expect(editor).toContain('result === "invalid"')
     expect(editor).toContain("focusFirstInvalidResumeField")
     expect(editor).toContain("createResumeInvalidFeedback")
-    expect(editor).toContain("activateInvalidSummary")
-    expect(editor).toContain("syncInvalidSummary")
-    expect(editor).toContain("resetInvalidSummary")
+    expect.soft(normalizedEditor).toMatch(/async function save\(\): Promise<void> \{ resetInvalidSummary\(\) const result = await saveEditor\(\)/)
+    expect.soft(normalizedEditor).toMatch(/if \(result === "invalid"\) \{ activateInvalidSummary\(fieldErrors\.value\) await nextTick\(\) focusFirstInvalidResumeField\(fieldErrors\.value\) \}/)
+    expect.soft(normalizedEditor).toMatch(/watch\(fieldErrors, \(currentErrors\) => \{ syncInvalidSummary\(currentErrors\) \}, \{ deep: true \}\)/)
     expect(editor).toContain('role="alert"')
     expect(editor).toContain('@click="cancel"')
     expect(editor).toContain('else if (action === "back") cancel()')
