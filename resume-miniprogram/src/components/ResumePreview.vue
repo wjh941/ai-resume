@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue"
 
+import ExpandableText from "./ExpandableText.vue"
 import type { ResumePayload, TemplateId } from "../types/resume"
 import { meaningfulEntries, previewContact } from "../utils/resume-preview"
 
@@ -30,7 +31,7 @@ function dateRange(startDate: string, endDate: string): string {
 
     <view v-if="resume.sectionVisibility.job" class="section">
       <text class="section-title">求职目标</text>
-      <text>目标岗位：{{ previewContact(resume.job.targetRole, "待补充岗位") }}</text>
+      <ExpandableText :text="`目标岗位：${previewContact(resume.job.targetRole, '待补充岗位')}`" :lines="1" :expand-at="18" label="目标岗位" />
       <text>期望薪资：{{ previewContact(resume.job.expectedSalary, "待补充") }}</text>
       <text>到岗时间：{{ previewContact(resume.job.availability, "待补充") }}</text>
     </view>
@@ -44,7 +45,7 @@ function dateRange(startDate: string, endDate: string): string {
 
     <view v-if="resume.sectionVisibility.selfEvaluation && resume.selfEvaluation.trim()" class="section">
       <text class="section-title">自我评价</text>
-      <text>{{ resume.selfEvaluation }}</text>
+      <ExpandableText :text="resume.selfEvaluation" :lines="4" :expand-at="96" label="自我评价" />
     </view>
 
     <view v-if="resume.sectionVisibility.education && education.length" class="section">
@@ -55,7 +56,7 @@ function dateRange(startDate: string, endDate: string): string {
           <text>{{ dateRange(item.startDate, item.endDate) }}</text>
         </view>
         <text>{{ [item.major, item.degree].filter(Boolean).join(" ｜ ") }}</text>
-        <text v-if="item.courses">{{ item.courses }}</text>
+        <ExpandableText v-if="item.courses" :text="item.courses" :lines="4" :expand-at="96" label="课程内容" />
       </view>
     </view>
 
@@ -63,11 +64,11 @@ function dateRange(startDate: string, endDate: string): string {
       <text class="section-title">实习/工作经历</text>
       <view v-for="(item, index) in employment" :key="`${item.company}-${index}`" class="experience">
         <view class="experience-title">
-          <text>{{ previewContact(item.company, "公司待补充") }}</text>
+          <ExpandableText :text="previewContact(item.company, '公司待补充')" :lines="1" :expand-at="18" label="公司名称" />
           <text>{{ dateRange(item.startDate, item.endDate) }}</text>
         </view>
-        <text>{{ previewContact(item.position, "岗位待补充") }}</text>
-        <text v-if="item.description">{{ item.description }}</text>
+        <ExpandableText :text="previewContact(item.position, '岗位待补充')" :lines="1" :expand-at="18" label="岗位名称" />
+        <ExpandableText v-if="item.description" :text="item.description" :lines="4" :expand-at="96" label="工作内容" />
       </view>
     </view>
 
@@ -75,11 +76,11 @@ function dateRange(startDate: string, endDate: string): string {
       <text class="section-title">项目经历</text>
       <view v-for="(item, index) in projects" :key="`${item.name}-${index}`" class="experience">
         <view class="experience-title">
-          <text>{{ previewContact(item.name, "项目名称待补充") }}</text>
+          <ExpandableText :text="previewContact(item.name, '项目名称待补充')" :lines="1" :expand-at="18" label="项目名称" />
           <text>{{ dateRange(item.startDate, item.endDate) }}</text>
         </view>
-        <text>{{ previewContact(item.role, "角色待补充") }}</text>
-        <text v-if="item.description">{{ item.description }}</text>
+        <ExpandableText :text="previewContact(item.role, '角色待补充')" :lines="1" :expand-at="18" label="项目角色" />
+        <ExpandableText v-if="item.description" :text="item.description" :lines="4" :expand-at="96" label="项目内容" />
       </view>
     </view>
   </view>

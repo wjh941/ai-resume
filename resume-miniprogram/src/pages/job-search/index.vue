@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue"
 
+import ExpandableText from "../../components/ExpandableText.vue"
 import OnboardingTour from "../../components/OnboardingTour.vue"
 import {
   extractResumePdf,
@@ -510,7 +511,7 @@ onMounted(() => {
         <view class="result-header">
           <view>
             <text class="card-eyebrow">当前岗位</text>
-            <text class="role">{{ jobConsultation.jobIntelligence.roleName }}</text>
+            <ExpandableText class="role" :text="jobConsultation.jobIntelligence.roleName" :lines="1" :expand-at="18" label="当前岗位" />
             <text class="identity-name">{{ jobConsultation.identityLabel }}</text>
           </view>
           <button class="secondary compact" @click="changeIdentity">切换身份</button>
@@ -766,6 +767,7 @@ onMounted(() => {
   margin: 0; padding: 8rpx 16rpx; color: #2d77d1; background: #edf5ff; border: 1rpx solid #cde0f7;
   border-radius: 999rpx; font-size: 23rpx; line-height: 1.45;
 }
+.role-tab { max-width: 320rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .custom-requirement-input { min-height: 96rpx; margin-top: 20rpx; padding: 18rpx 20rpx; line-height: 1.6; }
 .primary,.secondary { border-radius: 12rpx; font-size: 25rpx; }
 .primary { color: #fff; background: #2d77d1; }.secondary { color: #53667b; background: #edf2f7; }

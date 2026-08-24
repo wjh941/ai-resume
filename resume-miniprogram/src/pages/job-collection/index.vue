@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue"
 
+import ExpandableText from "../../components/ExpandableText.vue"
 import LoadingSpinner from "../../components/LoadingSpinner.vue"
 import {
   deleteFavoriteJob,
@@ -133,7 +134,7 @@ onMounted(() => { void load() })
     <view class="card"><text class="section-title">Matching filter</text><input v-model="matchFilter" maxlength="200" placeholder="Shanghai, remote, data platform" /><button :loading="subscriptionSaving" :disabled="subscriptionSaving" @click="saveSubscriptionFilter">Save filter</button><text v-if="lastNotifyAt" class="copy">Last alert: {{ lastNotifyAt }}</text></view>
       <text v-if="error" class="ui-error-tip">{{ error }}</text>
     <view v-if="loading" class="notice"><LoadingSpinner size="sm" label="Loading saved jobs..." /><text>Loading saved jobs...</text></view>
-    <view v-for="item in favorites" :key="item.id" class="favorite-card ui-long-list-item"><view><text class="role">{{ item.roleName }}</text><text v-if="item.note" class="copy">{{ item.note }}</text></view><button size="mini" :loading="removingFavoriteId === item.id" :disabled="Boolean(removingFavoriteId)" @click="removeFavorite(item.id)">Remove</button></view>
+    <view v-for="item in favorites" :key="item.id" class="favorite-card ui-long-list-item"><view><ExpandableText class="role" :text="item.roleName" :lines="1" :expand-at="18" label="岗位名称" /><text v-if="item.note" class="copy">{{ item.note }}</text></view><button size="mini" :loading="removingFavoriteId === item.id" :disabled="Boolean(removingFavoriteId)" @click="removeFavorite(item.id)">Remove</button></view>
     <view v-if="!loading && !favorites.length" class="empty-state"><view class="empty-illustration"><view></view><view></view><view></view></view><text>No saved jobs yet</text></view>
   </scroll-view>
 </template>

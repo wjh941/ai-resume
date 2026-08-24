@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { useId } from "vue"
+import { getCurrentInstance } from "vue"
 
 defineProps<{ label: string; modelValue: string; placeholder?: string; error?: string }>()
 defineEmits<{ "update:modelValue": [value: string] }>()
 
-const fieldId = useId()
+const fieldId = `form-field-${getCurrentInstance()?.uid ?? 0}`
 const errorId = `${fieldId}-error`
 </script>
 

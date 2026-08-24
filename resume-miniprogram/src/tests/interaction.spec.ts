@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { readFileSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
+import { fileURLToPath } from "node:url"
 
 import { runWithLoading } from "../utils/async-state"
 
@@ -115,11 +116,34 @@ describe("runWithLoading", () => {
     expect(field).toContain(':aria-label="label"')
     expect(field).toContain(':aria-invalid="Boolean(error)"')
     expect(field).toContain(':aria-describedby="error ? errorId : undefined"')
+    expect(field).toContain("getCurrentInstance")
+    expect(field).not.toContain("useId")
     expect(onboarding).toContain('@tap="closeFromMask"')
     expect(onboarding).toContain("@tap.stop")
     expect(jobs).toContain('role="button"')
     expect(jobs).toContain('tabindex="0"')
     expect(jobs).toContain(':aria-expanded="isAnalysisSectionOpen(section.order)"')
     expect(applications).toContain(':aria-label="`删除 ${item.company} 的 ${item.roleName} 投递记录`"')
+  })
+
+  it("uses the accessible H5 long-text contract", () => {
+    const componentUrl = new URL("../components/ExpandableText.vue", import.meta.url)
+    expect(existsSync(fileURLToPath(componentUrl))).toBe(true)
+    const component = readFileSync(componentUrl, "utf8")
+    const applications = readFileSync(new URL("../pages/applications/index.vue", import.meta.url), "utf8")
+    const collection = readFileSync(new URL("../pages/job-collection/index.vue", import.meta.url), "utf8")
+    const jobs = readFileSync(new URL("../pages/job-search/index.vue", import.meta.url), "utf8")
+    const preview = readFileSync(new URL("../components/ResumePreview.vue", import.meta.url), "utf8")
+    expect(component).toContain(':aria-expanded="expanded"')
+    expect(component).toContain("getCurrentInstance")
+    expect(component).not.toContain("useId")
+    expect(component).toContain("-webkit-line-clamp")
+    expect(component).toContain("overflow-wrap: anywhere")
+    expect(component).toContain("展开")
+    expect(component).toContain("收起")
+    expect(applications).toContain('<ExpandableText class="record-role"')
+    expect(collection).toContain('<ExpandableText class="role"')
+    expect(jobs).toContain('<ExpandableText class="role"')
+    expect(preview).toContain(':expand-at="96"')
   })
 })

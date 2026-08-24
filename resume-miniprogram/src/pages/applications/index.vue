@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue"
 
+import ExpandableText from "../../components/ExpandableText.vue"
 import LoadingSpinner from "../../components/LoadingSpinner.vue"
 import {
   createApplicationTimelineEvent,
@@ -324,7 +325,7 @@ onMounted(async () => {
 
       <view v-for="item in visibleApplications" :key="item.id" class="card record-card ui-long-list-item">
         <view class="record-top">
-          <view><text class="record-role">{{ item.roleName }}</text><text class="record-company">{{ item.company }}</text></view>
+          <view><ExpandableText class="record-role" :text="item.roleName" :lines="1" :expand-at="18" label="岗位名称" /><ExpandableText class="record-company" :text="item.company" :lines="1" :expand-at="18" label="公司名称" /></view>
           <text class="status">{{ statuses.find((status) => status.value === item.status)?.label }}</text>
         </view>
         <text v-if="item.city || item.source" class="detail">{{ [item.city, item.source].filter(Boolean).join(" · ") }}</text>
