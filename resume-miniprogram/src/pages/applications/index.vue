@@ -143,6 +143,7 @@ function resetForm() {
 }
 
 async function save() {
+  if (saving.value) return
   if (!form.value.roleName.trim()) {
     showErrorToast("请填写目标岗位")
     return

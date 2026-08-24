@@ -58,6 +58,13 @@ describe("runWithLoading", () => {
     expect(operatorKnowledge).toContain(':loading="loading" :disabled="loading || Boolean(versionsLoading) || restoringVersion !== null"')
     expect(operatorKnowledge).toContain(':loading="versionsLoading === item.id"')
     expect(operatorKnowledge).toContain(':loading="restoringVersion === version.version"')
+    expect(applications).toContain("if (saving.value) return")
+    expect(assessment).toContain("if (submitting.value) return")
+    expect(jobSearch).toContain("if (loading.value) return")
+    expect(jobSearch).toContain("if (marketSearchLoading.value || !activeRoleName.value) return")
+    expect(jobSearch).toContain("if (reviewLoading.value || pdfLoading.value) return")
+    expect(jobSearch).toContain("if (adviceLoading.value) return")
+    expect(membership).toContain("if (purchasing.value) return")
   })
 
   it("locks cross-action login and resume version requests while pending", () => {

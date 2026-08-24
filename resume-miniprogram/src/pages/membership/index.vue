@@ -38,6 +38,7 @@ async function load(): Promise<void> {
 }
 
 async function beginDemoCheckout(item: MembershipPackage): Promise<void> {
+  if (purchasing.value) return
   purchasing.value = true
   error.value = ""
   try {
@@ -50,6 +51,7 @@ async function beginDemoCheckout(item: MembershipPackage): Promise<void> {
 }
 
 async function completeCheckout(): Promise<void> {
+  if (purchasing.value) return
   if (!pendingOrder.value) return
   purchasing.value = true
   try {

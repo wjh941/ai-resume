@@ -170,6 +170,7 @@ async function selectIdentity(identityCode: (typeof IDENTITY_OPTIONS)[number]["c
 }
 
 async function loadJobAnalyses(identityCode: (typeof IDENTITY_OPTIONS)[number]["code"]) {
+  if (loading.value) return
   const roles = selectedOrTypedRoles()
   const rolesToLoad = roles.length ? roles : [consultation.pendingRoleName].filter(Boolean)
   if (!rolesToLoad.length) return
@@ -204,7 +205,7 @@ function selectJobConsultation(index: number) {
 }
 
 async function loadMarketSearch() {
-  if (!activeRoleName.value) return
+  if (marketSearchLoading.value || !activeRoleName.value) return
   marketSearchLoading.value = true
   marketSearchReport.value = null
   try {
@@ -255,6 +256,7 @@ function generateResumeForRole(index: number) {
 }
 
 async function reviewResume() {
+  if (reviewLoading.value || pdfLoading.value) return
   const text = resumeText.value.trim()
   if (!text) {
     reviewError.value = "请粘贴需要优化的简历内容，或先上传 PDF。"
@@ -291,6 +293,7 @@ type ChooseFile = (options: {
 }) => void
 
 function chooseResumePdf() {
+  if (reviewLoading.value || pdfLoading.value) return
   const chooseFile = (globalThis as typeof globalThis & { uni?: { chooseFile?: ChooseFile } }).uni?.chooseFile
   if (!chooseFile) {
     reviewError.value = "当前运行环境不支持 PDF 文件选择，请直接粘贴简历文本。"
@@ -331,6 +334,7 @@ function selectAdviceTopic(event: Event) {
 }
 
 async function requestCareerAdvice() {
+  if (adviceLoading.value) return
   if (!consultation.identityCode) {
     adviceError.value = "请先选择求职身份。"
     return
