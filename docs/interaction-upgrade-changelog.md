@@ -5,7 +5,7 @@ Date: 2026-08-24
 ## Scope
 
 - `resume-miniprogram`: H5 interaction enhancement only. Existing pages, routes, API interfaces, mock data, Chinese copy, and business flows are unchanged. No new experience-evidence, career-assessment, job-compare, member, or order business modules were added.
-- `web-frontend`: interaction foundation and full existing-view feedback upgrade. Missing business capabilities remain reserved for later work and are not implemented here.
+- `web-frontend`: interaction foundation plus the independent functional workbench modules listed below. H5 business pages remain unchanged.
 
 ## Shared interaction foundation
 
@@ -24,6 +24,18 @@ Date: 2026-08-24
 - Success notices use a restrained checkmark draw animation.
 - High-frequency action buttons use native press depth/ripple-compatible transitions; no heavy animation dependency was introduced.
 - Existing view headings now provide stable `aria-labelledby` targets for the transition shell.
+
+## Web functional completion
+
+- Resume drafts: `ResumeView` now supports open, copy, delete, and stable pending states; `ResumeEditorView` edits basic data, job target, education, employment, projects, skills, certificates, and self-evaluation through the existing draft API.
+- Applications: `ApplicationsView` adds edit mode, row-level status updates, timeline disclosure and append, reminders, deletion confirmation, filters, and per-record loading cleanup.
+- Experience evidence: `EvidenceView` and `EvidenceForm` support five evidence kinds, verified state, edit/delete, role-based suggestions, and readiness checks against a selected real draft.
+- Membership and orders: `MembershipView`, `MembershipPackageCard`, and `OrderRow` show entitlement, packages, pending orders, demo payment confirmation, and order history. VIP state changes only after the payment callback succeeds.
+- Career assessment: `AssessmentView` and `AssessmentQuestionCard` support answer progress, saved-answer restoration, simplified/professional report modes, result action plans, and membership navigation for upgrade notices.
+- Role comparison: `ComparisonView` and `ComparisonRolePicker` load recommendation roles, enforce unique 2–4 role selection, render comparison score/strength/gap/risk/action data, and retain selections on request failure.
+- Navigation: Web sidebar entries now expose evidence, membership, assessment, and comparison; Career, Jobs, Account, Assessment, and Comparison views provide handoff actions without changing backend interfaces.
+- Loading and failure behavior: every new async action uses `AsyncButton` or a block skeleton/spinner, disables duplicate clicks, and clears pending state in `finally`; failed saves preserve local form values.
+- Tests: Web workflow helper tests cover drafts, applications, evidence, membership, assessment, and comparison state transitions. Existing H5 files and interfaces were not modified in this iteration.
 
 ## `resume-miniprogram` H5
 
