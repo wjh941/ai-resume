@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { focusFirstInvalidResumeField, resolveResumeInvalidSummary } from "../lib/resume-invalid-feedback"
+import { createResumeInvalidFeedback, focusFirstInvalidResumeField } from "../lib/resume-invalid-feedback"
 
 describe("focusFirstInvalidResumeField", () => {
   it("focuses and centers the first invalid resume control in form order", () => {
@@ -24,13 +24,25 @@ describe("focusFirstInvalidResumeField", () => {
   })
 })
 
-describe("resolveResumeInvalidSummary", () => {
-  it("stays silent before submit, follows the current first error, and clears after correction", () => {
+describe("createResumeInvalidFeedback", () => {
+  it("owns activation, error synchronization, clearing, and reset semantics", () => {
+    const feedback = createResumeInvalidFeedback()
     const multipleErrors = { "basic.name": "name required", "basic.phone": "phone invalid" }
 
-    expect(resolveResumeInvalidSummary(false, multipleErrors)).toBe("")
-    expect(resolveResumeInvalidSummary(true, multipleErrors)).toBe("name required")
-    expect(resolveResumeInvalidSummary(true, { "basic.phone": "phone invalid" })).toBe("phone invalid")
-    expect(resolveResumeInvalidSummary(true, {})).toBe("")
+    feedback.sync(multipleErrors)
+    expect(feedback.summary.value).toBe("")
+
+    feedback.activate(multipleErrors)
+    expect(feedback.summary.value).toBe("name required")
+    feedback.sync({ "basic.phone": "phone invalid" })
+    expect(feedback.summary.value).toBe("phone invalid")
+    feedback.sync({})
+    expect(feedback.summary.value).toBe("")
+
+    feedback.sync(multipleErrors)
+    expect(feedback.summary.value).toBe("name required")
+    feedback.reset()
+    feedback.sync(multipleErrors)
+    expect(feedback.summary.value).toBe("")
   })
 })

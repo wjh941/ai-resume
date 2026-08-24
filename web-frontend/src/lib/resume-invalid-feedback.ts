@@ -1,3 +1,5 @@
+import { ref } from "vue"
+
 const RESUME_FIELD_CONTROL_IDS: ReadonlyArray<readonly [string, string]> = [
   ["jobTitle", "resume-job-title"],
   ["basic.name", "resume-basic-name"],
@@ -15,11 +17,23 @@ type InvalidFeedbackRoot = {
   getElementById(id: string): InvalidControl | null
 }
 
-export function resolveResumeInvalidSummary(
-  active: boolean,
-  errors: Record<string, string>,
-): string {
-  return active ? Object.values(errors)[0] || "" : ""
+export function createResumeInvalidFeedback() {
+  const summary = ref("")
+  let active = false
+
+  const sync = (errors: Record<string, string>) => {
+    summary.value = active ? Object.values(errors)[0] || "" : ""
+  }
+  const activate = (errors: Record<string, string>) => {
+    active = true
+    sync(errors)
+  }
+  const reset = () => {
+    active = false
+    summary.value = ""
+  }
+
+  return { summary, activate, sync, reset }
 }
 
 export function focusFirstInvalidResumeField(
