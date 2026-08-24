@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url"
 import { runWithLoading } from "../utils/async-state"
 import {
   getAssessmentStepTransition,
-  getRoleFieldError,
+  transitionJobRoleFeedback,
 } from "../utils/h5-feedback"
 
 describe("runWithLoading", () => {
@@ -30,9 +30,17 @@ describe("runWithLoading", () => {
     expect(states).toEqual([true, false])
   })
 
-  it("returns field feedback only when no role was selected", () => {
-    expect(getRoleFieldError([])).toBe("请输入岗位名称，或从下方联想岗位中选择。")
-    expect(getRoleFieldError(["数据工程师"])).toBe("")
+  it("transitions job feedback through invalid submission and correction", () => {
+    let feedback = { error: "岗位分析失败", roleFieldError: "" }
+
+    feedback = transitionJobRoleFeedback(feedback, { type: "submit", roles: [] })
+    expect(feedback).toEqual({
+      error: "",
+      roleFieldError: "请输入岗位名称，或从下方联想岗位中选择。",
+    })
+
+    feedback = transitionJobRoleFeedback(feedback, { type: "input", value: " 数据工程师 " })
+    expect(feedback).toEqual({ error: "", roleFieldError: "" })
   })
 
   it("keeps unanswered assessment steps non-blocking", () => {
@@ -199,9 +207,11 @@ describe("runWithLoading", () => {
     expect(jobSearch).toContain('const roleFieldError = ref("")')
     expect(jobSearch).toContain(':aria-invalid="Boolean(roleFieldError)"')
     expect(jobSearch).toContain('id="job-role-error"')
+    expect(jobSearch.match(/transitionJobRoleFeedback/g)).toHaveLength(3)
     expect(assessment).toContain('const stepHint = ref("")')
     expect(assessment).toContain('aria-live="polite"')
-    expect(editor).toContain("captureFocusRestore")
-    expect(editor).toContain("complete: restoreFocus")
+    expect(editor.match(/const restoreFocus = captureFocusRestore/g)).toHaveLength(2)
+    expect(editor.match(/typeof document === "undefined" \? undefined : document/g)).toHaveLength(2)
+    expect(editor.match(/complete: restoreFocus/g)).toHaveLength(2)
   })
 })

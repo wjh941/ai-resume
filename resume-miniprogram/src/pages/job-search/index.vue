@@ -24,7 +24,7 @@ import type {
 } from "../../types/consultation"
 import { prepareResumeForJob } from "../../utils/resume-autofill"
 import { completeOnboarding, hasCompletedOnboarding } from "../../utils/onboarding"
-import { getRoleFieldError } from "../../utils/h5-feedback"
+import { transitionJobRoleFeedback } from "../../utils/h5-feedback"
 
 const roleName = ref("")
 const selectedRoles = ref<string[]>([])
@@ -84,7 +84,12 @@ const selectedAdviceTopic = computed(() => adviceTopics[selectedAdviceIndex.valu
 let suggestionRequestId = 0
 
 watch(roleName, (value) => {
-  if (value.trim()) roleFieldError.value = ""
+  const feedback = transitionJobRoleFeedback(
+    { error: error.value, roleFieldError: roleFieldError.value },
+    { type: "input", value },
+  )
+  error.value = feedback.error
+  roleFieldError.value = feedback.roleFieldError
   void refreshSuggestions(value)
 })
 
@@ -151,15 +156,14 @@ function resetResults() {
 
 async function beginConsultation() {
   const roles = selectedOrTypedRoles()
-  const nextRoleFieldError = getRoleFieldError(roles)
-  if (nextRoleFieldError) {
-    roleFieldError.value = nextRoleFieldError
-    error.value = ""
-    return
-  }
+  const feedback = transitionJobRoleFeedback(
+    { error: error.value, roleFieldError: roleFieldError.value },
+    { type: "submit", roles },
+  )
+  error.value = feedback.error
+  roleFieldError.value = feedback.roleFieldError
+  if (roleFieldError.value) return
 
-  roleFieldError.value = ""
-  error.value = ""
   resetResults()
   const nextStep = consultation.beginRoleConsultation(roles[0])
   if (nextStep === "identity-selection") return
