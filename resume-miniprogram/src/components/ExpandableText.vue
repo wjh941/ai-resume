@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, getCurrentInstance, ref } from "vue"
+import { computed, getCurrentInstance, ref, watch } from "vue"
 
 import { isExpandableText } from "../utils/expandable-text"
 
@@ -18,6 +18,10 @@ const expanded = ref(false)
 const contentId = `expandable-text-${getCurrentInstance()?.uid ?? 0}`
 const canExpand = computed(() => isExpandableText(props.text, props.expandAt))
 const toggleLabel = computed(() => `${expanded.value ? "收起" : "展开"}${props.label}`)
+
+watch(() => props.text, () => {
+  expanded.value = false
+})
 </script>
 
 <template>

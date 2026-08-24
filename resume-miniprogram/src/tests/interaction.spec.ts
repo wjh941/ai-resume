@@ -137,6 +137,7 @@ describe("runWithLoading", () => {
     expect(component).toContain(':aria-expanded="expanded"')
     expect(component).toContain("getCurrentInstance")
     expect(component).not.toContain("useId")
+    expect(component).toContain("watch(() => props.text")
     expect(component).toContain("-webkit-line-clamp")
     expect(component).toContain("overflow-wrap: anywhere")
     expect(component).toContain("展开")
