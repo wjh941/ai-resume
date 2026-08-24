@@ -248,7 +248,7 @@ onMounted(loadVersions)
         <button size="mini" @click="backToForm">返回填写</button>
         <button size="mini" @click="openApplicationTracker">加入投递计划</button>
         <button size="mini" class="primary" :loading="saveLoading" :disabled="saveLoading || Boolean(exporting)" @click="save">保存草稿</button>
-        <button size="mini" :loading="importLoading" @click="importResume">导入简历</button>
+        <button size="mini" :loading="importLoading" :disabled="importLoading || Boolean(exporting)" @click="importResume">导入简历</button>
         <button size="mini" :loading="exporting === 'word'" :disabled="Boolean(exporting)" @click="exportResume('word')">导出 Word</button>
         <button size="mini" :loading="exporting === 'pdf'" :disabled="Boolean(exporting)" @click="exportResume('pdf')">导出 PDF</button>
       </view>
@@ -268,7 +268,7 @@ onMounted(loadVersions)
       <view class="version-heading"><text>简历版本</text><text>快照不会新建草稿</text></view>
       <view class="version-create">
         <input v-model="versionNote" placeholder="版本备注，例如：投递前" />
-        <button size="mini" class="primary" :loading="versionLoading" @click="saveVersion">保存版本</button>
+        <button size="mini" class="primary" :loading="versionLoading" :disabled="versionLoading || Boolean(exporting)" @click="saveVersion">保存版本</button>
       </view>
       <view v-if="versions.length" class="version-list">
         <view v-for="version in versions" :key="version.id" class="version-row">

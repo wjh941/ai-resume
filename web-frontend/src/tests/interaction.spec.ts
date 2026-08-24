@@ -36,4 +36,29 @@ describe("useAsyncAction", () => {
     resolve("first")
     await expect(first).resolves.toBe("first")
   })
+
+  it("locks career task controls while a task update is pending", () => {
+    const source = readFileSync(new URL("../views/CareerView.vue", import.meta.url), "utf8")
+    expect(source).toContain("if (pendingTaskId.value) return")
+    expect(source).toContain(':loading="pendingTaskId === task.id" :disabled="Boolean(pendingTaskId)"')
+  })
+
+  it("locks application follow-up controls while one request is pending", () => {
+    const source = readFileSync(new URL("../views/ApplicationsView.vue", import.meta.url), "utf8")
+    expect(source).toContain(':loading="pendingKey === `timeline-load:${item.id}`" :disabled="Boolean(pendingKey)"')
+    expect(source).toContain(':loading="pendingKey === `timeline-add:${item.id}`" :disabled="Boolean(pendingKey)"')
+    expect(source).toContain(':loading="pendingKey === `reminder:${item.id}`" :disabled="Boolean(pendingKey)"')
+  })
+
+  it("guards account actions and mode switches while requests are pending", () => {
+    const account = readFileSync(new URL("../views/AccountView.vue", import.meta.url), "utf8")
+    const jobs = readFileSync(new URL("../views/JobsView.vue", import.meta.url), "utf8")
+    const insights = readFileSync(new URL("../views/InsightsView.vue", import.meta.url), "utf8")
+    const assessment = readFileSync(new URL("../views/AssessmentView.vue", import.meta.url), "utf8")
+    expect(account).toContain("if (pendingAction.value) return")
+    expect(account).toContain(':disabled="Boolean(pendingAction)"')
+    expect(jobs).toContain(':disabled="loading"')
+    expect(insights).toContain(':disabled="loading"')
+    expect(assessment).toContain(':disabled="saving"')
+  })
 })

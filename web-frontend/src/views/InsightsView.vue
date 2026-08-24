@@ -48,7 +48,7 @@ async function queryInsights() {
     <form class="insight-query" @submit.prevent="queryInsights">
       <label><span>岗位</span><input v-model.trim="roleName" maxlength="120" placeholder="例如：数据分析师" /></label>
       <label><span>资料年份</span><input v-model="year" type="number" min="2000" max="2100" /></label>
-      <div class="mode-switch" role="group" aria-label="洞察表达方式"><button type="button" :class="{ 'is-selected': reportMode === 'simplified' }" @click="reportMode = 'simplified'">精简版</button><button type="button" :class="{ 'is-selected': reportMode === 'professional' }" @click="reportMode = 'professional'">专业版</button></div>
+      <div class="mode-switch" role="group" aria-label="洞察表达方式"><button type="button" :disabled="loading" :class="{ 'is-selected': reportMode === 'simplified' }" @click="reportMode = 'simplified'">精简版</button><button type="button" :disabled="loading" :class="{ 'is-selected': reportMode === 'professional' }" @click="reportMode = 'professional'">专业版</button></div>
       <AsyncButton class="primary-button compact" type="submit" :loading="loading"><Search :size="17" aria-hidden="true" />{{ loading ? "查询中" : "查询洞察" }}</AsyncButton>
     </form>
     <p v-if="error" class="notice-error" role="alert">{{ error }}</p>

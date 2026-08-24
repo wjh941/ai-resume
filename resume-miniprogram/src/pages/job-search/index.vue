@@ -460,7 +460,7 @@ onMounted(() => {
           placeholder="可选：补充目标城市、公司类型、薪资或行业偏好"
           auto-height
         />
-        <button class="primary primary-action" :loading="loading" @click="beginConsultation">查询岗位情报</button>
+        <button class="primary primary-action" :loading="loading" :disabled="loading" @click="beginConsultation">查询岗位情报</button>
         <text v-if="error" class="error">{{ error }}</text>
       </view>
 
@@ -536,7 +536,7 @@ onMounted(() => {
               <text class="block-title">联网市场更新</text>
               <text class="market-caption">主动读取公开网页来源，不替代岗位分析结论</text>
             </view>
-            <button class="secondary compact" :loading="marketSearchLoading" @click="loadMarketSearch">联网更新</button>
+            <button class="secondary compact" :loading="marketSearchLoading" :disabled="marketSearchLoading" @click="loadMarketSearch">联网更新</button>
           </view>
           <text v-if="marketSearchReport" :class="['market-notice', { 'market-disabled': !marketSearchReport.enabled }]">
             {{ marketSearchReport.notice }}
@@ -628,8 +628,8 @@ onMounted(() => {
           auto-height
         />
         <view class="button-row">
-          <button class="secondary" :loading="pdfLoading" @click="chooseResumePdf">上传 PDF 提取文字</button>
-          <button class="primary inline-primary" :loading="reviewLoading" @click="reviewResume">开始批改</button>
+          <button class="secondary" :loading="pdfLoading" :disabled="pdfLoading || reviewLoading" @click="chooseResumePdf">上传 PDF 提取文字</button>
+          <button class="primary inline-primary" :loading="reviewLoading" :disabled="reviewLoading || pdfLoading" @click="reviewResume">开始批改</button>
         </view>
         <text v-if="reviewError" class="error">{{ reviewError }}</text>
       </view>
@@ -680,7 +680,7 @@ onMounted(() => {
           placeholder="可补充具体问题，例如：如何确认公积金基数？"
           auto-height
         />
-        <button class="primary primary-action" :loading="adviceLoading" @click="requestCareerAdvice">获取针对性建议</button>
+        <button class="primary primary-action" :loading="adviceLoading" :disabled="adviceLoading" @click="requestCareerAdvice">获取针对性建议</button>
         <text v-if="adviceError" class="error">{{ adviceError }}</text>
       </view>
 

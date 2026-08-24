@@ -77,8 +77,8 @@ function clearLocalData(): void {
       <text class="section-title">Backup this device</text>
       <text class="description">Export or restore your local resume draft and career-planning workspace as a JSON file. Server records are not included.</text>
       <view class="backup-actions">
-        <button :loading="backupBusy" @click="exportBackup">Export local backup</button>
-        <button :loading="backupBusy" class="secondary" @click="confirmRestoreBackup">Restore local backup</button>
+        <button :loading="backupBusy" :disabled="backupBusy" @click="exportBackup">Export local backup</button>
+        <button :loading="backupBusy" :disabled="backupBusy" class="secondary" @click="confirmRestoreBackup">Restore local backup</button>
       </view>
     </view>
     <view class="section">

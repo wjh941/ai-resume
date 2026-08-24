@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue"
 
+import LoadingSpinner from "../../components/LoadingSpinner.vue"
 import {
   getAssessmentQuestions,
   listAnnualInsights,
@@ -104,7 +105,7 @@ onMounted(() => {
         <text class="notice-text">{{ store.notice || "本测评用于职业决策支持，不是心理或医疗诊断，也不承诺就业结果。" }}</text>
       </view>
 
-      <view v-if="loading" class="card loading-card"><text>正在加载测评题目…</text></view>
+      <view v-if="loading" class="card loading-card"><LoadingSpinner size="sm" label="正在加载测评题目" /><text>正在加载测评题目…</text></view>
       <text v-if="error" class="error">{{ error }}</text>
 
       <template v-if="!loading && !result">
@@ -130,6 +131,7 @@ onMounted(() => {
                 :key="option.value"
                 class="scale-button"
                 :class="{ selected: store.answers[question.key] === option.value }"
+                :disabled="submitting"
                 @click="answer(question.key, option.value)"
               >{{ option.value }}</button>
             </view>
@@ -140,7 +142,7 @@ onMounted(() => {
 
           <view class="button-row">
             <button class="secondary" :disabled="currentStep === 0" @click="goPrevious">上一步</button>
-            <button class="primary" :loading="submitting" @click="goNext">
+            <button class="primary" :loading="submitting" :disabled="submitting" @click="goNext">
               {{ currentStep === steps.length - 1 ? "生成测评建议" : "下一步" }}
             </button>
           </view>

@@ -66,6 +66,7 @@ const localJobMatches = ref<LocalJobMatchItem[]>([])
 const localJobMatchNotice = ref("")
 const careerTasks = ref<CareerTask[]>([])
 const taskSaving = ref(false)
+const taskTogglingId = ref("")
 const taskForm = ref({ title: "", dueDate: "", applicationId: "", evidenceId: "" })
 const isTierTransitioning = ref(false)
 let tierTransitionTimer: ReturnType<typeof setTimeout> | undefined
@@ -168,6 +169,7 @@ function openApplicationTracker() {
 }
 
 async function generatePlan() {
+  if (loading.value) return
   const payload = buildPayload()
   if (!payload.major) {
     error.value = "请先填写专业，可填写跨专业目标。"
@@ -225,6 +227,7 @@ async function loadSavedProfile() {
 }
 
 async function useForResume(recommendation: RoleRecommendation) {
+  if (resumeLoading.value) return
   resumeLoading.value = recommendation.role.roleName
   try {
     const job = await queryJob(recommendation.role.roleName)
@@ -249,6 +252,7 @@ async function loadCareerTasks() {
 }
 
 async function generateTasks() {
+  if (taskSaving.value) return
   const actions = recommendations.value.flatMap((item) => item.actionPlan).filter(Boolean)
   if (!actions.length) {
     uni.showToast({ title: "请先生成职业建议", icon: "none" })
@@ -267,6 +271,7 @@ async function generateTasks() {
 }
 
 async function createTask() {
+  if (taskSaving.value) return
   if (!taskForm.value.title.trim()) {
     uni.showToast({ title: "请填写任务内容", icon: "none" })
     return
@@ -293,11 +298,15 @@ async function createTask() {
 }
 
 async function toggleTask(task: CareerTask) {
+  if (taskTogglingId.value) return
+  taskTogglingId.value = task.id
   try {
     await updateCareerTask(task.id, { status: task.status === "completed" ? "pending" : "completed" })
     await loadCareerTasks()
   } catch (reason) {
     uni.showToast({ title: reason instanceof Error ? reason.message : "任务状态更新失败，请稍后重试", icon: "none" })
+  } finally {
+    taskTogglingId.value = ""
   }
 }
 
@@ -333,22 +342,26 @@ onUnmounted(() => {
         <button class="assessment-entry" @click="openApplicationTracker">创建计划</button>
       </view>
       <view class="task-panel">
-        <view class="task-heading"><view><text>职业任务</text><text>把当前建议转成可完成的行动记录。</text></view><button size="mini" class="task-generate" :loading="taskSaving" @click="generateTasks">生成任务</button></view>
+        <view class="task-heading"><view><text>职业任务</text><text>把当前建议转成可完成的行动记录。</text></view><button size="mini" class="task-generate" :loading="taskSaving" :disabled="taskSaving" @click="generateTasks">生成任务</button></view>
         <view class="task-create">
           <input v-model="taskForm.title" placeholder="新增任务，例如：整理作品集" />
           <input v-model="taskForm.dueDate" placeholder="截止日期 YYYY-MM-DD（可空）" />
           <input v-model="taskForm.applicationId" placeholder="关联投递 ID（可空）" />
           <input v-model="taskForm.evidenceId" placeholder="关联证据 ID（可空）" />
-          <button size="mini" class="secondary" :loading="taskSaving" @click="createTask">添加任务</button>
+          <button size="mini" class="secondary" :loading="taskSaving" :disabled="taskSaving" @click="createTask">添加任务</button>
         </view>
         <view v-if="careerTasks.length" class="task-list">
           <view v-for="task in careerTasks" :key="task.id" class="task-row" :class="{ completed: task.status === 'completed' }">
-            <checkbox
-              class="task-check"
-              :checked="task.status === 'completed'"
-              color="#2c8b70"
-              @click.stop="toggleTask(task)"
-            />
+            <view class="task-check-slot">
+              <checkbox
+                class="task-check"
+                :checked="task.status === 'completed'"
+                color="#2c8b70"
+                :disabled="Boolean(taskTogglingId)"
+                @click.stop="toggleTask(task)"
+              />
+              <LoadingSpinner v-if="taskTogglingId === task.id" size="sm" label="正在更新任务状态" />
+            </view>
             <view><text class="task-title">{{ task.title }}</text><text v-if="task.dueDate" class="task-detail">截止：{{ task.dueDate }}</text><text v-if="task.linkToApplicationId || task.linkToEvidenceId" class="task-detail">关联：{{ [task.linkToApplicationId, task.linkToEvidenceId].filter(Boolean).join(" · ") }}</text></view>
           </view>
         </view>
@@ -392,7 +405,7 @@ onUnmounted(() => {
           <view class="field"><text>工作形式</text><input v-model="profile.workTypes[0]" placeholder="全职 / 实习" /></view>
         </view>
         <text v-if="error" class="error">{{ error }}</text>
-        <button class="primary" :loading="loading" @click="generatePlan">生成我的三档求职方案</button>
+        <button class="primary" :loading="loading" :disabled="loading" @click="generatePlan">生成我的三档求职方案</button>
       </view>
 
       <view v-if="loading" class="loading-skeletons" aria-live="polite">
@@ -461,7 +474,7 @@ onUnmounted(() => {
               :class="{ selected: isInComparison(recommendation.role.roleName) }"
               @click="toggleComparison(recommendation.role.roleName)"
             >{{ isInComparison(recommendation.role.roleName) ? "取消对比" : "加入对比" }}</button>
-            <button class="secondary" :loading="resumeLoading === recommendation.role.roleName" @click="useForResume(recommendation)">按此岗位优化简历</button>
+            <button class="secondary" :loading="resumeLoading === recommendation.role.roleName" :disabled="Boolean(resumeLoading)" @click="useForResume(recommendation)">按此岗位优化简历</button>
           </view>
         </view>
         <text class="notice">{{ store.result.recommendationNotice }}</text>
@@ -481,7 +494,7 @@ onUnmounted(() => {
 .weekly-target-title,.weekly-target-text { display: block; }.weekly-target-title { color: #26735c; font-size: 27rpx; font-weight: 700; }.weekly-target-text { margin-top: 6rpx; color: #598575; font-size: 22rpx; line-height: 1.5; }
 .assessment-brief > view { min-width: 0; }.assessment-brief-title,.assessment-brief-text { display: block; }.assessment-brief-title { color: #245b99; font-size: 27rpx; font-weight: 700; }.assessment-brief-text { margin-top: 6rpx; color: #59728d; font-size: 22rpx; line-height: 1.5; }
 .assessment-entry { flex-shrink: 0; margin: 0; padding: 0 22rpx; color: #1677ff; background: rgba(255,255,255,.82); border: 1rpx solid #a9d1ff; border-radius: 999rpx; font-size: 24rpx; line-height: 62rpx; }
-.task-panel { margin-top: 20rpx; padding: 22rpx; background: #f2fbf8; border: 1rpx solid #cfeee4; border-radius: 16rpx; }.task-heading,.task-row { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }.task-heading > view { min-width: 0; }.task-heading text { display: block; }.task-heading text:first-child { color: #26735c; font-size: 29rpx; font-weight: 700; }.task-heading text:last-child { margin-top: 6rpx; color: #598575; font-size: 22rpx; line-height: 1.5; }.task-generate { flex-shrink: 0; margin: 0; color: #fff; background: #2c8b70; font-size: 22rpx; }.task-create { display: grid; grid-template-columns: 1fr 1fr; gap: 12rpx; margin-top: 16rpx; }.task-create input { box-sizing: border-box; min-height: 68rpx; width: 100%; padding: 0 16rpx; color: #1f3e36; background: #fff; border: 1rpx solid #cfeee4; border-radius: 10rpx; font-size: 23rpx; }.task-create button { justify-self: start; margin: 0; font-size: 22rpx; }.task-list { margin-top: 14rpx; }.task-row { padding: 14rpx 0; border-top: 1rpx solid #d8efe5; }.task-row.completed { opacity: .62; }.task-check { flex-shrink: 0; width: 34rpx; height: 34rpx; margin: 0; }.task-title,.task-detail,.task-empty { display: block; }.task-title { color: #244a3e; font-size: 25rpx; font-weight: 600; }.task-detail,.task-empty { margin-top: 5rpx; color: #598575; font-size: 21rpx; line-height: 1.45; }.task-empty { margin-top: 14rpx; }
+.task-panel { margin-top: 20rpx; padding: 22rpx; background: #f2fbf8; border: 1rpx solid #cfeee4; border-radius: 16rpx; }.task-heading,.task-row { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }.task-heading > view { min-width: 0; }.task-heading text { display: block; }.task-heading text:first-child { color: #26735c; font-size: 29rpx; font-weight: 700; }.task-heading text:last-child { margin-top: 6rpx; color: #598575; font-size: 22rpx; line-height: 1.5; }.task-generate { flex-shrink: 0; margin: 0; color: #fff; background: #2c8b70; font-size: 22rpx; }.task-create { display: grid; grid-template-columns: 1fr 1fr; gap: 12rpx; margin-top: 16rpx; }.task-create input { box-sizing: border-box; min-height: 68rpx; width: 100%; padding: 0 16rpx; color: #1f3e36; background: #fff; border: 1rpx solid #cfeee4; border-radius: 10rpx; font-size: 23rpx; }.task-create button { justify-self: start; margin: 0; font-size: 22rpx; }.task-list { margin-top: 14rpx; }.task-row { padding: 14rpx 0; border-top: 1rpx solid #d8efe5; }.task-row.completed { opacity: .62; }.task-check-slot { position: relative; display: flex; width: 34rpx; height: 34rpx; flex: 0 0 34rpx; align-items: center; justify-content: center; }.task-check { flex-shrink: 0; width: 34rpx; height: 34rpx; margin: 0; }.task-check-slot .ui-loading-spinner { position: absolute; }.task-title,.task-detail,.task-empty { display: block; }.task-title { color: #244a3e; font-size: 25rpx; font-weight: 600; }.task-detail,.task-empty { margin-top: 5rpx; color: #598575; font-size: 21rpx; line-height: 1.45; }.task-empty { margin-top: 14rpx; }
 .comparison-bar { display: flex; align-items: center; justify-content: space-between; gap: 18rpx; margin-top: 20rpx; padding: 20rpx 22rpx; background: #eef8ff; border: 1rpx solid #c7e5ff; border-radius: 16rpx; }
 .comparison-title,.comparison-hint { display: block; }.comparison-title { color: #245b99; font-size: 27rpx; font-weight: 700; }.comparison-hint { margin-top: 6rpx; color: #59728d; font-size: 22rpx; line-height: 1.45; }.comparison-button { flex-shrink: 0; margin: 0; color: #fff; background: #1677ff; font-size: 23rpx; }
 .card { background: #fff; border: 1rpx solid #e7edf5; border-radius: 20rpx; padding: 24rpx; margin-top: 20rpx; box-shadow: 0 8rpx 24rpx rgba(35, 78, 130, 0.06); }

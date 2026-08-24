@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue"
 
+import LoadingSpinner from "../../components/LoadingSpinner.vue"
 import {
   completeDemoPayment,
   createMembershipOrder,
@@ -70,10 +71,10 @@ onMounted(() => { void load() })
 <template>
   <scroll-view class="page" scroll-y>
     <view class="status-card"><text class="eyebrow">MEMBERSHIP</text><text class="title">{{ vip?.vipLevel || "Loading" }} plan</text><text class="copy">{{ vip?.expireTime ? `Valid until ${vip.expireTime}` : "No active paid entitlement" }}</text><text class="copy">{{ vip?.autoRenew ? "Auto-renew preference is on" : "Auto-renew preference is off" }}</text></view>
-    <view v-if="pendingOrder" class="demo-card"><text class="section-title">Demo checkout ready</text><text class="copy">Order {{ pendingOrder.orderId }} was created. Real payment gateways are intentionally not connected.</text><button class="primary" :loading="purchasing" @click="completeCheckout">Complete demo payment</button></view>
+    <view v-if="pendingOrder" class="demo-card"><text class="section-title">Demo checkout ready</text><text class="copy">Order {{ pendingOrder.orderId }} was created. Real payment gateways are intentionally not connected.</text><button class="primary" :loading="purchasing" :disabled="purchasing" @click="completeCheckout">Complete demo payment</button></view>
     <text v-if="error" class="error">{{ error }}</text>
-    <text v-if="loading" class="notice">Loading membership options...</text>
-    <view v-for="item in packages" :key="item.packageType" class="package-card"><text class="package-name">{{ item.name }}</text><text class="price">{{ (item.totalAmount / 100).toFixed(2) }}</text><text v-for="benefit in item.benefits" :key="benefit" class="benefit">{{ benefit }}</text><button :loading="purchasing" @click="beginDemoCheckout(item)">Create demo order</button></view>
+    <view v-if="loading" class="notice"><LoadingSpinner size="sm" label="Loading membership options" /><text>Loading membership options...</text></view>
+    <view v-for="item in packages" :key="item.packageType" class="package-card"><text class="package-name">{{ item.name }}</text><text class="price">{{ (item.totalAmount / 100).toFixed(2) }}</text><text v-for="benefit in item.benefits" :key="benefit" class="benefit">{{ benefit }}</text><button :loading="purchasing" :disabled="purchasing" @click="beginDemoCheckout(item)">Create demo order</button></view>
     <view v-if="orders.length" class="history"><text class="section-title">Recent orders</text><view v-for="item in orders.slice(0, 3)" :key="item.orderId" class="history-row"><text>{{ item.packageType }} - {{ item.paymentStatus }}</text><text>{{ item.createTime }}</text></view></view>
   </scroll-view>
 </template>

@@ -48,6 +48,7 @@ async function load(): Promise<void> {
 }
 
 async function toggleFavorite(): Promise<void> {
+  if (saving.value) return
   if (!selectedRole.value) {
     error.value = "Enter a job role to save it."
     return
@@ -123,7 +124,7 @@ onMounted(() => { void load() })
       <text class="section-title">Save a role</text>
       <input v-model="roleName" placeholder="Data Engineer" />
       <textarea v-model="note" placeholder="Optional review note" />
-      <button class="primary" :loading="saving" @click="toggleFavorite">{{ currentFavorite ? "Remove favorite" : "Save favorite" }}</button>
+      <button class="primary" :loading="saving" :disabled="saving" @click="toggleFavorite">{{ currentFavorite ? "Remove favorite" : "Save favorite" }}</button>
     </view>
     <view class="card subscription"><view><text class="section-title">Job matching alert</text><text class="copy">Save this preference now; actual alert delivery remains a mock.</text></view><switch class="subscription-switch" :class="{ 'subscription-switch--pending': subscriptionSaving }" :disabled="subscriptionSaving" :checked="enabled" color="#1677ff" @change="updateSubscription" /></view>
     <view class="card"><text class="section-title">Matching filter</text><input v-model="matchFilter" maxlength="200" placeholder="Shanghai, remote, data platform" /><button :loading="subscriptionSaving" :disabled="subscriptionSaving" @click="saveSubscriptionFilter">Save filter</button><text v-if="lastNotifyAt" class="copy">Last alert: {{ lastNotifyAt }}</text></view>

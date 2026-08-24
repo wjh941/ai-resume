@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue"
 
+import LoadingSpinner from "../../components/LoadingSpinner.vue"
 import { createOperatorKnowledge, listOperatorKnowledge, listOperatorKnowledgeVersions, restoreOperatorKnowledgeVersion, updateOperatorKnowledge, type OperatorKnowledgeItem, type OperatorKnowledgeVersion } from "../../services/operator-api"
 import { toUserMessage } from "../../services/http"
 import { getAuthUser } from "../../stores/session"
@@ -15,6 +16,8 @@ const content = ref("")
 const status = ref<OperatorKnowledgeItem["status"]>("active")
 const loading = ref(false)
 const saving = ref(false)
+const versionsLoading = ref("")
+const restoringVersion = ref<number | null>(null)
 const error = ref("")
 
 function clearForm(): void {
@@ -32,11 +35,13 @@ async function loadItems(): Promise<void> {
 }
 
 async function editItem(item: OperatorKnowledgeItem): Promise<void> {
+  if (versionsLoading.value || restoringVersion.value !== null) return
   selectedItemId.value = item.id
   title.value = item.title
   content.value = item.content
   status.value = item.status
-  try { versions.value = await listOperatorKnowledgeVersions(item.id) } catch (reason) { error.value = toUserMessage(reason, "无法加载历史版本，请稍后重试。") }
+  versionsLoading.value = item.id
+  try { versions.value = await listOperatorKnowledgeVersions(item.id) } catch (reason) { error.value = toUserMessage(reason, "无法加载历史版本，请稍后重试。") } finally { versionsLoading.value = "" }
 }
 
 function changeStatus(event: { detail: { value: string } }): void {
@@ -44,6 +49,7 @@ function changeStatus(event: { detail: { value: string } }): void {
 }
 
 async function saveItem(): Promise<void> {
+  if (saving.value) return
   if (!title.value.trim() || !content.value.trim()) { error.value = "请填写知识标题和内容。"; return }
   saving.value = true
   error.value = ""
@@ -58,15 +64,16 @@ async function saveItem(): Promise<void> {
 }
 
 function restoreVersion(version: OperatorKnowledgeVersion): void {
-  if (!selectedItemId.value) return
+  if (!selectedItemId.value || restoringVersion.value !== null || versionsLoading.value) return
   uni.showModal({ title: "恢复历史版本", content: "恢复后会生成一个新的当前版本，原有版本记录不会被删除。", success: async (result) => {
     if (!result.confirm || !selectedItemId.value) return
+    restoringVersion.value = version.version
     try {
       const item = await restoreOperatorKnowledgeVersion(selectedItemId.value, version.version)
       await loadItems()
       await editItem(item)
       uni.showToast({ title: "已恢复历史版本", icon: "success" })
-    } catch (reason) { error.value = toUserMessage(reason, "恢复历史版本失败，请稍后重试。") }
+    } catch (reason) { error.value = toUserMessage(reason, "恢复历史版本失败，请稍后重试。") } finally { restoringVersion.value = null }
   } })
 }
 
@@ -82,14 +89,14 @@ onMounted(() => {
     <view class="editor">
       <input v-model="title" placeholder="知识标题" maxlength="200" />
       <textarea v-model="content" placeholder="知识内容" maxlength="20000" auto-height />
-      <view class="form-footer"><picker :range="statusOptions.map((item) => statusLabels[item])" :value="statusOptions.indexOf(status)" @change="changeStatus"><view class="status-picker">状态：{{ statusLabels[status] }}</view></picker><view class="form-actions"><button size="mini" @click="clearForm">新建内容</button><button size="mini" class="primary" :loading="saving" @click="saveItem">保存</button></view></view>
+      <view class="form-footer"><picker :range="statusOptions.map((item) => statusLabels[item])" :value="statusOptions.indexOf(status)" @change="changeStatus"><view class="status-picker">状态：{{ statusLabels[status] }}</view></picker><view class="form-actions"><button size="mini" :disabled="saving || Boolean(versionsLoading) || restoringVersion !== null" @click="clearForm">新建内容</button><button size="mini" class="primary" :loading="saving" :disabled="saving" @click="saveItem">保存</button></view></view>
       <text v-if="error" class="error">{{ error }}</text>
     </view>
-    <view class="list-heading"><text>知识条目</text><button size="mini" @click="loadItems">刷新</button></view>
-    <text v-if="loading" class="state">正在加载知识条目…</text>
+    <view class="list-heading"><text>知识条目</text><button size="mini" :loading="loading" :disabled="loading || Boolean(versionsLoading) || restoringVersion !== null" @click="loadItems">刷新</button></view>
+    <view v-if="loading" class="state"><LoadingSpinner size="sm" label="正在加载知识条目" /><text>正在加载知识条目…</text></view>
     <text v-else-if="!items.length" class="state">暂无知识条目，可从上方新建内容。</text>
-    <view v-for="item in items" :key="item.id" class="item"><view class="item-copy"><text class="item-title">{{ item.title }}</text><text class="item-meta">{{ statusLabels[item.status] }} · 第 {{ item.version }} 版</text></view><button size="mini" @click="editItem(item)">编辑</button></view>
-    <view v-if="selectedItemId" class="versions"><text class="versions-title">历史版本</text><view v-for="version in versions" :key="version.version" class="version"><view><text class="version-title">第 {{ version.version }} 版 · {{ statusLabels[version.status] }}</text><text class="version-copy">{{ version.content }}</text></view><button size="mini" @click="restoreVersion(version)">恢复</button></view></view>
+    <view v-for="item in items" :key="item.id" class="item"><view class="item-copy"><text class="item-title">{{ item.title }}</text><text class="item-meta">{{ statusLabels[item.status] }} · 第 {{ item.version }} 版</text></view><button size="mini" :loading="versionsLoading === item.id" :disabled="Boolean(versionsLoading) || restoringVersion !== null" @click="editItem(item)">编辑</button></view>
+    <view v-if="selectedItemId" class="versions"><text class="versions-title">历史版本</text><view v-for="version in versions" :key="version.version" class="version"><view><text class="version-title">第 {{ version.version }} 版 · {{ statusLabels[version.status] }}</text><text class="version-copy">{{ version.content }}</text></view><button size="mini" :loading="restoringVersion === version.version" :disabled="restoringVersion !== null || Boolean(versionsLoading)" @click="restoreVersion(version)">恢复</button></view></view>
   </scroll-view>
 </template>
 

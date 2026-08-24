@@ -35,6 +35,16 @@ The following changes are interaction-only and preserve existing APIs, routes, p
 - `knowledgebase` separates data-source loading from the existing initialization request, disables duplicate initialization taps, and clears source loading on all outcomes.
 - No new H5 business page or module was added; experience evidence, assessment, comparison, membership, and order routes remain existing capabilities only.
 
+### Pending-control audit follow-up
+
+- Web `CareerView` task toggles now reject duplicate updates and lock all task checks while one status request is pending.
+- Web `ApplicationsView` locks row follow-up, reminder, status, edit, and delete controls during an active request; filter changes cannot start a second refresh.
+- Web `AccountView` prevents consent, export, and deletion requests from overwriting one another; all account actions share one disabled pending surface.
+- Web Jobs, Insights, and Assessment mode switches are disabled while their current query or submit request is running.
+- H5 applications now expose separate syncing, timeline, reminder, and delete loading states with `finally` cleanup; career-planner task toggles show a fixed-slot spinner to avoid row jitter.
+- H5 career assessment, membership, operator knowledgebase, job search, job collection, privacy backup, and resume editor async controls now pair native loading feedback with disabled guards.
+- H5 operator knowledgebase version reads/restores and application timeline/reminder/delete flows clear state on failure or cancellation; no request payload or route changed.
+
 ## `web-frontend`
 
 - `AsyncButton`: reusable pending button with disabled click protection, `aria-busy`, and inline spinner.
@@ -77,6 +87,6 @@ Particle bursts, global card flips, swipe-away deletion, bottom-sheet drawers, a
 
 ## Verification
 
-- Web unit tests and production build passed.
-- H5 unit tests: 36 files, 83 tests passed.
+- Web unit tests: 38 tests passed across 12 files; production build passed.
+- H5 unit tests: 36 files, 85 tests passed.
 - H5 build passed with `npm run build:h5`.

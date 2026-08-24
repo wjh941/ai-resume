@@ -36,6 +36,10 @@ const applications = ref<ApplicationRecord[]>([])
 const selectedStatus = ref<"all" | ApplicationStatus>("all")
 const loading = ref(false)
 const saving = ref(false)
+const syncing = ref(false)
+const timelineSaving = ref(false)
+const reminderSaving = ref(false)
+const pendingDeleteId = ref("")
 const error = ref("")
 const form = ref<ApplicationInput>(emptyForm())
 const interviewDate = ref("")
@@ -92,12 +96,18 @@ async function load() {
 }
 
 async function syncPending() {
-  const result = await applicationsStore.syncPending()
-  if (result.synced) {
-    await load()
-    uni.showToast({ title: `已同步 ${result.synced} 条记录`, icon: "success" })
-  } else if (result.remaining) {
-    uni.showToast({ title: "网络仍不可用，待同步记录已保留", icon: "none" })
+  if (syncing.value) return
+  syncing.value = true
+  try {
+    const result = await applicationsStore.syncPending()
+    if (result.synced) {
+      await load()
+      uni.showToast({ title: `已同步 ${result.synced} 条记录`, icon: "success" })
+    } else if (result.remaining) {
+      uni.showToast({ title: "网络仍不可用，待同步记录已保留", icon: "none" })
+    }
+  } finally {
+    syncing.value = false
   }
 }
 
@@ -162,11 +172,13 @@ function beginTimeline(item: ApplicationRecord) {
 }
 
 async function saveTimeline() {
+  if (timelineSaving.value) return
   const draft = timelineDraft.value
   if (!draft.applicationId || !draft.title.trim() || !draft.occurredAt) {
     uni.showToast({ title: "请填写时间线标题和时间", icon: "none" })
     return
   }
+  timelineSaving.value = true
   try {
     await createApplicationTimelineEvent(draft.applicationId, {
       title: draft.title,
@@ -179,29 +191,37 @@ async function saveTimeline() {
     uni.showToast({ title: "时间线已添加", icon: "success" })
   } catch (reason) {
     uni.showToast({ title: reason instanceof Error ? reason.message : "时间线保存失败，请稍后重试", icon: "none" })
+  } finally {
+    timelineSaving.value = false
   }
 }
 
 async function saveReminder() {
+  if (reminderSaving.value) return
   if (!form.value.id || !reminderAt.value) {
     uni.showToast({ title: "请先编辑投递记录并填写提醒时间", icon: "none" })
     return
   }
+  reminderSaving.value = true
   try {
     await saveInterviewReminder(form.value.id, reminderAt.value)
     reminderAt.value = ""
     uni.showToast({ title: "面试提醒已保存", icon: "success" })
   } catch (reason) {
     uni.showToast({ title: reason instanceof Error ? reason.message : "提醒保存失败，请稍后重试", icon: "none" })
+  } finally {
+    reminderSaving.value = false
   }
 }
 
 function remove(item: ApplicationRecord) {
+  if (pendingDeleteId.value) return
   uni.showModal({
     title: "删除投递记录",
     content: `确认删除“${item.roleName}”的投递计划吗？`,
     success: async (result) => {
       if (!result.confirm) return
+      pendingDeleteId.value = item.id
       try {
         await deleteApplication(getClientId(), item.id)
         applications.value = applications.value.filter((current) => current.id !== item.id)
@@ -212,6 +232,8 @@ function remove(item: ApplicationRecord) {
           title: reason instanceof Error ? reason.message : "删除失败，请稍后重试",
           icon: "none",
         })
+      } finally {
+        pendingDeleteId.value = ""
       }
     },
   })
@@ -237,7 +259,7 @@ onMounted(async () => {
         <view><text class="summary-number">{{ dueCount }}</text><text class="summary-label">条待跟进记录</text></view>
         <view v-if="applicationsStore.pendingCount" class="pending">
           <text>本机待同步 {{ applicationsStore.pendingCount }} 条</text>
-          <button size="mini" @click="syncPending">重试同步</button>
+          <button size="mini" :loading="syncing" :disabled="syncing" @click="syncPending">重试同步</button>
         </view>
       </view>
 
@@ -271,10 +293,10 @@ onMounted(async () => {
         <view class="field"><text>备注</text><textarea v-model="form.notes" placeholder="例如：需要准备作品集" /></view>
         <view v-if="form.id" class="reminder-row">
           <input v-model="reminderAt" placeholder="提醒时间，例如 2026-08-25T09:30:00+08:00" />
-          <button size="mini" class="secondary" @click="saveReminder">保存面试提醒</button>
+          <button size="mini" class="secondary" :loading="reminderSaving" :disabled="reminderSaving" @click="saveReminder">保存面试提醒</button>
         </view>
         <text v-if="form.draftId" class="linked-draft">已关联草稿：{{ form.draftId }}</text>
-        <button class="primary" :loading="saving" @click="save">保存投递计划</button>
+        <button class="primary" :loading="saving" :disabled="saving" @click="save">保存投递计划</button>
       </view>
 
       <view class="filter-row">
@@ -322,9 +344,9 @@ onMounted(async () => {
           <input v-model="timelineDraft.title" placeholder="时间线标题" />
           <input v-model="timelineDraft.occurredAt" placeholder="发生时间" />
           <textarea v-model="timelineDraft.description" placeholder="补充说明（可空）" />
-          <button size="mini" class="secondary" @click="saveTimeline">添加时间线</button>
+          <button size="mini" class="secondary" :loading="timelineSaving" :disabled="timelineSaving" @click="saveTimeline">添加时间线</button>
         </view>
-        <view class="actions"><button size="mini" class="secondary" @click="edit(item)">编辑</button><button size="mini" class="secondary" @click="beginTimeline(item)">添加时间线</button><button size="mini" class="danger" @click="remove(item)">删除</button></view>
+        <view class="actions"><button size="mini" class="secondary" :disabled="Boolean(syncing || timelineSaving || reminderSaving || pendingDeleteId)" @click="edit(item)">编辑</button><button size="mini" class="secondary" :disabled="Boolean(syncing || timelineSaving || reminderSaving || pendingDeleteId)" @click="beginTimeline(item)">添加时间线</button><button size="mini" class="danger" :loading="pendingDeleteId === item.id" :disabled="Boolean(pendingDeleteId)" @click="remove(item)">删除</button></view>
       </view>
     </view>
   </scroll-view>

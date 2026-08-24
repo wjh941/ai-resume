@@ -66,8 +66,8 @@ async function favorite() {
     <form class="role-query" @submit.prevent="queryRole">
       <label><span>目标岗位</span><input v-model.trim="roleName" maxlength="200" placeholder="例如：数据分析师" /></label>
       <div class="mode-switch" role="group" aria-label="报告表达方式">
-        <button type="button" :class="{ 'is-selected': reportMode === 'simplified' }" @click="reportMode = 'simplified'">精简版</button>
-        <button type="button" :class="{ 'is-selected': reportMode === 'professional' }" @click="reportMode = 'professional'">专业版</button>
+        <button type="button" :disabled="loading" :class="{ 'is-selected': reportMode === 'simplified' }" @click="reportMode = 'simplified'">精简版</button>
+        <button type="button" :disabled="loading" :class="{ 'is-selected': reportMode === 'professional' }" @click="reportMode = 'professional'">专业版</button>
       </div>
       <AsyncButton class="primary-button compact" type="submit" :loading="loading"><Search :size="17" aria-hidden="true" />{{ loading ? "分析中" : "查询岗位" }}</AsyncButton>
     </form>

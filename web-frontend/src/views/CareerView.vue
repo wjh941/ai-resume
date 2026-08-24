@@ -61,6 +61,7 @@ async function addTask() {
 }
 
 async function toggleTask(task: CareerTask) {
+  if (pendingTaskId.value) return
   const status = task.status === "completed" ? "pending" : "completed"
   pendingTaskId.value = task.id
   try {
@@ -96,7 +97,7 @@ onMounted(refresh)
     <div v-else-if="loading" class="content-skeleton" aria-busy="true"><LoadingSpinner class="content-loading-spinner" label="正在读取行动清单" /><span /><span /></div>
     <div v-else-if="tasks.length" class="task-list">
       <article v-for="task in tasks" :key="task.id" class="task-row" :class="{ 'is-complete': task.status === 'completed' }">
-        <AsyncButton class="task-check" type="button" :loading="pendingTaskId === task.id" :title="task.status === 'completed' ? '标记为未完成' : '标记为已完成'" :aria-label="task.status === 'completed' ? '标记为未完成' : '标记为已完成'" @click="toggleTask(task)"><Check :size="16" aria-hidden="true" /></AsyncButton>
+        <AsyncButton class="task-check" type="button" :loading="pendingTaskId === task.id" :disabled="Boolean(pendingTaskId)" :title="task.status === 'completed' ? '标记为未完成' : '标记为已完成'" :aria-label="task.status === 'completed' ? '标记为未完成' : '标记为已完成'" @click="toggleTask(task)"><Check :size="16" aria-hidden="true" /></AsyncButton>
         <div><h2>{{ task.title }}</h2><p v-if="task.description">{{ task.description }}</p></div>
         <span v-if="task.due_date" class="due-date"><CalendarDays :size="15" aria-hidden="true" />{{ task.due_date }}</span>
       </article>
