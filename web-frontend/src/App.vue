@@ -7,6 +7,7 @@ import WebTopbar from "./components/WebTopbar.vue"
 import { requestApi } from "./lib/api"
 import { clearSession, readSession, type Session } from "./lib/session"
 import AccountView from "./views/AccountView.vue"
+import AssessmentView from "./views/AssessmentView.vue"
 import ApplicationsView from "./views/ApplicationsView.vue"
 import EvidenceView from "./views/EvidenceView.vue"
 import CareerView from "./views/CareerView.vue"
@@ -30,6 +31,7 @@ const activeComponent = computed(() => ({
   applications: ApplicationsView,
   evidence: EvidenceView,
   membership: MembershipView,
+  assessment: AssessmentView,
   insights: InsightsView,
   account: AccountView,
 }[activeView.value]))

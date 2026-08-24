@@ -20,6 +20,7 @@ export type WorkspaceView =
   | "applications"
   | "evidence"
   | "membership"
+  | "assessment"
   | "insights"
   | "account"
 
@@ -39,6 +40,7 @@ const navigation = [
   { key: "applications", label: "投递管理", icon: KanbanSquare },
   { key: "evidence", label: "经历证据", icon: ClipboardCheck },
   { key: "membership", label: "会员与订单", icon: Crown },
+  { key: "assessment", label: "职业测评", icon: ChartNoAxesCombined },
   { key: "insights", label: "年度洞察", icon: ChartNoAxesCombined },
   { key: "account", label: "账户设置", icon: UserRound },
 ] as const
