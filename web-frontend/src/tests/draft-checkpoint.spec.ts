@@ -44,6 +44,23 @@ it("restores only a newer matching checkpoint", () => {
   expect(readDraftCheckpoint(storage, "d-1", "2026-08-24T10:00:00Z")).toMatchObject({ id: "d-1" })
 })
 
+it("rejects a checkpoint when the server timestamp is invalid", () => {
+  writeDraftCheckpoint(storage, draft, Date.parse("2026-08-24T11:00:00Z"))
+
+  expect(readDraftCheckpoint(storage, "d-1", "not-a-server-timestamp")).toBeNull()
+})
+
+it("rejects unsupported checkpoint versions", () => {
+  storage.setItem(checkpointKey("d-1"), JSON.stringify({
+    version: 2,
+    draftId: "d-1",
+    savedAt: Date.parse("2026-08-24T11:00:00Z"),
+    draft,
+  }))
+
+  expect(readDraftCheckpoint(storage, "d-1", "2026-08-24T10:00:00Z")).toBeNull()
+})
+
 it("restores the existing backend-shaped section visibility", () => {
   const backendDraft = JSON.parse(JSON.stringify(draft)) as DraftRecord
   backendDraft.resume.sectionVisibility = {

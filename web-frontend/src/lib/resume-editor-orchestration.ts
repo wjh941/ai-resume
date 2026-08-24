@@ -87,12 +87,20 @@ export function createResumeEditorOrchestration(options: ResumeEditorOrchestrati
     saving.value = true
     try {
       const saved = await options.saveRemote(draft.value)
-      if (unmounted || draftRevision !== savedRevision) {
+      if (draftRevision !== savedRevision) {
         localCheckpoint.flush()
         if (!unmounted) options.onSaved(saved)
         return "saved"
       }
       localCheckpoint.cancel()
+      if (unmounted) {
+        try {
+          options.clearCheckpoint(saved.id)
+        } catch {
+          // The editor is detached, so there is no local status surface to update.
+        }
+        return "saved"
+      }
       checkpointPaused = true
       try {
         draft.value = saved

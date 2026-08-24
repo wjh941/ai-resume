@@ -132,6 +132,30 @@ describe("createResumeEditorOrchestration", () => {
     expect(controller.localSaveState.value).toBe("error")
   })
 
+  it("recovers after a failed checkpoint write", async () => {
+    let attempts = 0
+    const { controller } = setup({
+      checkpoint: () => {
+        attempts += 1
+        if (attempts === 1) throw new Error("storage full")
+      },
+    })
+    await controller.hydrate(validDraft())
+
+    controller.draft.value!.resume.basic.city = "首次失败"
+    await nextTick()
+    vi.advanceTimersByTime(800)
+    expect(controller.localSaveState.value).toBe("error")
+
+    controller.draft.value!.resume.basic.city = "再次保存"
+    await nextTick()
+    expect(controller.localSaveState.value).toBe("saving")
+    vi.advanceTimersByTime(800)
+
+    expect(attempts).toBe(2)
+    expect(controller.localSaveState.value).toBe("saved")
+  })
+
   it("keeps validation live after an invalid manual save", async () => {
     const { saveRemote, controller } = setup()
     const draft = validDraft()
@@ -182,6 +206,23 @@ describe("createResumeEditorOrchestration", () => {
     expect(onSaved).toHaveBeenCalledTimes(1)
   })
 
+  it("prevents concurrent duplicate remote saves", async () => {
+    let resolveRemote!: (draft: DraftRecord) => void
+    const remoteResult = new Promise<DraftRecord>((resolve) => { resolveRemote = resolve })
+    const saveRemote = vi.fn(() => remoteResult)
+    const { controller } = setup({ saveRemote })
+    await controller.hydrate(validDraft())
+
+    const firstSave = controller.save()
+    const secondSave = controller.save()
+    expect(saveRemote).toHaveBeenCalledTimes(1)
+
+    resolveRemote(validDraft())
+    await expect(secondSave).resolves.toBe("busy")
+    await expect(firstSave).resolves.toBe("saved")
+    expect(saveRemote).toHaveBeenCalledTimes(1)
+  })
+
   it("does not recreate a checkpoint after replacing the draft from the server", async () => {
     const { checkpoint, controller } = setup()
     await controller.hydrate(validDraft())
@@ -219,7 +260,7 @@ describe("createResumeEditorOrchestration", () => {
     expect(onSaved).toHaveBeenCalledWith(saved)
   })
 
-  it("does not clear a flushed checkpoint after unmounting during remote save", async () => {
+  it("preserves a changed checkpoint after unmounting during remote save", async () => {
     let resolveRemote!: (draft: DraftRecord) => void
     const checkpointedCities: string[] = []
     const { clearCheckpoint, onSaved, controller, unmount } = setup({
@@ -240,5 +281,25 @@ describe("createResumeEditorOrchestration", () => {
     expect(checkpointedCities).toEqual(["保存前", "离开前修改"])
     expect(clearCheckpoint).not.toHaveBeenCalled()
     expect(onSaved).not.toHaveBeenCalled()
+  })
+
+  it("clears an unchanged checkpoint after unmounting during a successful save", async () => {
+    let resolveRemote!: (draft: DraftRecord) => void
+    const { checkpoint, clearCheckpoint, onSaved, controller, unmount } = setup({
+      saveRemote: () => new Promise((resolve) => { resolveRemote = resolve }),
+    })
+    await controller.hydrate(validDraft())
+    controller.draft.value!.resume.basic.city = "保存前"
+    await nextTick()
+
+    const saving = controller.save()
+    unmount()
+    resolveRemote(validDraft())
+
+    await expect(saving).resolves.toBe("saved")
+    expect(checkpoint).toHaveBeenCalledTimes(1)
+    expect(clearCheckpoint).toHaveBeenCalledWith("d-1")
+    expect(onSaved).not.toHaveBeenCalled()
+    expect(controller.saving.value).toBe(false)
   })
 })

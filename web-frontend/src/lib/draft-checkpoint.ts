@@ -61,7 +61,7 @@ export function readDraftCheckpoint(
     const parsed = JSON.parse(raw) as Partial<Envelope>
     const serverTime = Date.parse(serverUpdatedAt)
     if (parsed.version !== 1 || parsed.draftId !== draftId || !Number.isFinite(parsed.savedAt)) return null
-    if (Number.isFinite(serverTime) && parsed.savedAt! <= serverTime) return null
+    if (!Number.isFinite(serverTime) || parsed.savedAt! <= serverTime) return null
     if (!isDraftRecord(parsed.draft, draftId)) return null
     return parsed.draft
   } catch {
