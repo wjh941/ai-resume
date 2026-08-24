@@ -165,3 +165,32 @@ This iteration preserves every existing route, API contract, request payload, mo
 
 - Web unit tests: 44 passed across 13 files; production build passed.
 - H5 unit tests: 92 passed across 38 files; `npm run build:h5` passed.
+
+## 2026-08-24 quality-of-life and form robustness
+
+This iteration keeps all existing routes, API contracts, request payloads, mock data, Chinese business copy, and completed modules intact. It adds form resilience and bounded rendering only; no business page, remote autosave request, dependency, or backend capability was introduced.
+
+### `resume-miniprogram` H5
+
+- Resume-form validation now surfaces inline feedback for name, phone, email, and target role. Job search reports its missing-role error beside the input, and career assessment shows unanswered-step guidance while preserving the existing non-blocking next-step and final-submit navigation.
+- Local resume checkpoints use an 800 ms debounce, flush on hide/unmount and before manual save, and expose local saving/saved/error status. Draft changes never call the remote API; the existing save button remains the only remote-save entry point and retains its pending guard.
+- Native import-preview and version-restore modals restore the prior connected focus target after close. Existing modal success callbacks, confirmation behavior, and business effects are unchanged.
+- Drafts, applications, evidence, and saved jobs render progressively at 20 initial records and 20 records per increment, while the original source arrays remain authoritative and all records remain reachable.
+- Additive empty-state copy is exactly: “本机填写中的内容也会自动保留。”, “前往填写简历”, “可先查询岗位，再回到这里记录进度。”, “查询岗位”, and “暂未找到匹配岗位，可换一个更具体的岗位名称。”. The two actions navigate only to the existing resume-form and job-search routes; no route or page was added.
+
+### `web-frontend`
+
+- Resume-editor validation now reports draft name, name, phone, email, and target-role errors inline. Job search uses field-specific role feedback, and assessment identifies unanswered questions while continuing to block incomplete or duplicate submission before the existing API call.
+- Local draft checkpoints use the same 800 ms debounce, reject malformed/stale/unsupported records, isolate storage failures from remote errors, preserve edits made during an in-flight save, and clear only after a successful unchanged manual save. No remote autosave was added.
+- Desktop shortcuts are `Ctrl/Cmd+S` for manual draft save, `Alt+ArrowLeft` for editor back, and scoped `Escape` for applications edit/timeline close. Exact modifiers, repeat/IME suppression, and the same pending guards used by manual actions prevent duplicate or conflicting operations.
+- Resume drafts, filtered applications, evidence records, and membership orders render progressively at 40 initial records and 40 records per increment. Source objects remain authoritative, refreshed/filtered lists reset their window, and every source record remains reachable.
+- Additive empty-state copy is exactly: “本机编辑内容会自动保留，手动保存后同步到服务端。”, “可直接使用上方表单新增第一条记录。”, and “输入具体岗位名称后开始整理能力要求。”. Existing empty-state copy remains present.
+- Application records retain all five desktop columns (icon, role/company, status, next action, actions), use stable widths and horizontal scrolling on wide layouts, and return to the existing stacked layout at `840px` and below.
+
+### Verification for this iteration
+
+- Impeccable UI detector: one full-target run returned `[]`; no detector remediation was required.
+- H5 unit tests: 115 passed across 42 files, including the existing API and phase-service contract suites. `npm.cmd run build:h5` completed with `DONE  Build complete.`
+- Web unit tests: 83 passed across 19 files, including `api.spec.ts` and `domain-api.spec.ts`. The production build transformed 1800 modules and completed successfully.
+- Scope audit against the authoritative execution base `69e26d86fe1613b3b8be0bcf5684852735ff092f` and the plan reference `b0dbe20` found no changes under backend, service, API, router, mock, or fixture paths and no lockfile changes. `git diff --check` passed for both ranges and the working tree.
+- Existing Chinese strings were preserved or moved unchanged into focused helpers; only the additive UI copy listed above was introduced. API contract tests are green for mock/request mapping; no live-backend smoke result is claimed by this frontend-only verification.
