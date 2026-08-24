@@ -43,7 +43,7 @@
 - evidence.ts: listEvidence(), saveEvidence(input), deleteEvidence(id), getEvidenceSuggestions(roleName), checkResumeReadiness(resume).
 - membership.ts: getVipStatus(), listMembershipPackages(), createMembershipOrder(packageType, autoRenew), completeDemoPayment(orderId), listOrders().
 - assessment.ts: getAssessmentQuestions(), loadAssessment(), submitAssessment(answers, reportMode).
-- career.ts: loadCareerRecommendations(): Promise<CareerRecommendation[]>, compareRoles(roleNames: string[]): Promise<CareerComparisonResponse>, listCareerTasks(planId: string): Promise<CareerTaskRecord[]>, saveCareerTask(input): Promise<CareerTaskRecord>, updateCareerTask(taskId, input): Promise<CareerTaskRecord>, and deleteCareerTask(taskId): Promise<void>.
+- career.ts: loadCareerRecommendations(): Promise<CareerRecommendationResponse>, compareRoles(roleNames: string[]): Promise<CareerComparisonResponse>, listCareerTasks(planId: string): Promise<CareerTaskRecord[]>, saveCareerTask(input): Promise<CareerTaskRecord>, updateCareerTask(taskId, input): Promise<CareerTaskRecord>, and deleteCareerTask(taskId): Promise<void>.
 
 - [ ] **Step 1: Write the failing request-mapping tests**
 
