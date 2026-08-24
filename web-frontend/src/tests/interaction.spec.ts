@@ -61,4 +61,33 @@ describe("useAsyncAction", () => {
     expect(insights).toContain(':disabled="loading"')
     expect(assessment).toContain(':disabled="saving"')
   })
+
+  it("uses one semantic error feedback contract across business views", () => {
+    const notice = readFileSync(new URL("../components/ErrorNotice.vue", import.meta.url), "utf8")
+    const overview = readFileSync(new URL("../views/OverviewView.vue", import.meta.url), "utf8")
+    const applications = readFileSync(new URL("../views/ApplicationsView.vue", import.meta.url), "utf8")
+    expect(notice).toContain('role="alert"')
+    expect(notice).toContain("notice-error")
+    expect(overview).toContain("<ErrorNotice")
+    expect(applications).toContain("<ErrorNotice")
+  })
+
+  it("keeps theme switching and responsive bounds centralized", () => {
+    const app = readFileSync(new URL("../App.vue", import.meta.url), "utf8")
+    const styles = readFileSync(new URL("../styles/base.css", import.meta.url), "utf8")
+    expect(app).toContain("theme-switching")
+    expect(styles).toContain("--theme-transition")
+    expect(styles).toContain("html.theme-switching")
+    expect(styles).toContain("@media (max-width: 380px)")
+    expect(styles).toContain("@media (min-width: 1600px)")
+  })
+
+  it("contains off-screen Web records and disables theme motion when requested", () => {
+    const styles = readFileSync(new URL("../styles/base.css", import.meta.url), "utf8")
+    expect(styles).toContain("content-visibility: auto")
+    expect(styles).toContain("contain-intrinsic-size")
+    expect(styles).toContain("html.theme-switching .web-shell *")
+    expect(styles).toContain(".notice-error::before")
+    expect(styles).toContain("prefers-reduced-motion: reduce")
+  })
 })

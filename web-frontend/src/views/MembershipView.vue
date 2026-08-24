@@ -40,7 +40,7 @@ onMounted(refresh)
 <template>
   <section class="view-layout membership-view">
     <div class="view-heading"><div><h1 id="membership-title">会员与订单</h1><p>查看当前权益、选择服务套餐，并保留完整的订单状态。</p></div><AsyncButton class="text-action" type="button" :loading="loading" @click="refresh"><RefreshCw :size="16" aria-hidden="true" />刷新</AsyncButton></div>
-    <p v-if="error" class="notice-error" role="alert">{{ error }}</p><p v-if="notice" class="notice-success" aria-live="polite"><CheckCircle2 :size="16" aria-hidden="true" />{{ notice }}</p>
+    <ErrorNotice v-if="error" :message="error" /><p v-if="notice" class="notice-success" aria-live="polite"><CheckCircle2 :size="16" aria-hidden="true" />{{ notice }}</p>
     <div v-if="loading" class="content-skeleton membership-loading" aria-busy="true"><LoadingSpinner class="content-loading-spinner" label="正在读取会员信息" /><span /><span /><span /></div>
     <template v-else>
       <section class="membership-entitlement"><div class="record-symbol record-coral"><Crown :size="24" aria-hidden="true" /></div><div><span class="section-kicker">当前权益</span><h2>{{ vip?.vipLevel || "普通用户" }}</h2><p>到期时间：{{ vip?.expireTime || "暂无到期时间" }} · {{ vip?.autoRenew ? "已开启自动续费" : "未开启自动续费" }}</p></div></section>

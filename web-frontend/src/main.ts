@@ -1,6 +1,7 @@
 import { createApp } from "vue"
 
 import App from "./App.vue"
+import ErrorNotice from "./components/ErrorNotice.vue"
 import "./styles/base.css"
 
-createApp(App).mount("#app")
+createApp(App).component("ErrorNotice", ErrorNotice).mount("#app")

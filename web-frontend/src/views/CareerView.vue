@@ -93,7 +93,7 @@ onMounted(refresh)
       <AsyncButton class="primary-button compact" type="submit" :loading="saving"><Plus :size="17" aria-hidden="true" />{{ saving ? "保存中" : "加入清单" }}</AsyncButton>
     </form>
 
-    <p v-if="error" class="notice-error" role="alert">{{ error }}</p>
+    <ErrorNotice v-if="error" :message="error" />
     <div v-else-if="loading" class="content-skeleton" aria-busy="true"><LoadingSpinner class="content-loading-spinner" label="正在读取行动清单" /><span /><span /></div>
     <div v-else-if="tasks.length" class="task-list">
       <article v-for="task in tasks" :key="task.id" class="task-row" :class="{ 'is-complete': task.status === 'completed' }">

@@ -70,7 +70,7 @@ onMounted(refresh)
       <AsyncButton class="text-action" type="button" :loading="loading" @click="refresh"><RefreshCw :size="16" aria-hidden="true" />刷新</AsyncButton>
     </div>
 
-    <p v-if="error" class="notice-error" role="alert">{{ error }}</p>
+    <ErrorNotice v-if="error" :message="error" />
     <div v-else-if="loading" class="content-skeleton" aria-busy="true"><LoadingSpinner class="content-loading-spinner" label="正在读取简历草稿" /><span /><span /><span /></div>
     <div v-else-if="drafts.length" class="record-list">
       <article v-for="draft in drafts" :key="draft.id" class="record-row">

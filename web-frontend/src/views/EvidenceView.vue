@@ -61,7 +61,7 @@ onMounted(refresh)
 <template>
   <section class="view-layout evidence-view">
     <div class="view-heading"><div><h1 id="evidence-title">经历证据</h1><p>把项目、学习和工作经历沉淀为可复用的事实材料，帮助简历和面试表达更可信。</p></div><AsyncButton class="text-action" type="button" :loading="loading" @click="refresh"><RefreshCw :size="16" aria-hidden="true" />刷新</AsyncButton></div>
-    <p v-if="error" class="notice-error" role="alert">{{ error }}</p><p v-if="notice" class="notice-success" aria-live="polite"><CheckCircle2 :size="16" aria-hidden="true" />{{ notice }}</p>
+    <ErrorNotice v-if="error" :message="error" /><p v-if="notice" class="notice-success" aria-live="polite"><CheckCircle2 :size="16" aria-hidden="true" />{{ notice }}</p>
     <div v-if="loading" class="content-skeleton evidence-loading" aria-busy="true"><LoadingSpinner class="content-loading-spinner" label="正在读取经历证据" /><span /><span /><span /></div>
     <template v-else>
       <EvidenceForm v-model="model" :pending="saving" :editing="Boolean(editingId)" @submit="submit" @cancel="resetForm" />

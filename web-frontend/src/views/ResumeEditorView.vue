@@ -103,9 +103,9 @@ onMounted(load)
       <LoadingSpinner class="content-loading-spinner" label="正在读取简历草稿" />
       <span /><span /><span /><span />
     </div>
-    <p v-else-if="error && !draft" class="notice-error" role="alert">{{ error }}</p>
+    <ErrorNotice v-else-if="error && !draft" :message="error" />
     <form v-else-if="draft" class="resume-editor-form" @submit.prevent="save">
-      <p v-if="error" class="notice-error" role="alert">{{ error }}</p>
+      <ErrorNotice v-if="error" :message="error" />
       <section class="editor-section">
         <h2>基本信息</h2>
         <div class="editor-grid">

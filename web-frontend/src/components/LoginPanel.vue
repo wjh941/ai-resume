@@ -108,7 +108,7 @@ async function submit() {
           </template>
 
           <p v-if="hint" class="form-hint" aria-live="polite">{{ hint }}</p>
-          <p v-if="error" class="form-error" role="alert">{{ error }}</p>
+          <ErrorNotice v-if="error" :message="error" compact />
           <AsyncButton class="primary-button" type="submit" :loading="loading">
             <span>{{ loading ? '正在验证' : submitLabel }}</span><ArrowRight :size="18" aria-hidden="true" />
           </AsyncButton>

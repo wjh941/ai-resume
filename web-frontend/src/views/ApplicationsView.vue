@@ -83,7 +83,7 @@ onMounted(refresh)
       <AsyncButton v-if="editing" class="text-action compact" type="button" @click="resetForm"><X :size="15" aria-hidden="true" />取消编辑</AsyncButton>
     </form>
     <div class="application-toolbar"><label><span>筛选状态</span><select v-model="filterStatus" :disabled="loading" @change="refresh"><option value="">全部状态</option><option v-for="(label, value) in statusLabels" :key="value" :value="value">{{ label }}</option></select></label><span class="toolbar-hint">共 {{ items.length }} 条记录</span></div>
-    <p v-if="error" class="notice-error notice-with-action" role="alert"><span>{{ error }}</span><AsyncButton class="notice-action" type="button" :loading="loading" @click="refresh">重试</AsyncButton></p>
+    <ErrorNotice v-if="error" :message="error"><AsyncButton class="notice-action" type="button" :loading="loading" @click="refresh">重试</AsyncButton></ErrorNotice>
     <div v-else-if="loading" class="content-skeleton application-loading" aria-busy="true"><LoadingSpinner class="content-loading-spinner" label="正在读取投递记录" /><span /><span /></div>
     <div v-else-if="items.length" class="application-table">
       <article v-for="item in items" :key="item.id" class="application-record">

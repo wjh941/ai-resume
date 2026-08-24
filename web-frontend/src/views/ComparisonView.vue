@@ -35,7 +35,7 @@ onMounted(refresh)
 <template>
   <section class="view-layout comparison-view">
     <div class="view-heading"><div><h1 id="comparison-title">岗位对比</h1><p>把目标岗位放在同一张表里，比较匹配程度、证据缺口和下一步行动。</p></div><AsyncButton class="text-action" type="button" :loading="loading" @click="refresh"><RefreshCw :size="16" aria-hidden="true" />刷新推荐</AsyncButton></div>
-    <p v-if="error" class="notice-error" role="alert">{{ error }}</p>
+    <ErrorNotice v-if="error" :message="error" />
     <div v-if="loading" class="content-skeleton comparison-loading" aria-busy="true"><LoadingSpinner class="content-loading-spinner" label="正在读取岗位推荐" /><span /><span /></div>
     <template v-else>
       <ComparisonRolePicker v-model:selected="selected" :roles="roles" :max-selectable="4" :pending="comparing" @submit="compare" />

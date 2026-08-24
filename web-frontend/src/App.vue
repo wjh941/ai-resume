@@ -24,6 +24,8 @@ const activeView = ref<WorkspaceView>("overview")
 const editingDraftId = ref<string | null>(null)
 const dark = ref(false)
 const logoutLoading = ref(false)
+let themeSwitchTimer: number | undefined
+let themeInitialized = false
 const activeComponent = computed(() => ({
   overview: OverviewView,
   resume: ResumeView,
@@ -39,7 +41,18 @@ const activeComponent = computed(() => ({
 }[activeView.value]))
 
 watch(dark, (value) => {
-  document.documentElement.dataset.theme = value ? "dark" : "light"
+  const root = document.documentElement
+  root.dataset.theme = value ? "dark" : "light"
+  if (!themeInitialized) {
+    themeInitialized = true
+    return
+  }
+  root.classList.add("theme-switching")
+  if (themeSwitchTimer !== undefined) window.clearTimeout(themeSwitchTimer)
+  themeSwitchTimer = window.setTimeout(() => {
+    root.classList.remove("theme-switching")
+    themeSwitchTimer = undefined
+  }, 220)
 }, { immediate: true })
 
 async function logout() {

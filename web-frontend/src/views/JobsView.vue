@@ -71,7 +71,7 @@ async function favorite() {
       </div>
       <AsyncButton class="primary-button compact" type="submit" :loading="loading"><Search :size="17" aria-hidden="true" />{{ loading ? "分析中" : "查询岗位" }}</AsyncButton>
     </form>
-    <p v-if="error" class="notice-error" role="alert">{{ error }}</p>
+    <ErrorNotice v-if="error" :message="error" />
 
     <article v-if="result" class="job-result">
       <div class="result-heading"><div><h2>{{ result.role_name }}</h2><p>{{ result.report?.summary || "根据当前资料整理岗位准备方向。" }}</p></div><div class="heading-actions"><AsyncButton class="text-action" type="button" @click="emit('navigate', 'comparison')">加入岗位对比</AsyncButton><AsyncButton class="text-action" type="button" :loading="saving" @click="favorite"><BookmarkPlus :size="16" aria-hidden="true" />收藏岗位</AsyncButton></div></div>
