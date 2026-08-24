@@ -339,6 +339,25 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .assessment-result-grid h3 { margin: 0 0 12px; font-size: 14px; }
 .assessment-loading { min-height: 330px; }
 
+.comparison-view { gap: 26px; }
+.comparison-picker { display: grid; gap: 18px; padding: 22px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.role-chip-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.role-chip-grid button { min-height: 38px; padding: 0 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; background: var(--surface-raised); font-size: 13px; font-weight: 700; }
+.role-chip-grid button:hover, .role-chip-grid button.is-selected { color: var(--forest-strong); border-color: var(--forest); background: var(--mint); }
+.comparison-result { display: grid; gap: 24px; padding: 24px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.comparison-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.comparison-card { display: grid; gap: 15px; min-height: 360px; padding: 20px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-raised); box-shadow: var(--shadow); }
+.comparison-card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.comparison-card-heading h3 { margin: 0; font-size: 19px; }
+.comparison-card-heading small { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
+.comparison-card-heading strong { color: var(--coral-strong); font-size: 30px; line-height: 1; }
+.comparison-card > p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+.comparison-card section { padding-top: 14px; border-top: 1px solid var(--line); }
+.comparison-card h4 { margin: 0 0 9px; font-size: 13px; }
+.comparison-card details { padding-top: 14px; border-top: 1px solid var(--line); }
+.comparison-card summary { cursor: pointer; color: var(--forest); font-size: 13px; font-weight: 750; }
+.comparison-loading { min-height: 320px; }
+
 .resume-editor-view { gap: 26px; }
 .resume-editor-form { display: grid; gap: 18px; }
 .editor-section { display: grid; gap: 16px; padding: 22px 0; border-top: 1px solid var(--line); }
@@ -410,6 +429,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .order-row > :nth-child(3), .order-row > :nth-child(4) { grid-column: 1 / -1; }
   .assessment-question-grid, .assessment-result-grid { grid-template-columns: 1fr; }
   .assessment-result-grid section + section { border-top: 1px solid var(--line); border-left: 0; }
+  .comparison-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 480px) {
   .login-form-area { padding: 36px 20px; }

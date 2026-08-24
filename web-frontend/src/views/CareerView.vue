@@ -5,6 +5,7 @@ import { onMounted, ref } from "vue"
 import { requestApi } from "../lib/api"
 import AsyncButton from "../components/AsyncButton.vue"
 import LoadingSpinner from "../components/LoadingSpinner.vue"
+import type { WorkspaceView } from "../components/WebSidebar.vue"
 
 type CareerTask = {
   id: string
@@ -22,6 +23,7 @@ const loading = ref(true)
 const saving = ref(false)
 const pendingTaskId = ref<string | null>(null)
 const error = ref("")
+const emit = defineEmits<{ navigate: [view: WorkspaceView] }>()
 
 async function refresh() {
   loading.value = true
@@ -81,7 +83,7 @@ onMounted(refresh)
   <section class="view-layout">
     <div class="view-heading">
       <div><h1 id="career-title">职业规划</h1><p>把职业建议拆解为能在本周完成的小行动，并保留完成记录。</p></div>
-      <AsyncButton class="text-action" type="button" :loading="loading" @click="refresh"><RefreshCw :size="16" aria-hidden="true" />刷新</AsyncButton>
+      <div class="heading-actions"><AsyncButton class="text-action" type="button" :loading="loading" @click="refresh"><RefreshCw :size="16" aria-hidden="true" />刷新</AsyncButton><AsyncButton class="text-action" type="button" @click="emit('navigate', 'comparison')">比较岗位</AsyncButton></div>
     </div>
 
     <form class="inline-form" @submit.prevent="addTask">

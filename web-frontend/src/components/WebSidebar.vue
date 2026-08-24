@@ -7,6 +7,7 @@ import {
   FilePenLine,
   Home,
   Crown,
+  GitCompareArrows,
   KanbanSquare,
   Map,
   UserRound,
@@ -21,6 +22,7 @@ export type WorkspaceView =
   | "evidence"
   | "membership"
   | "assessment"
+  | "comparison"
   | "insights"
   | "account"
 
@@ -41,6 +43,7 @@ const navigation = [
   { key: "evidence", label: "经历证据", icon: ClipboardCheck },
   { key: "membership", label: "会员与订单", icon: Crown },
   { key: "assessment", label: "职业测评", icon: ChartNoAxesCombined },
+  { key: "comparison", label: "岗位对比", icon: GitCompareArrows },
   { key: "insights", label: "年度洞察", icon: ChartNoAxesCombined },
   { key: "account", label: "账户设置", icon: UserRound },
 ] as const

@@ -4,6 +4,7 @@ import { computed, ref } from "vue"
 
 import { requestApi } from "../lib/api"
 import AsyncButton from "../components/AsyncButton.vue"
+import type { WorkspaceView } from "../components/WebSidebar.vue"
 
 type JobResult = {
   role_name: string
@@ -21,6 +22,7 @@ const loading = ref(false)
 const saving = ref(false)
 const error = ref("")
 const skills = computed(() => [...(result.value?.required_skills || []), ...(result.value?.hard_requirements || [])].slice(0, 8))
+const emit = defineEmits<{ navigate: [view: WorkspaceView] }>()
 
 async function queryRole() {
   if (!roleName.value.trim()) {
@@ -72,7 +74,7 @@ async function favorite() {
     <p v-if="error" class="notice-error" role="alert">{{ error }}</p>
 
     <article v-if="result" class="job-result">
-      <div class="result-heading"><div><h2>{{ result.role_name }}</h2><p>{{ result.report?.summary || "根据当前资料整理岗位准备方向。" }}</p></div><AsyncButton class="text-action" type="button" :loading="saving" @click="favorite"><BookmarkPlus :size="16" aria-hidden="true" />收藏岗位</AsyncButton></div>
+      <div class="result-heading"><div><h2>{{ result.role_name }}</h2><p>{{ result.report?.summary || "根据当前资料整理岗位准备方向。" }}</p></div><div class="heading-actions"><AsyncButton class="text-action" type="button" @click="emit('navigate', 'comparison')">加入岗位对比</AsyncButton><AsyncButton class="text-action" type="button" :loading="saving" @click="favorite"><BookmarkPlus :size="16" aria-hidden="true" />收藏岗位</AsyncButton></div></div>
       <div class="job-columns">
         <section><h3>优先能力</h3><ul class="tag-list"><li v-for="skill in skills" :key="skill">{{ skill }}</li></ul></section>
         <section><h3>核心职责</h3><ul class="plain-list"><li v-for="item in result.responsibilities?.slice(0, 4)" :key="item">{{ item }}</li></ul></section>
