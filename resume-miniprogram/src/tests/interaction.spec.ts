@@ -126,12 +126,13 @@ describe("runWithLoading", () => {
     expect(applications).toContain(':aria-label="`删除 ${item.company} 的 ${item.roleName} 投递记录`"')
   })
 
-  it("debounces H5 local checkpoints and maps resume field errors", () => {
+  it("wires H5 resume resilience and mapped field errors", () => {
     const resumeForm = readFileSync(new URL("../pages/resume-form/index.vue", import.meta.url), "utf8")
-    expect(resumeForm).toContain("createDebouncedTask")
-    expect(resumeForm).toContain("const localSaveState")
-    expect(resumeForm).toContain("checkpointPaused")
-    expect(resumeForm).toContain("localCheckpoint.flush()")
+    expect(resumeForm).toContain("createResumeFormOrchestration")
+    expect(resumeForm).toContain("registerHide: onHide")
+    expect(resumeForm).toContain("registerBeforeUnmount: onBeforeUnmount")
+    expect(resumeForm).toContain("saveRemote: () => saveDraft")
+    expect(resumeForm).toContain("settleSavedId: nextTick")
     expect(resumeForm).toContain(':error="fieldErrors[\'basic.name\']"')
     expect(resumeForm).toContain(':error="fieldErrors[\'basic.phone\']"')
     expect(resumeForm).toContain(':error="fieldErrors[\'basic.email\']"')

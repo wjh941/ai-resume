@@ -9,12 +9,12 @@ import { saveDraft } from "../../services/resume-api"
 import { useResumeStore } from "../../stores/resume"
 import { getClientId } from "../../stores/session"
 import type { EvidenceSuggestion } from "../../types/evidence"
-import { createDebouncedTask } from "../../utils/debounced-task"
 import {
   createRoleBasedInternshipDraft,
   createRoleBasedProjectDraft,
   prepareResumeForJob,
 } from "../../utils/resume-autofill"
+import { createResumeFormOrchestration } from "../../utils/resume-form-orchestration"
 import { toValidationErrorMap, validateResume } from "../../utils/validators"
 
 const store = useResumeStore()
@@ -22,39 +22,27 @@ const resume = computed(() => store.draft.resume)
 const activeJob = computed(() => store.activeJob ?? store.draft.jobIntelligence)
 const evidenceSuggestions = ref<EvidenceSuggestion[]>([])
 const suggestionsLoading = ref(false)
-const fieldErrors = ref<Record<string, string>>({})
-const saving = ref(false)
-const localSaveState = ref<"idle" | "saving" | "saved" | "error">("idle")
-const validationActive = ref(false)
-let checkpointPaused = false
-
-function persistLocalCheckpoint(): void {
-  try {
-    store.checkpoint()
-    localSaveState.value = "saved"
-  } catch {
-    localSaveState.value = "error"
-  }
-}
-
-const localCheckpoint = createDebouncedTask(persistLocalCheckpoint, 800)
-
-watch(() => store.draft, () => {
-  if (checkpointPaused) return
-  localSaveState.value = "saving"
-  localCheckpoint.schedule()
-}, { deep: true })
 watch(activeJob, (job) => {
   evidenceSuggestions.value = []
   if (job) void loadEvidenceSuggestions(job.roleName)
 }, { immediate: true })
-watch(resume, () => {
-  if (validationActive.value) fieldErrors.value = toValidationErrorMap(validateResume(resume.value))
-}, { deep: true })
 
-const flushLocalCheckpoint = () => localCheckpoint.flush()
-onHide(flushLocalCheckpoint)
-onBeforeUnmount(flushLocalCheckpoint)
+const {
+  localSaveState,
+  fieldErrors,
+  saving,
+  save: saveResume,
+} = createResumeFormOrchestration({
+  draft: () => store.draft,
+  resume,
+  checkpoint: () => store.checkpoint(),
+  validate: () => toValidationErrorMap(validateResume(resume.value)),
+  saveRemote: () => saveDraft(getClientId(), store.draft),
+  applySavedId: (id) => { store.draft.id = id },
+  settleSavedId: nextTick,
+  registerHide: onHide,
+  registerBeforeUnmount: onBeforeUnmount,
+})
 
 function addEducation() {
   resume.value.education.push({ school: "", major: "", degree: "", startDate: "", endDate: "", courses: "" })
@@ -109,31 +97,11 @@ function applyEvidenceSuggestion(suggestion: EvidenceSuggestion) {
 }
 
 async function save() {
-  if (saving.value) return
-  localCheckpoint.flush()
-  validationActive.value = true
-  const errors = validateResume(resume.value)
-  fieldErrors.value = toValidationErrorMap(errors)
-  if (errors.length) return
-  saving.value = true
-  try {
-    const saved = await saveDraft(getClientId(), store.draft)
-    checkpointPaused = true
-    try {
-      store.draft.id = saved.id
-      await nextTick()
-    } finally {
-      checkpointPaused = false
-    }
-    localCheckpoint.cancel()
-    persistLocalCheckpoint()
+  const result = await saveResume()
+  if (result === "saved") {
     uni.showToast({ title: "草稿已保存", icon: "success" })
-  } catch {
-    localCheckpoint.cancel()
-    persistLocalCheckpoint()
+  } else if (result === "local-fallback") {
     uni.showToast({ title: "网络异常，已保留本地草稿", icon: "none" })
-  } finally {
-    saving.value = false
   }
 }
 
