@@ -189,6 +189,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .record-row { grid-template-columns: 42px minmax(0, 1fr) auto; }
 .record-row h2, .task-row h2, .application-row h2 { margin: 0; font-size: 16px; line-height: 1.3; }
 .record-row p, .task-row p, .application-row p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+.record-actions { display: flex; flex-wrap: wrap; gap: 7px; justify-content: flex-end; }
+.compact { min-height: 34px; padding: 0 9px; font-size: 12px; }
 .record-symbol { display: grid; width: 40px; height: 40px; place-items: center; border-radius: var(--radius); }
 .record-coral { color: #9b3825; background: #fbe2db; }
 .record-sky { color: #176786; background: #dff3fb; }
@@ -244,6 +246,23 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .upgrade-notice { color: #765f11; }
 .account-scope > section { display: flex; align-items: flex-start; gap: 13px; color: var(--forest); }.account-scope h2 { margin: 0; color: var(--ink); font-size: 21px; }.account-scope p { margin: 7px 0 0; color: var(--muted); }.account-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 
+.resume-editor-view { gap: 26px; }
+.resume-editor-form { display: grid; gap: 18px; }
+.editor-section { display: grid; gap: 16px; padding: 22px 0; border-top: 1px solid var(--line); }
+.editor-section:last-of-type { border-bottom: 1px solid var(--line); }
+.editor-section h2 { margin: 0; font-size: 18px; line-height: 1.3; }
+.editor-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.editor-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
+.editor-grid label, .editor-section > label { display: grid; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 700; }
+.editor-grid input, .editor-grid textarea, .editor-grid select, .editor-section > label input, .editor-section > label textarea { width: 100%; min-height: 42px; padding: 9px 10px; color: var(--ink); border: 1px solid var(--line); border-radius: 6px; background: var(--surface-raised); resize: vertical; }
+.editor-grid input, .editor-grid select, .editor-section > label input { padding-top: 0; padding-bottom: 0; }
+.editor-grid input:focus, .editor-grid textarea:focus, .editor-grid select:focus, .editor-section > label input:focus, .editor-section > label textarea:focus { border-color: var(--forest); box-shadow: 0 0 0 3px color-mix(in srgb, var(--mint) 55%, transparent); outline: 0; }
+.editor-wide { grid-column: 1 / -1; }
+.editor-item { display: grid; gap: 10px; padding: 16px 0; border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
+.editor-item:first-of-type { border-top: 0; padding-top: 0; }
+.editor-item > .danger-action { justify-self: start; }
+.editor-loading { min-height: 420px; }
+
 @keyframes skeleton { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
 @keyframes rise-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes spinner-rotate { to { transform: rotate(360deg); } }
@@ -284,6 +303,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .inline-form, .application-form, .role-query, .insight-query { grid-template-columns: 1fr 1fr; }
   .inline-form > :first-child, .application-form > :first-child, .role-query > :first-child, .insight-query > :first-child { grid-column: 1 / -1; }
   .application-row { grid-template-columns: 40px minmax(0, 1fr) auto; }.application-row small { grid-column: 2 / -1; text-align: left; }
+  .record-actions { grid-column: 2 / -1; justify-content: flex-start; }
+  .editor-grid { grid-template-columns: 1fr; }
+  .editor-wide { grid-column: auto; }
 }
 @media (max-width: 480px) {
   .login-form-area { padding: 36px 20px; }
@@ -294,6 +316,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .inline-form, .application-form, .role-query, .insight-query { grid-template-columns: 1fr; }.inline-form > :first-child, .application-form > :first-child, .role-query > :first-child, .insight-query > :first-child { grid-column: auto; }
   .record-row, .task-row { grid-template-columns: 40px minmax(0, 1fr); }.record-row .record-tag, .task-row .due-date { grid-column: 2; justify-self: start; }
   .result-heading { align-items: flex-start; flex-direction: column; }
+  .editor-section-heading { align-items: flex-start; flex-direction: column; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; }

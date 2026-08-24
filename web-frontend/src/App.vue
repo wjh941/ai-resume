@@ -13,9 +13,11 @@ import InsightsView from "./views/InsightsView.vue"
 import JobsView from "./views/JobsView.vue"
 import OverviewView from "./views/OverviewView.vue"
 import ResumeView from "./views/ResumeView.vue"
+import ResumeEditorView from "./views/ResumeEditorView.vue"
 
 const session = ref<Session | null>(readSession())
 const activeView = ref<WorkspaceView>("overview")
+const editingDraftId = ref<string | null>(null)
 const dark = ref(false)
 const logoutLoading = ref(false)
 const activeComponent = computed(() => ({
@@ -52,10 +54,16 @@ async function logout() {
     <WebSidebar :active-view="activeView" @navigate="activeView = $event" />
     <main class="web-workspace">
       <WebTopbar :user="session.user" :dark="dark" :logout-loading="logoutLoading" @logout="logout" @toggle-theme="dark = !dark" />
-      <section class="workspace-stage" :aria-labelledby="`${activeView}-title`">
+      <section class="workspace-stage" :aria-labelledby="editingDraftId ? 'resume-editor-title' : `${activeView}-title`">
         <Transition name="view-swap" mode="out-in">
-          <div :key="activeView" class="view-transition-shell">
-            <component :is="activeComponent" @navigate="activeView = $event" />
+          <div :key="editingDraftId ? `resume-editor-${editingDraftId}` : activeView" class="view-transition-shell">
+            <ResumeEditorView
+              v-if="editingDraftId"
+              :draft-id="editingDraftId"
+              @cancel="editingDraftId = null"
+              @saved="editingDraftId = null"
+            />
+            <component v-else :is="activeComponent" @navigate="activeView = $event" @open-draft="editingDraftId = $event" />
           </div>
         </Transition>
       </section>

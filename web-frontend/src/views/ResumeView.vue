@@ -1,31 +1,62 @@
 <script setup lang="ts">
-import { FilePenLine, RefreshCw } from "lucide-vue-next"
+import { Copy, FilePenLine, Pencil, RefreshCw, Trash2 } from "lucide-vue-next"
 import { onMounted, ref } from "vue"
 
-import { requestApi } from "../lib/api"
+import { copyDraft, deleteDraft, listDrafts, type DraftRecord } from "../lib/drafts"
+import { prependDraft, removeDraftById } from "../lib/draft-workflow"
 import AsyncButton from "../components/AsyncButton.vue"
 import LoadingSpinner from "../components/LoadingSpinner.vue"
 
-type Draft = {
-  id: string
-  job_title?: string
-  template_id?: string
-  updated_at?: string
-}
+const emit = defineEmits<{
+  "open-draft": [draftId: string]
+}>()
 
-const drafts = ref<Draft[]>([])
+const drafts = ref<DraftRecord[]>([])
 const loading = ref(true)
 const error = ref("")
+const pendingAction = ref<"copy" | "delete" | "">("")
+const pendingDraftId = ref("")
 
 async function refresh() {
   loading.value = true
   error.value = ""
   try {
-    drafts.value = (await requestApi<{ items: Draft[] }>("/api/draft/list")).items
+    drafts.value = await listDrafts()
   } catch {
     error.value = "暂时无法读取简历草稿，请稍后重试"
   } finally {
     loading.value = false
+  }
+}
+
+async function copy(item: DraftRecord): Promise<void> {
+  if (pendingAction.value) return
+  pendingAction.value = "copy"
+  pendingDraftId.value = item.id
+  error.value = ""
+  try {
+    drafts.value = prependDraft(drafts.value, await copyDraft(item.id))
+  } catch {
+    error.value = "无法复制简历草稿，请稍后重试"
+  } finally {
+    pendingAction.value = ""
+    pendingDraftId.value = ""
+  }
+}
+
+async function remove(item: DraftRecord): Promise<void> {
+  if (pendingAction.value || !window.confirm("确认删除这份简历草稿吗？")) return
+  pendingAction.value = "delete"
+  pendingDraftId.value = item.id
+  error.value = ""
+  try {
+    await deleteDraft(item.id)
+    drafts.value = removeDraftById(drafts.value, item.id)
+  } catch {
+    error.value = "无法删除简历草稿，请稍后重试"
+  } finally {
+    pendingAction.value = ""
+    pendingDraftId.value = ""
   }
 }
 
@@ -44,8 +75,12 @@ onMounted(refresh)
     <div v-else-if="drafts.length" class="record-list">
       <article v-for="draft in drafts" :key="draft.id" class="record-row">
         <span class="record-symbol record-coral"><FilePenLine :size="21" aria-hidden="true" /></span>
-        <div><h2>{{ draft.job_title || "未命名简历" }}</h2><p>模板：{{ draft.template_id || "默认模板" }} · 最近保存：{{ draft.updated_at || "时间待同步" }}</p></div>
-        <span class="record-tag">草稿</span>
+        <div><h2>{{ draft.jobTitle || "未命名简历" }}</h2><p>模板：{{ draft.templateId || "默认模板" }} · 最近保存：{{ draft.updatedAt || "时间待同步" }}</p></div>
+        <div class="record-actions">
+          <AsyncButton class="text-action compact" type="button" title="继续编辑" @click="emit('open-draft', draft.id)"><Pencil :size="15" aria-hidden="true" />编辑</AsyncButton>
+          <AsyncButton class="text-action compact" type="button" :loading="pendingAction === 'copy' && pendingDraftId === draft.id" :disabled="Boolean(pendingAction)" title="复制草稿" @click="copy(draft)"><Copy :size="15" aria-hidden="true" />复制</AsyncButton>
+          <AsyncButton class="danger-action compact" type="button" :loading="pendingAction === 'delete' && pendingDraftId === draft.id" :disabled="Boolean(pendingAction)" title="删除草稿" @click="remove(draft)"><Trash2 :size="15" aria-hidden="true" />删除</AsyncButton>
+        </div>
       </article>
     </div>
     <div v-else class="empty-board">
