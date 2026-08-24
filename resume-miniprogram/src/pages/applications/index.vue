@@ -17,6 +17,7 @@ import type {
   ApplicationStatus,
 } from "../../types/application"
 import { filterApplications } from "../../utils/application-filter"
+import { showErrorToast } from "../../utils/error-feedback"
 
 type Query = { roleName?: string; city?: string; draftId?: string }
 
@@ -143,7 +144,7 @@ function resetForm() {
 
 async function save() {
   if (!form.value.roleName.trim()) {
-    uni.showToast({ title: "请填写目标岗位", icon: "none" })
+    showErrorToast("请填写目标岗位")
     return
   }
   saving.value = true
@@ -175,7 +176,7 @@ async function saveTimeline() {
   if (timelineSaving.value) return
   const draft = timelineDraft.value
   if (!draft.applicationId || !draft.title.trim() || !draft.occurredAt) {
-    uni.showToast({ title: "请填写时间线标题和时间", icon: "none" })
+    showErrorToast("请填写时间线标题和时间")
     return
   }
   timelineSaving.value = true
@@ -190,7 +191,7 @@ async function saveTimeline() {
     timelineDraft.value = { applicationId: "", title: "", description: "", occurredAt: "" }
     uni.showToast({ title: "时间线已添加", icon: "success" })
   } catch (reason) {
-    uni.showToast({ title: reason instanceof Error ? reason.message : "时间线保存失败，请稍后重试", icon: "none" })
+    showErrorToast(reason instanceof Error ? reason.message : "时间线保存失败，请稍后重试")
   } finally {
     timelineSaving.value = false
   }
@@ -199,7 +200,7 @@ async function saveTimeline() {
 async function saveReminder() {
   if (reminderSaving.value) return
   if (!form.value.id || !reminderAt.value) {
-    uni.showToast({ title: "请先编辑投递记录并填写提醒时间", icon: "none" })
+    showErrorToast("请先编辑投递记录并填写提醒时间")
     return
   }
   reminderSaving.value = true
@@ -208,7 +209,7 @@ async function saveReminder() {
     reminderAt.value = ""
     uni.showToast({ title: "面试提醒已保存", icon: "success" })
   } catch (reason) {
-    uni.showToast({ title: reason instanceof Error ? reason.message : "提醒保存失败，请稍后重试", icon: "none" })
+    showErrorToast(reason instanceof Error ? reason.message : "提醒保存失败，请稍后重试")
   } finally {
     reminderSaving.value = false
   }
@@ -228,10 +229,7 @@ function remove(item: ApplicationRecord) {
         if (form.value.id === item.id) resetForm()
         uni.showToast({ title: "投递记录已删除", icon: "success" })
       } catch (reason) {
-        uni.showToast({
-          title: reason instanceof Error ? reason.message : "删除失败，请稍后重试",
-          icon: "none",
-        })
+        showErrorToast(reason instanceof Error ? reason.message : "删除失败，请稍后重试")
       } finally {
         pendingDeleteId.value = ""
       }
@@ -319,7 +317,7 @@ onMounted(async () => {
         <text v-for="item in upcomingInterviews" :key="item.id" class="panel-item">{{ item.roleName }} · {{ item.company }} · {{ item.nextInterviewAt }}</text>
       </view>
 
-      <text v-if="error" class="error">{{ error }}</text>
+      <text v-if="error" class="ui-error-tip">{{ error }}</text>
       <view v-else-if="loading" class="empty"><LoadingSpinner size="sm" label="正在加载投递记录…" /><text>正在加载投递记录…</text></view>
       <view v-else-if="!visibleApplications.length" class="empty">还没有投递计划。确认岗位与公司后，在上方手动保存第一条记录。</view>
 

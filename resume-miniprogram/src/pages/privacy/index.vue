@@ -9,6 +9,7 @@ import { clearLocalCareerWorkspace } from "../../utils/local-privacy"
 import { exportLocalBackupFile, importLocalBackupFile } from "../../utils/local-backup-file"
 import { parseLocalBackup, serializeLocalBackup } from "../../utils/local-backup"
 import { toUserMessage } from "../../services/http"
+import { showErrorToast } from "../../utils/error-feedback"
 
 const resumeStore = useResumeStore()
 const careerStore = useCareerStore()
@@ -22,7 +23,7 @@ async function exportBackup(): Promise<void> {
     await exportLocalBackupFile(serializeLocalBackup(resumeStore.exportBackup(), careerStore.exportBackup()))
     uni.showToast({ title: "Backup file created", icon: "success" })
   } catch (reason) {
-    uni.showToast({ title: toUserMessage(reason, "Unable to create a backup file."), icon: "none" })
+    showErrorToast(toUserMessage(reason, "Unable to create a backup file."))
   } finally {
     backupBusy.value = false
   }
@@ -37,7 +38,7 @@ async function restoreBackup(): Promise<void> {
     }
     uni.showToast({ title: "Local backup restored", icon: "success" })
   } catch (reason) {
-    uni.showToast({ title: toUserMessage(reason, "Unable to restore the backup file."), icon: "none" })
+    showErrorToast(toUserMessage(reason, "Unable to restore the backup file."))
   } finally {
     backupBusy.value = false
   }

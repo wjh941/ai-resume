@@ -8,6 +8,7 @@ import {
 } from "../../services/evidence-api"
 import LoadingSpinner from "../../components/LoadingSpinner.vue"
 import { getClientId } from "../../stores/session"
+import { showErrorToast } from "../../utils/error-feedback"
 import type {
   EvidenceKind,
   ResumeEvidence,
@@ -51,10 +52,7 @@ async function load() {
   try {
     evidence.value = await listEvidence(getClientId())
   } catch (reason) {
-    uni.showToast({
-      title: reason instanceof Error ? reason.message : "经历证据加载失败",
-      icon: "none",
-    })
+    showErrorToast(reason instanceof Error ? reason.message : "经历证据加载失败")
   } finally {
     loading.value = false
   }
@@ -63,7 +61,7 @@ async function load() {
 async function save() {
   if (saving.value) return
   if (!form.value.title.trim() || !form.value.actions.trim()) {
-    uni.showToast({ title: "请填写经历标题和真实行动", icon: "none" })
+    showErrorToast("请填写经历标题和真实行动")
     return
   }
   saving.value = true
@@ -75,10 +73,7 @@ async function save() {
     form.value = emptyForm()
     uni.showToast({ title: "经历证据已保存", icon: "success" })
   } catch (reason) {
-    uni.showToast({
-      title: reason instanceof Error ? reason.message : "经历证据保存失败",
-      icon: "none",
-    })
+    showErrorToast(reason instanceof Error ? reason.message : "经历证据保存失败")
   } finally {
     saving.value = false
   }
@@ -108,10 +103,7 @@ async function remove(item: ResumeEvidence) {
     if (form.value.id === item.id) form.value = emptyForm()
     uni.showToast({ title: "经历证据已删除", icon: "success" })
   } catch (reason) {
-    uni.showToast({
-      title: reason instanceof Error ? reason.message : "删除失败",
-      icon: "none",
-    })
+    showErrorToast(reason instanceof Error ? reason.message : "删除失败")
   } finally {
     pendingDeleteId.value = null
   }

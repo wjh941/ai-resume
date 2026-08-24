@@ -19,6 +19,7 @@ import { getClientId } from "../../stores/session"
 import { validateResume } from "../../utils/validators"
 import { downloadExport } from "../../utils/download-export"
 import { notify } from "../../utils/notifications"
+import { showErrorToast } from "../../utils/error-feedback"
 import type { ResumePayload } from "../../types/resume"
 
 const store = useResumeStore()
@@ -58,7 +59,7 @@ async function save(): Promise<boolean> {
   if (saveLoading.value) return false
   const errors = validateResume(resume.value)
   if (errors.length) {
-    uni.showToast({ title: errors[0].message, icon: "none" })
+    showErrorToast(errors[0].message)
     return false
   }
   saveLoading.value = true
@@ -130,7 +131,7 @@ async function importResume(): Promise<void> {
     importPreview.value = result.parsedResume
     uni.showToast({ title: "解析预览已生成，请核对后应用", icon: "none" })
   } catch (reason) {
-    uni.showToast({ title: reason instanceof Error ? reason.message : "简历导入失败，请稍后重试", icon: "none" })
+    showErrorToast(reason instanceof Error ? reason.message : "简历导入失败，请稍后重试")
   } finally {
     importLoading.value = false
   }
@@ -203,7 +204,7 @@ async function saveVersion() {
     await loadVersions()
     uni.showToast({ title: "版本快照已保存", icon: "success" })
   } catch (reason) {
-    uni.showToast({ title: reason instanceof Error ? reason.message : "版本快照保存失败，请稍后重试", icon: "none" })
+    showErrorToast(reason instanceof Error ? reason.message : "版本快照保存失败，请稍后重试")
   } finally {
     versionLoading.value = false
   }
@@ -225,7 +226,7 @@ function restoreVersion(version: ResumeVersion) {
         await loadVersions()
         uni.showToast({ title: "已恢复所选版本", icon: "success" })
       } catch (reason) {
-        uni.showToast({ title: reason instanceof Error ? reason.message : "版本恢复失败，请稍后重试", icon: "none" })
+        showErrorToast(reason instanceof Error ? reason.message : "版本恢复失败，请稍后重试")
       } finally {
         restoringVersionId.value = ""
       }
@@ -240,7 +241,7 @@ async function compareVersion(version: ResumeVersion) {
   try {
     versionDiff.value = await compareResumeVersions(store.draft.id, active.id, version.id)
   } catch (reason) {
-    uni.showToast({ title: reason instanceof Error ? reason.message : "版本比较失败，请稍后重试", icon: "none" })
+    showErrorToast(reason instanceof Error ? reason.message : "版本比较失败，请稍后重试")
   } finally {
     versionComparingId.value = ""
   }

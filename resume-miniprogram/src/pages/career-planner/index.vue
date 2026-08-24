@@ -24,6 +24,7 @@ import type { CareerIdentityCode, CareerProfilePayload, MajorSuggestion, Recomme
 import type { LocalJobMatchItem } from "../../types/job-match"
 import { prepareResumeForJob } from "../../utils/resume-autofill"
 import { canOpenComparison } from "../../utils/role-comparison"
+import { showErrorToast } from "../../utils/error-feedback"
 
 const store = useCareerStore()
 const resumeStore = useResumeStore()
@@ -145,13 +146,13 @@ function isInComparison(roleName: string): boolean {
 
 function toggleComparison(roleName: string) {
   if (!store.toggleComparisonRole(roleName)) {
-    uni.showToast({ title: "最多对比 4 个岗位", icon: "none" })
+    showErrorToast("最多对比 4 个岗位")
   }
 }
 
 function openComparison() {
   if (!canOpenComparison(store.comparisonRoleNames)) {
-    uni.showToast({ title: "请先选择 2-4 个岗位进行对比", icon: "none" })
+    showErrorToast("请先选择 2-4 个岗位进行对比")
     return
   }
   uni.navigateTo({ url: "/pages/role-comparison/index" })
@@ -160,7 +161,7 @@ function openComparison() {
 function openApplicationTracker() {
   const roleName = store.weeklyTarget?.roleName
   if (!roleName) {
-    uni.showToast({ title: "请先在岗位对比页设置本周主目标", icon: "none" })
+    showErrorToast("请先在岗位对比页设置本周主目标")
     return
   }
   uni.navigateTo({
@@ -237,7 +238,7 @@ async function useForResume(recommendation: RoleRecommendation) {
     store.selectRole(recommendation)
     uni.navigateTo({ url: "/pages/template-picker/index" })
   } catch (reason) {
-    uni.showToast({ title: reason instanceof Error ? reason.message : "岗位载入失败", icon: "none" })
+    showErrorToast(reason instanceof Error ? reason.message : "岗位载入失败")
   } finally {
     resumeLoading.value = ""
   }
@@ -255,7 +256,7 @@ async function generateTasks() {
   if (taskSaving.value) return
   const actions = recommendations.value.flatMap((item) => item.actionPlan).filter(Boolean)
   if (!actions.length) {
-    uni.showToast({ title: "请先生成职业建议", icon: "none" })
+    showErrorToast("请先生成职业建议")
     return
   }
   taskSaving.value = true
@@ -264,7 +265,7 @@ async function generateTasks() {
     await loadCareerTasks()
     uni.showToast({ title: "已生成职业任务", icon: "success" })
   } catch (reason) {
-    uni.showToast({ title: reason instanceof Error ? reason.message : "职业任务生成失败，请稍后重试", icon: "none" })
+    showErrorToast(reason instanceof Error ? reason.message : "职业任务生成失败，请稍后重试")
   } finally {
     taskSaving.value = false
   }
@@ -273,7 +274,7 @@ async function generateTasks() {
 async function createTask() {
   if (taskSaving.value) return
   if (!taskForm.value.title.trim()) {
-    uni.showToast({ title: "请填写任务内容", icon: "none" })
+    showErrorToast("请填写任务内容")
     return
   }
   taskSaving.value = true
@@ -291,7 +292,7 @@ async function createTask() {
     await loadCareerTasks()
     uni.showToast({ title: "职业任务已添加", icon: "success" })
   } catch (reason) {
-    uni.showToast({ title: reason instanceof Error ? reason.message : "职业任务保存失败，请稍后重试", icon: "none" })
+    showErrorToast(reason instanceof Error ? reason.message : "职业任务保存失败，请稍后重试")
   } finally {
     taskSaving.value = false
   }
@@ -304,7 +305,7 @@ async function toggleTask(task: CareerTask) {
     await updateCareerTask(task.id, { status: task.status === "completed" ? "pending" : "completed" })
     await loadCareerTasks()
   } catch (reason) {
-    uni.showToast({ title: reason instanceof Error ? reason.message : "任务状态更新失败，请稍后重试", icon: "none" })
+    showErrorToast(reason instanceof Error ? reason.message : "任务状态更新失败，请稍后重试")
   } finally {
     taskTogglingId.value = ""
   }
@@ -404,7 +405,7 @@ onUnmounted(() => {
           <view class="field"><text>最低期望薪资</text><input v-model="profile.minimumSalary" placeholder="例如：10k" /></view>
           <view class="field"><text>工作形式</text><input v-model="profile.workTypes[0]" placeholder="全职 / 实习" /></view>
         </view>
-        <text v-if="error" class="error">{{ error }}</text>
+      <text v-if="error" class="ui-error-tip">{{ error }}</text>
         <button class="primary" :loading="loading" :disabled="loading" @click="generatePlan">生成我的三档求职方案</button>
       </view>
 

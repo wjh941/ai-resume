@@ -2,6 +2,7 @@
 import { ref } from "vue"
 
 import LoadingSpinner from "../../components/LoadingSpinner.vue"
+import { showErrorToast } from "../../utils/error-feedback"
 import { checkResumeReadiness } from "../../services/evidence-api"
 import { useResumeStore } from "../../stores/resume"
 import type { TemplateId } from "../../types/resume"
@@ -37,14 +38,14 @@ async function chooseTemplate(templateId: TemplateId) {
     const report = await checkResumeReadiness(store.draft.resume)
     const decision = decideTemplateSelection(report)
     if (decision.blocked) {
-      uni.showToast({ title: `请先补充${report.blockingItems[0]}`, icon: "none" })
+      showErrorToast(`请先补充${report.blockingItems[0]}`)
       return
     }
     if (decision.requiresWarningConfirmation && !(await confirmWarnings(report.warningItems))) {
       return
     }
   } catch {
-    uni.showToast({ title: "简历检查失败，请稍后重试", icon: "none" })
+    showErrorToast("简历检查失败，请稍后重试")
     return
   } finally {
     loadingTemplateId.value = null

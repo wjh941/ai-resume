@@ -12,6 +12,7 @@ import {
 } from "../../services/drafts-api"
 import { useResumeStore } from "../../stores/resume"
 import { getClientId } from "../../stores/session"
+import { showErrorToast } from "../../utils/error-feedback"
 
 const resumeStore = useResumeStore()
 const drafts = ref<DraftRecord[]>([])
@@ -42,7 +43,7 @@ async function openDraft(item: DraftRecord): Promise<void> {
     resumeStore.checkpoint()
     uni.navigateTo({ url: "/pages/resume-editor/index" })
   } catch (reason) {
-    uni.showToast({ title: reason instanceof Error ? reason.message : "Unable to open draft", icon: "none" })
+    showErrorToast(reason instanceof Error ? reason.message : "Unable to open draft")
   } finally {
     pendingAction.value = ""
     pendingDraftId.value = ""
@@ -57,7 +58,7 @@ async function copy(item: DraftRecord): Promise<void> {
     drafts.value.unshift(copied)
     uni.showToast({ title: "Draft copied", icon: "success" })
   } catch (reason) {
-    uni.showToast({ title: reason instanceof Error ? reason.message : "Unable to copy draft", icon: "none" })
+    showErrorToast(reason instanceof Error ? reason.message : "Unable to copy draft")
   } finally {
     pendingAction.value = ""
     pendingDraftId.value = ""
@@ -77,7 +78,7 @@ function remove(item: DraftRecord): void {
         drafts.value = drafts.value.filter((draft) => draft.id !== item.id)
         uni.showToast({ title: "Draft deleted", icon: "success" })
       } catch (reason) {
-        uni.showToast({ title: reason instanceof Error ? reason.message : "Unable to delete draft", icon: "none" })
+        showErrorToast(reason instanceof Error ? reason.message : "Unable to delete draft")
       } finally {
         pendingAction.value = ""
         pendingDraftId.value = ""
@@ -104,7 +105,7 @@ onMounted(load)
       <button size="mini" :loading="loading" :disabled="loading" @click="load">Refresh</button>
     </view>
     <view v-if="loading" class="notice"><LoadingSpinner size="sm" label="Loading drafts..." /><text>Loading drafts...</text></view>
-    <text v-else-if="error" class="error">{{ error }}</text>
+      <text v-else-if="error" class="ui-error-tip">{{ error }}</text>
     <view v-else-if="!drafts.length" class="empty-state">
       <view class="empty-illustration" aria-hidden="true"><view></view><view></view><view></view></view>
       <text class="empty-title">No resume drafts yet</text>
