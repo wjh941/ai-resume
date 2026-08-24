@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from "vue"
 
 import ExpandableText from "../../components/ExpandableText.vue"
 import LoadingSpinner from "../../components/LoadingSpinner.vue"
+import { useIncrementalList } from "../../composables/useIncrementalList"
 import {
   deleteFavoriteJob,
   getJobMatchSubscriptionSettings,
@@ -19,6 +20,12 @@ const resumeStore = useResumeStore()
 const roleName = ref(resumeStore.activeJob?.roleName || resumeStore.draft.resume.job.targetRole || "")
 const note = ref("")
 const favorites = ref<FavoriteJob[]>([])
+const {
+  visibleItems: renderedItems,
+  hasMore,
+  showMore,
+  reset: resetVisibleItems,
+} = useIncrementalList(favorites)
 const enabled = ref(false)
 const matchFilter = ref("")
 const lastNotifyAt = ref<string | null>(null)
@@ -38,6 +45,7 @@ async function load(): Promise<void> {
       () => Promise.all([listFavoriteJobs(), getJobMatchSubscriptionSettings()]),
     )
     favorites.value = items
+    resetVisibleItems()
     enabled.value = subscribed.enabled
     matchFilter.value = subscribed.matchFilter
     lastNotifyAt.value = subscribed.lastNotifyAt
@@ -122,7 +130,7 @@ onMounted(() => { void load() })
 </script>
 
 <template>
-  <scroll-view class="page" scroll-y>
+  <scroll-view class="page progressive-scroll-page" scroll-y @scrolltolower="showMore">
     <view class="hero"><text class="eyebrow">JOB COLLECTION</text><text class="title">Saved job directions</text><text class="copy">Keep roles you want to revisit. External job matching and notifications are not connected in this development phase.</text></view>
     <view class="card">
       <text class="section-title">Save a role</text>
@@ -134,7 +142,8 @@ onMounted(() => { void load() })
     <view class="card"><text class="section-title">Matching filter</text><input v-model="matchFilter" maxlength="200" placeholder="Shanghai, remote, data platform" /><button :loading="subscriptionSaving" :disabled="subscriptionSaving" @click="saveSubscriptionFilter">Save filter</button><text v-if="lastNotifyAt" class="copy">Last alert: {{ lastNotifyAt }}</text></view>
       <text v-if="error" class="ui-error-tip">{{ error }}</text>
     <view v-if="loading" class="notice"><LoadingSpinner size="sm" label="Loading saved jobs..." /><text>Loading saved jobs...</text></view>
-    <view v-for="item in favorites" :key="item.id" class="favorite-card ui-long-list-item"><view><ExpandableText class="role" :text="item.roleName" :lines="1" :expand-at="18" label="岗位名称" /><text v-if="item.note" class="copy">{{ item.note }}</text></view><button size="mini" :loading="removingFavoriteId === item.id" :disabled="Boolean(removingFavoriteId)" @click="removeFavorite(item.id)">Remove</button></view>
+    <view v-for="item in renderedItems" :key="item.id" class="favorite-card ui-long-list-item"><view><ExpandableText class="role" :text="item.roleName" :lines="1" :expand-at="18" label="岗位名称" /><text v-if="item.note" class="copy">{{ item.note }}</text></view><button size="mini" :loading="removingFavoriteId === item.id" :disabled="Boolean(removingFavoriteId)" @click="removeFavorite(item.id)">Remove</button></view>
+    <text v-if="hasMore" class="progressive-list-hint">继续下滑显示更多</text>
     <view v-if="!loading && !favorites.length" class="empty-state"><view class="empty-illustration"><view></view><view></view><view></view></view><text>No saved jobs yet</text></view>
   </scroll-view>
 </template>

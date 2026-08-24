@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue"
+import { computed, onMounted, ref, watch } from "vue"
 
 import ExpandableText from "../../components/ExpandableText.vue"
 import LoadingSpinner from "../../components/LoadingSpinner.vue"
+import { useIncrementalList } from "../../composables/useIncrementalList"
 import {
   createApplicationTimelineEvent,
   deleteApplication,
@@ -51,6 +52,13 @@ const reminderAt = ref("")
 const visibleApplications = computed(() => filterApplications(applications.value, selectedStatus.value).filter((item) => (
   !interviewDate.value || item.nextInterviewAt?.startsWith(interviewDate.value)
 )))
+const {
+  visibleItems: renderedItems,
+  hasMore,
+  showMore,
+  reset: resetVisibleItems,
+} = useIncrementalList(visibleApplications)
+watch([selectedStatus, interviewDate], () => resetVisibleItems())
 const dueCount = computed(() => applications.value.filter((item) => (
   Boolean(item.nextActionAt) && !["offer", "rejected", "closed"].includes(item.status)
 )).length)
@@ -90,6 +98,7 @@ async function load() {
   error.value = ""
   try {
     applications.value = await listApplications(getClientId())
+    resetVisibleItems()
   } catch (reason) {
     error.value = reason instanceof Error ? reason.message : "投递记录加载失败"
   } finally {
@@ -239,6 +248,8 @@ function remove(item: ApplicationRecord) {
   })
 }
 
+const openJobSearch = () => uni.navigateTo({ url: "/pages/job-search/index" })
+
 onMounted(async () => {
   applicationsStore.restorePending()
   form.value = emptyForm(queryFromPage())
@@ -248,7 +259,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <scroll-view class="page" scroll-y>
+  <scroll-view class="page progressive-scroll-page" scroll-y @scrolltolower="showMore">
     <view class="content">
       <view class="hero">
         <text class="title">投递行动台</text>
@@ -321,9 +332,14 @@ onMounted(async () => {
 
       <text v-if="error" class="ui-error-tip">{{ error }}</text>
       <view v-else-if="loading" class="empty"><LoadingSpinner size="sm" label="正在加载投递记录…" /><text>正在加载投递记录…</text></view>
-      <view v-else-if="!visibleApplications.length" class="empty">还没有投递计划。确认岗位与公司后，在上方手动保存第一条记录。</view>
+      <view v-else-if="!visibleApplications.length" class="empty">
+        <view class="empty-illustration" aria-hidden="true"><view /><view /><view /></view>
+        <text>还没有投递计划。确认岗位与公司后，在上方手动保存第一条记录。</text>
+        <text class="empty-helper">可先查询岗位，再回到这里记录进度。</text>
+        <button class="empty-action" @click="openJobSearch">查询岗位</button>
+      </view>
 
-      <view v-for="item in visibleApplications" :key="item.id" class="card record-card ui-long-list-item">
+      <view v-for="item in renderedItems" :key="item.id" class="card record-card ui-long-list-item">
         <view class="record-top">
           <view><ExpandableText class="record-role" :text="item.roleName" :lines="1" :expand-at="18" label="岗位名称" /><ExpandableText class="record-company" :text="item.company" :lines="1" :expand-at="18" label="公司名称" /></view>
           <text class="status">{{ statuses.find((status) => status.value === item.status)?.label }}</text>
@@ -352,6 +368,7 @@ onMounted(async () => {
           <button size="mini" class="danger" :loading="pendingDeleteId === item.id" :disabled="Boolean(pendingDeleteId)" :aria-label="`删除 ${item.company} 的 ${item.roleName} 投递记录`" @click="remove(item)">删除</button>
         </view>
       </view>
+      <text v-if="hasMore" class="progressive-list-hint">继续下滑显示更多</text>
     </view>
   </scroll-view>
 </template>
@@ -363,6 +380,7 @@ onMounted(async () => {
 .card-heading,.record-top,.actions { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }.card-heading { color: #1f2329; font-size: 30rpx; font-weight: 700; }.field { margin-top: 20rpx; }.field > text { display: block; margin-bottom: 10rpx; color: #4e5969; font-size: 24rpx; }.two-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16rpx; } input,textarea,.picker { box-sizing: border-box; width: 100%; color: #1f2329; background: #f8fafc; border: 1rpx solid #dfe7f1; border-radius: 12rpx; font-size: 25rpx; } input,.picker { height: 76rpx; padding: 0 18rpx; line-height: 76rpx; } textarea { min-height: 120rpx; padding: 16rpx; line-height: 1.55; }
 button { margin-top: 20rpx; border-radius: 12rpx; }.primary { color: #fff; background: #1677ff; }.secondary { margin-top: 0; color: #4e5969; background: #f2f3f5; }.danger { margin-top: 0; color: #d4380d; background: #fff1f0; }.linked-draft { display: block; margin-top: 12rpx; color: #86909c; font-size: 21rpx; }
 .filter-row { display: flex; flex-wrap: wrap; gap: 10rpx; margin-top: 22rpx; }.filter-chip { margin: 0; padding: 8rpx 14rpx; color: #607286; background: #edf2f7; border-radius: 999rpx; font-size: 22rpx; }.filter-chip.active { color: #fff; background: #1677ff; }.empty,.error { display: block; margin-top: 20rpx; padding: 28rpx 22rpx; color: #86909c; background: #fff; border: 1rpx dashed #d9e0e8; border-radius: 16rpx; font-size: 24rpx; line-height: 1.6; text-align: center; }.error { color: #b3422a; background: #fff7f0; border-color: #ffd8bf; }
+.empty-illustration { display: flex; flex-direction: column; gap: 8rpx; width: 116rpx; margin: 0 auto 20rpx; padding: 20rpx; background: #eef6ff; border: 1rpx solid #d4e8ff; border-radius: 18rpx; }.empty-illustration view { height: 9rpx; background: #9fc8f7; border-radius: 999rpx; }.empty-illustration view:nth-child(2) { width: 76%; }.empty-illustration view:nth-child(3) { width: 54%; }.empty-helper { display: block; margin-top: 10rpx; color: #86909c; font-size: 23rpx; }.empty-action { margin: 20rpx auto 0; color: #fff; background: #1677ff; font-size: 24rpx; }
 .record-card { padding: 22rpx; }.record-role,.record-company { display: block; }.record-role { color: #1f2329; font-size: 29rpx; font-weight: 700; }.record-company { margin-top: 6rpx; color: #86909c; font-size: 22rpx; }.status { flex-shrink: 0; padding: 7rpx 12rpx; color: #1677ff; background: #e8f3ff; border-radius: 999rpx; font-size: 21rpx; }.detail,.next-action { display: block; margin-top: 12rpx; color: #4e5969; font-size: 23rpx; line-height: 1.55; }.next-action { color: #a56727; }.actions { justify-content: flex-end; margin-top: 18rpx; }.actions button { min-width: 110rpx; }
 .interview-filter { margin-top: 20rpx; }.interview-panel { margin-top: 20rpx; padding: 22rpx; background: #eef8ff; border: 1rpx solid #c7e5ff; border-radius: 16rpx; }.panel-title,.panel-item { display: block; }.panel-title { color: #245b99; font-size: 28rpx; font-weight: 700; }.panel-item { margin-top: 10rpx; color: #4e6682; font-size: 23rpx; line-height: 1.5; }.reminder-row { display: flex; align-items: center; gap: 12rpx; margin-top: 20rpx; }.reminder-row input { flex: 1; }.reminder-row button { flex-shrink: 0; }.timeline-list { margin-top: 16rpx; padding-top: 14rpx; border-top: 1rpx solid #e8edf3; }.timeline-item { display: block; margin-top: 8rpx; color: #5f6f82; font-size: 22rpx; line-height: 1.5; }.timeline-editor { display: grid; gap: 12rpx; margin-top: 16rpx; }.timeline-editor textarea { min-height: 90rpx; }.timeline-editor button { justify-self: start; margin-top: 0; }
 @media (max-width: 360px) { .two-columns { grid-template-columns: 1fr; }.summary-card,.reminder-row { align-items: flex-start; flex-direction: column; }.reminder-row { gap: 10rpx; }.pending { align-items: flex-start; flex-direction: column; } }

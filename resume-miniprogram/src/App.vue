@@ -80,5 +80,7 @@ button:disabled, button[disabled] { background-color: var(--ui-disabled-bg) !imp
 .ui-error-tip::before { display: inline-flex; width: 32rpx; height: 32rpx; align-items: center; justify-content: center; box-sizing: border-box; margin-right: 12rpx; content: "!"; color: var(--ui-error-color); border: 2rpx solid currentColor; border-radius: 50%; font-size: 22rpx; font-weight: 700; line-height: 1; vertical-align: middle; }
 .ui-error-tip--inline { min-height: 0; margin-top: 8rpx; padding: 0; color: var(--ui-error-color); background: transparent; border: 0; font-size: 22rpx; }
 .ui-error-tip--inline::before { display: none; }
-.ui-long-list-item { content-visibility: auto; contain: layout paint style; contain-intrinsic-size: auto 220rpx; }
+.progressive-scroll-page { height: 100vh; box-sizing: border-box; }
+.progressive-list-hint { display: block; padding: 24rpx 0 12rpx; color: #86909c; font-size: 22rpx; text-align: center; }
+.ui-long-list-item { content-visibility: auto; contain: layout paint style; contain-intrinsic-size: auto 180rpx; }
 </style>

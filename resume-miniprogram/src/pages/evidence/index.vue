@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue"
 
+import { useIncrementalList } from "../../composables/useIncrementalList"
 import {
   deleteEvidence,
   listEvidence,
@@ -24,6 +25,12 @@ const kindOptions: Array<{ value: EvidenceKind; label: string }> = [
 ]
 
 const evidence = ref<ResumeEvidence[]>([])
+const {
+  visibleItems: renderedItems,
+  hasMore,
+  showMore,
+  reset: resetVisibleItems,
+} = useIncrementalList(evidence)
 const loading = ref(false)
 const saving = ref(false)
 const pendingDeleteId = ref<string | null>(null)
@@ -51,6 +58,7 @@ async function load() {
   loading.value = true
   try {
     evidence.value = await listEvidence(getClientId())
+    resetVisibleItems()
   } catch (reason) {
     showErrorToast(reason instanceof Error ? reason.message : "经历证据加载失败")
   } finally {
@@ -119,7 +127,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <scroll-view class="page" scroll-y>
+  <scroll-view class="page progressive-scroll-page" scroll-y @scrolltolower="showMore">
     <view class="content">
       <view class="hero">
         <text class="eyebrow">FACT-BASED RESUME</text>
@@ -164,7 +172,7 @@ onMounted(() => {
       <view v-if="!loading && !evidence.length" class="empty">
         <text>先录入一条真实经历，后续可按目标岗位生成可确认的简历草案。</text>
       </view>
-      <view v-for="item in evidence" :key="item.id" class="card evidence-card ui-long-list-item">
+      <view v-for="item in renderedItems" :key="item.id" class="card evidence-card ui-long-list-item">
         <view class="evidence-top">
           <view>
             <text class="evidence-title">{{ item.title }}</text>
@@ -181,6 +189,7 @@ onMounted(() => {
           <button size="mini" class="danger" :loading="pendingDeleteId === item.id" :disabled="Boolean(pendingDeleteId)" @click="remove(item)">删除</button>
         </view>
       </view>
+      <text v-if="hasMore" class="progressive-list-hint">继续下滑显示更多</text>
     </view>
   </scroll-view>
 </template>

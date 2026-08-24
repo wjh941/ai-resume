@@ -460,6 +460,13 @@ onMounted(() => {
             </transition-group>
           </view>
         </view>
+        <view
+          v-if="consultation.stage === 'role-entry' && roleName.trim() && !suggestionLoading && !visibleSuggestions.length && !jobConsultations.length"
+          class="job-empty-state"
+        >
+          <text class="job-empty-icon" aria-hidden="true">⌕</text>
+          <text>暂未找到匹配岗位，可换一个更具体的岗位名称。</text>
+        </view>
         <text v-if="roleFieldError" id="job-role-error" class="ui-error-tip">{{ roleFieldError }}</text>
 
         <view v-if="selectedRoles.length" class="selected-role-area">
@@ -819,6 +826,8 @@ onMounted(() => {
 .source-copy { flex-shrink: 0; color: #2d77d1; font-size: 20rpx; }
 
 .result-title { display: block; margin-top: 34rpx; color: #1d2a3a; font-size: 31rpx; font-weight: 700; }
+.job-empty-state { display: flex; align-items: center; gap: 12rpx; margin-top: 14rpx; color: #64748b; font-size: 23rpx; line-height: 1.55; }
+.job-empty-icon { flex: 0 0 38rpx; font-size: 32rpx; text-align: center; }
 .analysis-section { margin-top: 14rpx; overflow: hidden; border: 1rpx solid #e6edf5; border-radius: 14rpx; }
 .analysis-section-header { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; padding: 18rpx; background: #fbfcfe; }
 .analysis-section-header > view { display: flex; align-items: center; gap: 12rpx; min-width: 0; }

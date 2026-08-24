@@ -2,6 +2,7 @@
 import { onMounted, ref } from "vue"
 
 import LoadingSpinner from "../../components/LoadingSpinner.vue"
+import { useIncrementalList } from "../../composables/useIncrementalList"
 import {
   copyDraft,
   deleteDraft,
@@ -16,6 +17,12 @@ import { showErrorToast } from "../../utils/error-feedback"
 
 const resumeStore = useResumeStore()
 const drafts = ref<DraftRecord[]>([])
+const {
+  visibleItems: renderedItems,
+  hasMore,
+  showMore,
+  reset: resetVisibleItems,
+} = useIncrementalList(drafts)
 const loading = ref(false)
 const error = ref("")
 const pendingAction = ref<"open" | "copy" | "delete" | "">("")
@@ -26,6 +33,7 @@ async function load(): Promise<void> {
   error.value = ""
   try {
     drafts.value = await listDrafts(getClientId())
+    resetVisibleItems()
   } catch (reason) {
     error.value = reason instanceof Error ? reason.message : "Unable to load drafts"
   } finally {
@@ -95,11 +103,13 @@ function createTrackerPrefill(item: DraftRecord): void {
   uni.navigateTo({ url: `/pages/applications/index?${params}` })
 }
 
+const openResumeForm = () => uni.navigateTo({ url: "/pages/resume-form/index" })
+
 onMounted(load)
 </script>
 
 <template>
-  <scroll-view class="page" scroll-y>
+  <scroll-view class="page progressive-scroll-page" scroll-y @scrolltolower="showMore">
     <view class="heading-row">
       <view><text class="title">Drafts</text><text class="subtitle">Open, copy, or prepare a tracker entry.</text></view>
       <button size="mini" :loading="loading" :disabled="loading" @click="load">Refresh</button>
@@ -110,8 +120,10 @@ onMounted(load)
       <view class="empty-illustration" aria-hidden="true"><view></view><view></view><view></view></view>
       <text class="empty-title">No resume drafts yet</text>
       <text class="notice">Your saved resume history will appear here.</text>
+      <text class="empty-helper">本机填写中的内容也会自动保留。</text>
+      <button class="empty-action" @click="openResumeForm">前往填写简历</button>
     </view>
-    <view v-for="item in drafts" :key="item.id" class="draft">
+    <view v-for="item in renderedItems" :key="item.id" class="draft">
       <text class="draft-title">{{ item.jobTitle || item.resume.job.targetRole || "Untitled draft" }}</text>
       <text class="draft-meta">Updated {{ item.updatedAt }}</text>
       <view class="actions">
@@ -121,6 +133,7 @@ onMounted(load)
         <button size="mini" class="danger" :loading="pendingAction === 'delete' && pendingDraftId === item.id" :disabled="Boolean(pendingAction)" @click="remove(item)">Delete</button>
       </view>
     </view>
+    <text v-if="hasMore" class="progressive-list-hint">继续下滑显示更多</text>
   </scroll-view>
 </template>
 
@@ -129,4 +142,5 @@ onMounted(load)
 .heading-row { display: flex; align-items: center; justify-content: space-between; gap: 20rpx; }
 .title,.subtitle,.draft-title,.draft-meta,.notice,.error { display: block; }.title { font-size: 40rpx; font-weight: 700; }.subtitle,.draft-meta,.notice { margin-top: 8rpx; color: #86909c; font-size: 24rpx; }.notice,.error { margin-top: 32rpx; text-align: center; }.error { color: #d4380d; }
 .draft { margin-top: 20rpx; padding: 24rpx; background: #fff; border: 1rpx solid #e5e6eb; border-radius: 12rpx; }.draft-title { font-size: 30rpx; font-weight: 600; }.actions { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 20rpx; }.actions button { margin: 0; font-size: 23rpx; }.primary { color: #fff; background: #1677ff; }.danger { color: #d4380d; background: #fff1f0; }.empty-state { margin-top: 42rpx; padding: 34rpx 24rpx; text-align: center; }.empty-illustration { display: flex; flex-direction: column; gap: 8rpx; width: 116rpx; margin: 0 auto 20rpx; padding: 20rpx; background: #eef6ff; border: 1rpx solid #d4e8ff; border-radius: 18rpx; }.empty-illustration view { height: 9rpx; background: #9fc8f7; border-radius: 999rpx; }.empty-illustration view:nth-child(2) { width: 76%; }.empty-illustration view:nth-child(3) { width: 54%; }.empty-title { display: block; color: #1f3e61; font-size: 29rpx; font-weight: 700; }
+.empty-helper { display: block; margin-top: 10rpx; color: #86909c; font-size: 23rpx; }.empty-action { margin: 20rpx auto 0; color: #fff; background: #1677ff; font-size: 24rpx; }
 </style>

@@ -214,4 +214,32 @@ describe("runWithLoading", () => {
     expect(editor.match(/typeof document === "undefined" \? undefined : document/g)).toHaveLength(2)
     expect(editor.match(/complete: restoreFocus/g)).toHaveLength(2)
   })
+
+  it("bounds H5 long lists and adds additive empty states", () => {
+    const app = readFileSync(new URL("../App.vue", import.meta.url), "utf8")
+    const drafts = readFileSync(new URL("../pages/drafts/index.vue", import.meta.url), "utf8")
+    const applications = readFileSync(new URL("../pages/applications/index.vue", import.meta.url), "utf8")
+    const evidence = readFileSync(new URL("../pages/evidence/index.vue", import.meta.url), "utf8")
+    const collection = readFileSync(new URL("../pages/job-collection/index.vue", import.meta.url), "utf8")
+    const jobSearch = readFileSync(new URL("../pages/job-search/index.vue", import.meta.url), "utf8")
+    const progressiveScrollRoot = '<scroll-view class="page progressive-scroll-page" scroll-y @scrolltolower="showMore">'
+    for (const page of [drafts, applications, evidence, collection]) {
+      expect(page).toContain("useIncrementalList")
+      expect(page).toContain(progressiveScrollRoot)
+      expect(page).toContain('v-for="item in renderedItems"')
+    }
+    expect(drafts).not.toContain('v-for="item in drafts"')
+    expect(applications).not.toContain('v-for="item in visibleApplications"')
+    expect(evidence).not.toContain('v-for="item in evidence"')
+    expect(collection).not.toContain('v-for="item in favorites"')
+    expect(drafts).toContain("progressive-scroll-page")
+    expect(app).toContain("contain-intrinsic-size: auto 180rpx")
+    expect(app).toContain(".progressive-scroll-page")
+    expect(jobSearch).toContain("job-empty-state")
+    expect(drafts).toContain("本机填写中的内容也会自动保留。")
+    expect(drafts).toContain('/pages/resume-form/index')
+    expect(applications).toContain("可先查询岗位，再回到这里记录进度。")
+    expect(applications).toContain('/pages/job-search/index')
+    expect(jobSearch).toContain("暂未找到匹配岗位，可换一个更具体的岗位名称。")
+  })
 })
