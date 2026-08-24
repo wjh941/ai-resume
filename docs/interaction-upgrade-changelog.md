@@ -96,3 +96,49 @@ Particle bursts, global card flips, swipe-away deletion, bottom-sheet drawers, a
 - Web unit tests: 38 tests passed across 12 files; production build passed.
 - H5 unit tests: 36 files, 86 tests passed.
 - H5 build passed with `npm run build:h5`.
+
+## 2026-08-24 polish and robustness pass
+
+This pass keeps all existing routes, API contracts, mock data, Chinese UI copy, and business modules intact. It only refines feedback, motion, and responsive behavior.
+
+### `resume-miniprogram` H5
+
+- Added shared `ui-error-tip` tokens in `App.vue` and applied them to existing network, permission, validation, and parameter-error surfaces across login, account, jobs, applications, drafts, assessment, planner, knowledgebase, membership, orders, comparison, and editor-related pages.
+- Added one disabled-state contract for native disabled buttons and `.is-disabled` controls, including consistent opacity, muted color/border, no press transform, and no shadow.
+- Tuned the shared easing curve to a non-overshooting curve, reduced press scale, and switched page-entry translation to `translate3d` to reduce low-end mobile jitter.
+- Kept `FormField` validation inline while reusing the same semantic error color system.
+
+### `web-frontend`
+
+- Added globally registered `ErrorNotice` and migrated existing business-view error states and login validation errors without changing their messages, retry actions, or request logic.
+- Added a short `theme-switching` transition window with initial-render protection, `color-scheme`, and shared surface transitions to prevent partial dark/light flashes.
+- Unified disabled button feedback and motion easing tokens; removed the global box-shadow transition that caused unnecessary repaint work.
+- Added responsive guards for ultra-wide workspaces and 540px/380px windows, including topbar action spacing, user-chip truncation, and stable workspace padding.
+
+### Verification for this pass
+
+- Web unit tests: 40 passed across 12 files; production build passed.
+- H5 unit tests: 87 passed across 36 files; `npm run build:h5` passed.
+
+## 2026-08-24 robustness edge-case follow-up
+
+This follow-up preserves every existing page, route, API contract, request payload, mock record, Chinese UI string, and business workflow. The changes remain limited to shared interaction feedback and rendering behavior.
+
+### `resume-miniprogram` H5
+
+- Added the shared `showErrorToast` helper for transient network, permission, invalid-parameter, and timeout errors while keeping existing inline validation messages and success/neutral toasts unchanged.
+- Strengthened the global disabled-button contract so native disabled attributes cannot be overridden by page-level button backgrounds; disabled controls also suppress press transforms and shadows.
+- Reused the centralized non-overshooting motion curves and GPU-friendly transforms on frequent planner, job-search, and comparison interactions, with reduced-motion fallbacks intact.
+- Added `content-visibility` containment to existing application, evidence, collection, and job-search list records so off-screen content can skip rendering without changing list data or actions.
+
+### `web-frontend`
+
+- Standardized all existing business-view and login errors on the shared `ErrorNotice` component, including consistent semantic icon treatment and unchanged retry behavior.
+- Limited color/surface transitions to the explicit `theme-switching` window, skipped the initial render, cleared repeated-toggle timers, and disabled theme motion under reduced-motion preferences to avoid light/dark flash.
+- Retained the ultra-wide and narrow-window layout guards and applied off-screen rendering containment to application, evidence, record, task, and order rows.
+- Kept all long-list data sources, API calls, routing, module ownership, and completed business capabilities unchanged.
+
+### Verification for this follow-up
+
+- Web unit tests: 41 passed across 12 files; production build passed.
+- H5 unit tests: 89 passed across 37 files; `npm run build:h5` passed.
