@@ -160,7 +160,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleShortcut))
     <form v-else-if="draft" class="resume-editor-form workbench-form" novalidate @submit.prevent="save">
       <ErrorNotice v-if="error" :message="error" />
       <p v-if="invalidSummary" class="form-error validation-summary" role="alert">{{ invalidSummary }}</p>
-      <section class="editor-section">
+      <section class="editor-section chapter-stage">
         <h2>基本信息</h2>
         <div class="editor-grid">
           <label>
@@ -195,7 +195,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleShortcut))
         </div>
       </section>
 
-      <section class="editor-section">
+      <section class="editor-section chapter-stage">
         <div class="editor-section-heading"><h2>教育经历</h2><AsyncButton class="text-action compact" type="button" @click="addEducation"><Plus :size="15" aria-hidden="true" />添加教育经历</AsyncButton></div>
         <div v-for="(item, index) in draft.resume.education" :key="index" class="editor-item">
           <div class="editor-grid">
@@ -208,7 +208,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleShortcut))
         </div>
       </section>
 
-      <section class="editor-section">
+      <section class="editor-section chapter-stage">
         <div class="editor-section-heading"><h2>工作经历</h2><AsyncButton class="text-action compact" type="button" @click="addEmployment"><Plus :size="15" aria-hidden="true" />添加工作经历</AsyncButton></div>
         <div v-for="(item, index) in draft.resume.employment" :key="index" class="editor-item">
           <div class="editor-grid">
@@ -221,7 +221,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleShortcut))
         </div>
       </section>
 
-      <section class="editor-section">
+      <section class="editor-section chapter-stage">
         <div class="editor-section-heading"><h2>项目经历</h2><AsyncButton class="text-action compact" type="button" @click="addProject"><Plus :size="15" aria-hidden="true" />添加项目经历</AsyncButton></div>
         <div v-for="(item, index) in draft.resume.projects" :key="index" class="editor-item">
           <div class="editor-grid">
@@ -233,7 +233,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleShortcut))
         </div>
       </section>
 
-      <section class="editor-section">
+      <section class="editor-section chapter-stage">
         <h2>技能与自我评价</h2>
         <label><span>技能（用逗号分隔）</span><input v-model="skillsText" /></label>
         <label><span>证书（用逗号分隔）</span><input :value="draft.resume.skills.certificates.join(', ')" @input="updateCertificates" /></label>

@@ -96,7 +96,7 @@ onMounted(refresh)
 
     <ErrorNotice v-if="error" :message="error" />
     <div v-else-if="loading" class="content-skeleton" aria-busy="true"><LoadingSpinner class="content-loading-spinner" label="正在读取行动清单" /><span /><span /></div>
-    <div v-else-if="tasks.length" class="task-list">
+    <div v-else-if="tasks.length" class="task-list decision-emphasis">
       <article v-for="task in tasks" :key="task.id" class="task-row" :class="{ 'is-complete': task.status === 'completed' }">
         <AsyncButton class="task-check" type="button" :loading="pendingTaskId === task.id" :disabled="Boolean(pendingTaskId)" :title="task.status === 'completed' ? '标记为未完成' : '标记为已完成'" :aria-label="task.status === 'completed' ? '标记为未完成' : '标记为已完成'" @click="toggleTask(task)"><Check :size="16" aria-hidden="true" /></AsyncButton>
         <div><h2>{{ task.title }}</h2><p v-if="task.description">{{ task.description }}</p></div>
