@@ -376,6 +376,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .membership-package.is-current { border-color: var(--primary); background: var(--primary-tint); }
 .membership-package:not(.is-current) .record-coral { color: var(--muted); background: var(--surface-muted); }
 .membership-package.is-current .record-coral { color: var(--primary-strong); background: color-mix(in srgb, var(--primary) 14%, var(--surface)); }
+/* A tier-level API match can identify more than one package; do not imply one is current. */
+.package-grid:has(.membership-package.is-current ~ .membership-package.is-current) .membership-package.is-current { border-color: var(--line); background: var(--surface-raised); }
+.package-grid:has(.membership-package.is-current ~ .membership-package.is-current) .membership-package.is-current .record-coral { color: var(--muted); background: var(--surface-muted); }
 .package-heading { display: flex; gap: 11px; align-items: center; }
 .package-heading h3 { margin: 0; font-size: 16px; }
 .package-heading p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
