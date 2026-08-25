@@ -202,3 +202,34 @@ This iteration keeps all existing routes, API contracts, request payloads, mock 
 - Visible resume back and application edit-cancel controls now share the same function-level pending guards as their keyboard paths. Native disabled and `aria-disabled` state uses the existing global button contract during load, create, update, delete, and related pending application actions.
 - Final focused verification passed: H5 26/26 tests and Web 39/39 tests. Final full verification passed: H5 117/117 tests across 42 files plus the H5 production build; Web 88/88 tests across 20 files plus the Web production build.
 - These final-review UI fixes were made after the iteration's single Impeccable detector run. The detector was intentionally not rerun, so no detector coverage is claimed for these fixes; focused and full automated tests, both production builds, diff/scope checks, and scoped final code review provide the validation evidence.
+
+## 2026-08-25 Web brand expression
+
+This iteration strengthens the Web workspace's 求职成长 identity without
+adding business capability or changing any API, route, mock data, request,
+Chinese copy, state, prop, emit, or handler contract.
+
+### `web-frontend`
+
+- Overview now presents the existing KPI and action route as a clearer growth
+  narrative through a compact stage marker, cobalt route cue, and restrained
+  surface hierarchy. Existing KPI values, skeleton dimensions, refresh/retry
+  states, and navigation actions remain unchanged.
+- Resume editor chapters use existing section boundaries to create a stronger
+  progression. Career tasks, assessment, comparison, and annual-insights
+  results use a restrained cobalt decision band while record rows and cards keep
+  their border-only elevation.
+- Native transitions, dark mode, keyboard focus, disabled states, responsive
+  wrapping, and reduced-motion rules remain in the shared CSS system.
+- Browser QA passed for reachable career, assessment-invalid, comparison
+  result/gate, and insights branches across light/dark 1440px and 390px states,
+  including long-content clipping and elevation checks. Resume editor QA is
+  blocked by the pre-existing `/api/draft/list` response-shape mismatch, and
+  assessment-result QA is blocked by the pre-existing unconfigured AI service;
+  neither blocker changed production code in this visual iteration.
+
+### Verification
+
+- Task 1 focused interaction test: 2/2 passed; build and browser QA passed.
+- Task 2 focused workflows: 19/19 passed; build, detector, and scoped browser
+  QA passed for all reachable branches.
