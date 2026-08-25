@@ -202,6 +202,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .content-skeleton span { display: block; height: 68px; border-radius: var(--radius); background: linear-gradient(100deg, var(--surface-muted) 25%, color-mix(in srgb, var(--primary) 14%, var(--surface-muted)) 48%, var(--surface-muted) 72%); background-size: 200% 100%; animation: skeleton 1.4s ease-in-out infinite; }
 
 .overview-hero { position: relative; }
+.growth-stage { position: relative; padding-bottom: 6px; }
+.growth-stage::after { position: absolute; bottom: 0; left: 0; width: 56px; height: 2px; content: ""; background: var(--primary); }
 .section-kicker { display: inline-flex; gap: 7px; align-items: center; margin-bottom: 13px; color: var(--coral-strong); font-size: 12px; font-weight: 800; letter-spacing: .04em; }
 .heading-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .sync-status { display: inline-flex; gap: 6px; align-items: center; color: var(--success); font-size: 12px; font-weight: 720; }
@@ -225,6 +227,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .decision-surface { border-top-color: color-mix(in srgb, var(--primary) 30%, var(--line)); }
 .inline-form.decision-surface, .insight-query.decision-surface { border: 0; box-shadow: var(--shadow); }
 .action-route { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(360px, 1.15fr); gap: 40px; padding: 30px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.growth-route { border-color: color-mix(in srgb, var(--primary) 26%, var(--line)); background: var(--surface-muted); }
 .action-route h2 { margin: 0; font-size: 24px; line-height: 1.25; }
 .action-route p { margin: 10px 0 0; color: var(--muted); }
 .route-actions { display: grid; grid-template-columns: repeat(3, 1fr); }

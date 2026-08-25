@@ -35,7 +35,7 @@ onMounted(refresh)
 
 <template>
   <section class="view-layout">
-    <div class="view-heading overview-hero">
+    <div class="view-heading overview-hero growth-stage">
       <div>
         <div class="section-kicker"><Activity :size="15" aria-hidden="true" />今日工作台</div>
         <h1 id="overview-title">今天先完成一件重要的事</h1>
@@ -58,7 +58,7 @@ onMounted(refresh)
       <article class="metric-block metric-sky"><span class="metric-icon"><KanbanSquare :size="21" aria-hidden="true" /></span><span>投递记录</span><strong><AnimatedNumber :value="overview?.applicationCount ?? '-'" /></strong><small>持续记录每次进展</small></article>
     </div>
 
-    <section class="action-route" aria-label="求职下一步">
+    <section class="action-route growth-route" aria-label="求职下一步">
       <div><h2>从准备到投递，按自己的节奏推进</h2><p>先补齐可验证的信息，再确定目标岗位，最后安排投递与复盘。</p></div>
       <div class="route-actions">
         <button type="button" @click="emit('navigate', 'resume')"><span>整理简历</span><ArrowUpRight :size="17" aria-hidden="true" /></button>
