@@ -88,7 +88,7 @@ onMounted(refresh)
       <div class="heading-actions"><AsyncButton class="text-action" type="button" :loading="loading" @click="refresh"><RefreshCw :size="16" aria-hidden="true" />刷新</AsyncButton><AsyncButton class="text-action" type="button" @click="emit('navigate', 'comparison')">比较岗位</AsyncButton></div>
     </div>
 
-    <form class="inline-form" @submit.prevent="addTask">
+    <form class="inline-form decision-surface" @submit.prevent="addTask">
       <label><span>新增行动</span><input v-model.trim="title" required maxlength="240" placeholder="例如：整理一个可展示的项目成果" /></label>
       <label><span>计划完成日</span><input v-model="dueDate" type="date" /></label>
       <AsyncButton class="primary-button compact" type="submit" :loading="saving"><Plus :size="17" aria-hidden="true" />{{ saving ? "保存中" : "加入清单" }}</AsyncButton>
