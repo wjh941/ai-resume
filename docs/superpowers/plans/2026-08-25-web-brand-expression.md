@@ -133,11 +133,11 @@ git commit -m "style(web): emphasize growth decisions"
 - Consumes: completed presentational commits and existing Web test/build commands.
 - Produces: a documented, verified iteration with no public interface change.
 
-- [ ] **Step 1: Add a concise changelog entry**
+- [x] **Step 1: Add a concise changelog entry**
 
 Document the overview growth narrative, editor/decision emphasis, retained operational record treatment, browser QA coverage, and no-business-change boundary. Do not rewrite older entries.
 
-- [ ] **Step 2: Run full Web verification**
+- [x] **Step 2: Run full Web verification**
 
 ```powershell
 cd web-frontend
@@ -147,11 +147,11 @@ npm.cmd run build
 
 Expected: all tests and production build pass.
 
-- [ ] **Step 3: Perform final browser and scope checks**
+- [x] **Step 3: Perform final browser and scope checks**
 
 Inspect 1440px light/dark, 1920px light/dark, and 390px mobile; exercise focus, disabled, reduced-motion, overview, editor, decision result, record list, and theme transition. Run `git diff --check` and audit the final range for out-of-scope H5/backend/API/router/mock/lockfile changes.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add docs/interaction-upgrade-changelog.md

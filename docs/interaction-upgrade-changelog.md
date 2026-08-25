@@ -233,3 +233,9 @@ Chinese copy, state, prop, emit, or handler contract.
 - Task 1 focused interaction test: 2/2 passed; build and browser QA passed.
 - Task 2 focused workflows: 19/19 passed; build, detector, and scoped browser
   QA passed for all reachable branches.
+- Final shell verification also covered 1920px and 390px without horizontal
+  overflow, 44px navigation/theme targets, 3px keyboard focus, disabled button
+  opacity/cursor/transform behavior, reduced-motion zero-duration animation,
+  and the normal 180ms theme transition. The existing draft-list response-shape
+  mismatch and unconfigured AI service remain documented external blockers for
+  the unreachable editor/result branches.
