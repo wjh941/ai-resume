@@ -14,8 +14,12 @@ export class ApiRequestError extends Error {
   }
 }
 
-function readMessage(body: ApiEnvelope<unknown>): string {
-  return body.detail || body.message || "请求未完成，请稍后重试"
+function readMessage(body: ApiEnvelope<unknown> | null | undefined): string {
+  return body?.detail || body?.message || "请求未完成，请稍后重试"
+}
+
+function isAbortError(reason: unknown): boolean {
+  return typeof reason === "object" && reason !== null && "name" in reason && reason.name === "AbortError"
 }
 
 export async function requestApi<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -25,8 +29,22 @@ export async function requestApi<T>(path: string, init: RequestInit = {}): Promi
     ...(init.headers as Record<string, string> | undefined),
     ...(session ? { Authorization: `Bearer ${session.token}` } : {}),
   }
-  const response = await fetch(path, { ...init, headers })
-  const body = (await response.json()) as ApiEnvelope<T>
+  let response: Response
+  try {
+    response = await fetch(path, { ...init, headers })
+  } catch (reason) {
+    if (isAbortError(reason)) throw reason
+    throw new ApiRequestError(readMessage(undefined), 0)
+  }
+
+  if (response.status === 204) return undefined as T
+
+  let body: ApiEnvelope<T>
+  try {
+    body = (await response.json()) as ApiEnvelope<T>
+  } catch {
+    throw new ApiRequestError(readMessage(undefined), response.status)
+  }
 
   if (response.status === 401) clearSession()
   if (!response.ok || body.code !== "ok") {

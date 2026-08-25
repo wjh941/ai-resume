@@ -271,3 +271,16 @@ integration blockers found during browser QA.
 - Temporary SQLite integration smoke: login, draft save/list, and complete
   assessment submission all returned HTTP 200; draft list returned an array and
   assessment returned persisted result data.
+
+## 2026-08-25 API request failure boundary
+
+- Hardened the shared Web `requestApi` adapter without changing routes,
+  payloads, response envelopes, mock data, or business workflows.
+- Network failures now surface as `ApiRequestError` with status `0`, while
+  non-JSON and empty-body responses use the HTTP status instead of leaking a
+  parser exception into page-level error handling.
+- HTTP 204 responses resolve as an empty result for existing delete-style
+  callers, and intentional `AbortError` cancellation remains intact for
+  callers that need to distinguish cancellation from failure.
+- Added regression coverage for network rejection, malformed response bodies,
+  and cancellation semantics.

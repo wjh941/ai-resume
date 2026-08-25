@@ -49,4 +49,37 @@ describe("requestApi", () => {
 
     expect(localStorage.getItem("resume-web-session")).toBeNull()
   })
+
+  it("normalizes network failures into an API request error", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")))
+
+    await expect(requestApi("/api/overview")).rejects.toMatchObject({
+      name: "ApiRequestError",
+      status: 0,
+    })
+  })
+
+  it("normalizes non-JSON responses instead of leaking a parser error", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
+      new Response("upstream unavailable", { status: 502 }),
+    ))
+
+    await expect(requestApi("/api/overview")).rejects.toMatchObject({
+      name: "ApiRequestError",
+      status: 502,
+    })
+  })
+
+  it("preserves an intentional abort for callers that need cancellation semantics", async () => {
+    const abortError = new DOMException("The operation was aborted", "AbortError")
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(abortError))
+
+    await expect(requestApi("/api/overview")).rejects.toBe(abortError)
+  })
+
+  it("accepts an empty 204 response for side-effect requests", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 204 })))
+
+    await expect(requestApi<void>("/api/draft/d-1", { method: "DELETE" })).resolves.toBeUndefined()
+  })
 })
