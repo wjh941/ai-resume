@@ -157,7 +157,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleShortcut))
       <span /><span /><span /><span />
     </div>
     <ErrorNotice v-else-if="error && !draft" :message="error" />
-    <form v-else-if="draft" class="resume-editor-form" novalidate @submit.prevent="save">
+    <form v-else-if="draft" class="resume-editor-form workbench-form" novalidate @submit.prevent="save">
       <ErrorNotice v-if="error" :message="error" />
       <p v-if="invalidSummary" class="form-error validation-summary" role="alert">{{ invalidSummary }}</p>
       <section class="editor-section">

@@ -30,7 +30,7 @@ function update<K extends keyof EvidenceDraft>(key: K, value: EvidenceDraft[K]):
 </script>
 
 <template>
-  <form class="evidence-form" @submit.prevent="emit('submit')">
+  <form class="evidence-form workbench-form" @submit.prevent="emit('submit')">
     <div class="editor-grid">
       <label><span>证据类型</span><select :value="modelValue.kind" @change="update('kind', ($event.target as HTMLSelectElement).value as EvidenceKind)"><option v-for="[value, label] in kinds" :key="value" :value="value">{{ label }}</option></select></label>
       <label><span>标题</span><input :value="modelValue.title" required maxlength="240" placeholder="例如：校园招聘项目" @input="update('title', ($event.target as HTMLInputElement).value)" /></label>

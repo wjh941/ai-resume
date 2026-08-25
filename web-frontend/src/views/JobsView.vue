@@ -72,7 +72,7 @@ async function favorite() {
 <template>
   <section class="view-layout">
     <div class="view-heading"><div><h1 id="jobs-title">岗位机会</h1><p>围绕一个明确的岗位梳理能力要求，再回到真实经历补齐准备。</p></div></div>
-    <form class="role-query" :aria-describedby="error ? 'jobs-error' : undefined" @submit.prevent="queryRole">
+    <form class="role-query workbench-form" :aria-describedby="error ? 'jobs-error' : undefined" @submit.prevent="queryRole">
       <label><span>目标岗位</span><input v-model.trim="roleName" maxlength="200" placeholder="例如：数据分析师" :aria-invalid="Boolean(roleFieldError)" :aria-describedby="roleFieldError ? 'jobs-role-error' : undefined" /><small v-if="roleFieldError" id="jobs-role-error" class="form-error">{{ roleFieldError }}</small></label>
       <div class="mode-switch" role="group" aria-label="报告表达方式">
         <button type="button" :disabled="loading" :class="{ 'is-selected': reportMode === 'simplified' }" @click="reportMode = 'simplified'">精简版</button>

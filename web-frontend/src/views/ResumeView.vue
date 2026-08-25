@@ -82,7 +82,7 @@ onMounted(refresh)
 
     <ErrorNotice v-if="error" :message="error" />
     <div v-else-if="loading" class="content-skeleton" aria-busy="true"><LoadingSpinner class="content-loading-spinner" label="正在读取简历草稿" /><span /><span /><span /></div>
-    <div v-else-if="drafts.length" class="record-list">
+    <div v-else-if="drafts.length" class="record-list record-surface">
       <article v-for="draft in renderedDrafts" :key="draft.id" class="record-row">
         <span class="record-symbol record-coral"><FilePenLine :size="21" aria-hidden="true" /></span>
         <div><h2><ExpandableText :text="draft.jobTitle || '未命名简历'" :lines="1" :expand-at="36" label="简历名称" /></h2><p>模板：{{ draft.templateId || "默认模板" }} · 最近保存：{{ draft.updatedAt || "时间待同步" }}</p></div>
