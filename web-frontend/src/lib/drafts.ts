@@ -137,8 +137,8 @@ function fromBackend(item: BackendDraft): DraftRecord {
 }
 
 export async function listDrafts(): Promise<DraftRecord[]> {
-  const data = await requestApi<{ items: BackendDraft[] }>("/api/draft/list")
-  return data.items.map(fromBackend)
+  const data = await requestApi<{ items: BackendDraft[] } | BackendDraft[]>("/api/draft/list")
+  return (Array.isArray(data) ? data : data.items).map(fromBackend)
 }
 
 export async function getDraft(id: string): Promise<DraftRecord> {

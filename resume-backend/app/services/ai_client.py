@@ -16,6 +16,7 @@ from app.schemas.consultation import (
 from app.schemas.job import JobIntelligence
 from app.schemas.resume import ResumePayload
 from app.schemas.career import ComparisonActionPlan, JobPlanResponse
+from app.services.career_assessment import score_assessment
 
 
 class AIClient(Protocol):
@@ -132,6 +133,16 @@ class UnconfiguredAIClient:
         self, resume: ResumePayload, job: JobIntelligence, mode: Literal["light", "deep"]
     ) -> ResumePayload:
         self._raise()
+
+
+class DevelopmentAIClient(UnconfiguredAIClient):
+    """Deterministic development fallback for workflows without AI credentials."""
+
+    async def assess_career(
+        self, questions: list[dict[str, object]], answers: dict[str, int]
+    ) -> dict[str, object]:
+        del questions
+        return score_assessment(answers)
 
 
 class OpenAICompatibleClient:
@@ -347,9 +358,9 @@ class ArkAIClient(OpenAICompatibleClient):
 
 def build_ai_client(settings: Settings) -> AIClient:
     if settings.ai_provider not in {"ark", "openai_compatible"}:
-        return UnconfiguredAIClient()
+        return DevelopmentAIClient() if not settings.production else UnconfiguredAIClient()
     if not settings.ai_api_key or not settings.ai_model:
-        return UnconfiguredAIClient()
+        return DevelopmentAIClient() if not settings.production else UnconfiguredAIClient()
     if settings.ai_provider == "ark":
         return ArkAIClient(settings)
     return OpenAICompatibleClient(settings)

@@ -239,3 +239,35 @@ Chinese copy, state, prop, emit, or handler contract.
   and the normal 180ms theme transition. The existing draft-list response-shape
   mismatch and unconfigured AI service remain documented external blockers for
   the unreachable editor/result branches.
+
+## 2026-08-25 Web-backend integration robustness
+
+This follow-up keeps the existing Web/H5 pages, routes, APIs, mock data, Chinese
+copy, and business workflows intact while fixing two real development-mode
+integration blockers found during browser QA.
+
+### `web-frontend`
+
+- `listDrafts()` now accepts both the documented `{ items: [...] }` envelope and
+  the current backend `/api/draft/list` direct-array payload, preserving the
+  existing camelCase mapping and all list actions.
+- Added a domain regression case for direct-array draft responses.
+
+### `resume-backend`
+
+- Added a deterministic `DevelopmentAIClient` fallback for missing AI
+  credentials in non-production environments. Career assessment submissions now
+  use the existing `score_assessment` rules and persist/render a result during
+  local demo and mock-mode use.
+- Production and explicitly configured AI environments retain the existing
+  real-client selection and explicit `ai_not_configured` failure behavior.
+- Added backend coverage for development fallback selection/result shape while
+  retaining production unconfigured-client coverage.
+
+### Verification
+
+- Web unit tests: 89 passed; production build passed.
+- Backend tests: 195 passed, 1 skipped.
+- Temporary SQLite integration smoke: login, draft save/list, and complete
+  assessment submission all returned HTTP 200; draft list returned an array and
+  assessment returned persisted result data.

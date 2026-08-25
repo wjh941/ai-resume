@@ -44,6 +44,25 @@ describe("typed domain adapters", () => {
     expect(requestMock).toHaveBeenCalledWith("/api/draft/list")
   })
 
+  it("maps a backend draft list returned directly as an array", async () => {
+    requestMock.mockResolvedValue([
+      {
+        id: "d-2",
+        job_title: "Product Designer",
+        template_id: "technology",
+        resume: { basic: { name: "B" } },
+        job_intelligence: null,
+        created_at: "2026-08-24T00:00:00Z",
+        updated_at: "2026-08-24T01:00:00Z",
+      },
+    ])
+
+    const drafts = await listDrafts()
+
+    expect(drafts).toHaveLength(1)
+    expect(drafts[0]).toMatchObject({ id: "d-2", jobTitle: "Product Designer" })
+  })
+
   it("posts an application with the existing backend field names", async () => {
     requestMock.mockResolvedValue({ id: "a-1", role_name: "Product Ops", company: "Acme", status: "saved" })
 
