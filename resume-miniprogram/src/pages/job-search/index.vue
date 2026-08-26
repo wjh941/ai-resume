@@ -51,6 +51,9 @@ const marketSearchReport = ref<MarketSearchReport | null>(null)
 const showTargetPicker = ref(false)
 const expandedAnalysisOrders = ref<number[]>([1, 2, 3])
 const showOnboarding = ref(false)
+const roleRipple = ref<Record<string, { x: string; y: string }>>({})
+const roleSettling = ref("")
+let roleRippleTimer: ReturnType<typeof setTimeout> | undefined
 
 const store = useResumeStore()
 const consultation = useConsultationStore()
@@ -140,6 +143,28 @@ function removeSelectedRole(role: string) {
     activeJobIndex.value = Math.max(0, jobConsultations.value.length - 1)
   }
   if (jobConsultation.value) store.setJobIntelligence(jobConsultation.value.jobIntelligence)
+}
+
+function captureRoleRipple(role: string, event: unknown): void {
+  const source = event as { detail?: { x?: number; y?: number }; touches?: Array<{ clientX?: number; clientY?: number }>; changedTouches?: Array<{ clientX?: number; clientY?: number }>; clientX?: number; clientY?: number; currentTarget?: { getBoundingClientRect?: () => DOMRect } }
+  const detail = source?.detail
+  const touch = source?.touches?.[0] ?? source?.changedTouches?.[0]
+  const currentTarget = source?.currentTarget
+  const rect = currentTarget?.getBoundingClientRect?.()
+  const clientX = detail?.x ?? touch?.clientX ?? source?.clientX
+  const clientY = detail?.y ?? touch?.clientY ?? source?.clientY
+  const x = rect ? Math.max(0, Math.min(rect.width, (clientX ?? rect.left + rect.width / 2) - rect.left)) : (clientX ?? 0)
+  const y = rect ? Math.max(0, Math.min(rect.height, (clientY ?? rect.top + rect.height / 2) - rect.top)) : (clientY ?? 0)
+  roleRipple.value = { ...roleRipple.value, [role]: { x: `${x}px`, y: `${y}px` } }
+  roleSettling.value = role
+  if (roleRippleTimer) clearTimeout(roleRippleTimer)
+  roleRippleTimer = setTimeout(() => { if (roleSettling.value === role) roleSettling.value = "" }, 380)
+}
+
+function removeSelectedRoleWithRipple(role: string, event: unknown): void {
+  const source = event as { detail?: { x?: number; y?: number }; touches?: unknown[]; changedTouches?: unknown[]; clientX?: number; clientY?: number }
+  if (source?.detail?.x !== undefined || source?.detail?.y !== undefined || source?.touches?.length || source?.changedTouches?.length || source?.clientX !== undefined || source?.clientY !== undefined) captureRoleRipple(role, event)
+  removeSelectedRole(role)
 }
 
 function resetResults() {
@@ -475,9 +500,12 @@ onMounted(() => {
             <button
               v-for="role in selectedRoles"
               :key="role"
-              class="role-chip"
+              class="role-chip ui-role-chip"
+              :class="{ 'tag-settling': roleSettling === role }"
+              :style="{ '--ripple-x': roleRipple[role]?.x, '--ripple-y': roleRipple[role]?.y }"
               :aria-label="`移除已选岗位 ${role}`"
-              @click="removeSelectedRole(role)"
+              @touchstart="captureRoleRipple(role, $event)"
+              @click="removeSelectedRoleWithRipple(role, $event)"
             >{{ role }} ×</button>
           </view>
         </view>
@@ -787,6 +815,7 @@ onMounted(() => {
   margin: 0; padding: 8rpx 16rpx; color: #2d77d1; background: #edf5ff; border: 1rpx solid #cde0f7;
   border-radius: 999rpx; font-size: 23rpx; line-height: 1.45;
 }
+
 .role-tab { max-width: 320rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .custom-requirement-input { min-height: 96rpx; margin-top: 20rpx; padding: 18rpx 20rpx; line-height: 1.6; }
 .primary,.secondary { border-radius: 12rpx; font-size: 25rpx; }

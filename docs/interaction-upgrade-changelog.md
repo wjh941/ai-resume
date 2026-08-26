@@ -452,3 +452,43 @@ contract, mock dataset, Chinese copy, and H5 implementation intact.
 - No API route or payload changed; H5 business files remain untouched.
 - Development fallback coverage: backend AI error-mapping and job-query tests
   passed.
+
+## 2026-08-26 Capsule and sidebar physical interactions
+
+This interaction-only pass preserves every existing route, page structure,
+API adapter, request payload, store, mock dataset, Chinese copy, and business
+workflow. No new business page or module was added.
+
+### Capsule multi-select (`web-frontend`)
+
+- Added reusable `CapsuleMultiSelect` to the existing岗位对比 picker.
+- Implemented press-bounce overshoot (`scale(.92)` press, 1.04 spring release),
+  pointer-origin clipped ripple, and spring checkmark stroke drawing.
+- Added elastic horizontal stretch feedback for 全选/重置 controls.
+- Added one inertia/deceleration loop shared by the bottom匹配进度 number and
+  progress fill, with requestAnimationFrame cleanup on unmount.
+- Added fixed-rhythm capsule skeletons that fade into tags without a layout
+  jump, plus an optional mild hover flip preview.
+- Scoped the only particle burst to the existing 开始对比 submit after success.
+
+### Sidebar (`web-frontend`)
+
+- Added the mobile bottom-sheet drawer with an 80ms settle dwell, reverse close,
+  reliable mask click close, and Escape close.
+- Replaced icon swapping with one three-path SVG hamburger-to-close morph.
+- Added collapsible navigation groups with inward swipe-away leave motion while
+  keeping other groups visible.
+- Added a liquid workspace progress slider and stable narrow-screen scrollbar
+  treatment.
+
+### Existing H5 selected-role chips (`resume-miniprogram`)
+
+- Added H5 pointer/detail coordinate capture, pointer-origin ripple, spring
+  press-release, and selected-state dot feedback to the existing role-removal
+  chips; removal and result cleanup handlers are unchanged.
+
+### Verification
+
+- Web interaction contract tests and production build passed.
+- H5 interaction contract tests and `build:h5` passed.
+- Native CSS/transform/opacity motion only; reduced-motion fallbacks retained.

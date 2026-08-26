@@ -17,6 +17,9 @@ page {
   --ui-motion-slow: 320ms;
   --ui-motion-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --ui-motion-ease-soft: cubic-bezier(0.25, 0.8, 0.25, 1);
+  --ui-tag-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ui-tag-settle: 380ms;
+  --ui-tag-ripple: rgba(22, 119, 255, .2);
   --ui-motion-reduced: 0ms;
   --ui-press-scale: .99;
   --ui-disabled-opacity: .56;
@@ -83,4 +86,14 @@ button:disabled, button[disabled] { background-color: var(--ui-disabled-bg) !imp
 .progressive-scroll-page { height: 100vh; box-sizing: border-box; }
 .progressive-list-hint { display: block; padding: 24rpx 0 12rpx; color: #86909c; font-size: 22rpx; text-align: center; }
 .ui-long-list-item { content-visibility: auto; contain: layout paint style; contain-intrinsic-size: auto 180rpx; }
+.ui-role-chip { position: relative; overflow: hidden; isolation: isolate; transform: translateZ(0); transition: transform 260ms var(--ui-tag-spring), background-color 200ms var(--ui-motion-ease), border-color 200ms var(--ui-motion-ease); }
+.ui-role-chip::before { position: absolute; top: var(--ripple-y, 50%); left: var(--ripple-x, 50%); z-index: -1; width: 18rpx; height: 18rpx; content: ""; border-radius: 50%; background: var(--ui-tag-ripple); opacity: 0; pointer-events: none; transform: translate(-50%, -50%) scale(0); }
+.ui-role-chip:active:not(:disabled) { transform: scale(.92); }
+.ui-role-chip.tag-settling { animation: ui-tag-press-release var(--ui-tag-settle) var(--ui-tag-spring) both; }
+.ui-role-chip.tag-settling::before { animation: ui-tag-ripple 420ms var(--ui-motion-ease) both; }
+.ui-role-chip::after { position: absolute; right: 10rpx; width: 10rpx; height: 10rpx; content: ""; border-radius: 50%; background: #34a853; opacity: 0; transform: scale(0); transition: opacity 150ms var(--ui-motion-ease), transform 220ms var(--ui-tag-spring); }
+.ui-role-chip:not(.tag-settling)::after { opacity: 1; transform: scale(1); }
+@keyframes ui-tag-press-release { 0% { transform: scale(.92); } 58% { transform: scale(1.04); } 100% { transform: scale(1); } }
+@keyframes ui-tag-ripple { 0% { opacity: .45; transform: translate(-50%, -50%) scale(0); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(12); } }
+@media (prefers-reduced-motion: reduce) { .ui-role-chip, .ui-role-chip::after { transition: none; } .ui-role-chip.tag-settling, .ui-role-chip.tag-settling::before { animation: none; } }
 </style>

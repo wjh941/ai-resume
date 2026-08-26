@@ -270,4 +270,16 @@ describe("runWithLoading", () => {
       expect(editSection).not.toContain("uni.pageScrollTo")
     }
   })
+
+  it("captures pointer coordinates for selected-role chip feedback", () => {
+    const jobSearch = readFileSync(new URL("../pages/job-search/index.vue", import.meta.url), "utf8")
+    const app = readFileSync(new URL("../App.vue", import.meta.url), "utf8")
+    expect(jobSearch).toContain("captureRoleRipple")
+    expect(jobSearch).toContain("currentTarget")
+    expect(jobSearch).toContain("ripple-x")
+    expect(jobSearch).toContain("roleSettling")
+    expect(jobSearch).toContain("removeSelectedRoleWithRipple")
+    expect(app).toContain("--ui-tag-spring")
+    expect(app).toContain("ui-tag-press-release")
+  })
 })
