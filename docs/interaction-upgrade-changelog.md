@@ -363,3 +363,23 @@ copy, and business handlers unchanged.
 - Web focused interaction tests: 18/18 passed.
 - Full H5 and Web unit suites plus both production builds passed after the
   implementation; no backend or API files changed.
+
+## 2026-08-26 Web async-view error boundary
+
+This robustness pass preserves all existing Web routes, business modules, API
+contracts, request behavior, mock data, Chinese copy, and H5 implementation.
+
+### `web-frontend`
+
+- Added a reusable async-view error presentation that reuses the shared
+  `ErrorNotice` component with the message `页面加载失败，请刷新后重试`.
+- Bounded dynamic view-chunk retries to two attempts, then fail into the error
+  component instead of leaving a blank workspace stage or an unhandled error.
+- Existing `LoadingSpinner`, route transition, navigation events, and business
+  view components remain unchanged.
+
+### Verification
+
+- Focused async-view interaction contracts: 20/20 passed.
+- Web production build completed and continued to emit independent view chunks.
+- No backend, API, mock, H5, or business-module files changed.
