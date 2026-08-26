@@ -267,4 +267,15 @@ describe("useAsyncAction", () => {
     expect(errorView).toContain('message="页面加载失败，请刷新后重试"')
     expect(errorView).toContain("compact")
   })
+
+  it("uses restrained hover elevation for high-value workspace surfaces", () => {
+    const styles = readFileSync(new URL("../styles/base.css", import.meta.url), "utf8")
+    expect(styles).toContain("--shadow-hover:")
+    expect(styles).toContain("@media (hover: hover)")
+    expect(styles).toContain(".metric-block:hover")
+    expect(styles).toContain(".comparison-card:hover")
+    expect(styles).toContain(".membership-package:hover")
+    expect(styles).toContain(".assessment-question:not(.is-invalid):hover")
+    expect(styles).toContain("transform: translateY(-2px)")
+  })
 })
