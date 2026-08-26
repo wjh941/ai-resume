@@ -1,23 +1,36 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue"
+import { computed, defineAsyncComponent, ref, watch, type Component } from "vue"
 
 import WebSidebar, { type WorkspaceView } from "./components/WebSidebar.vue"
 import LoginPanel from "./components/LoginPanel.vue"
 import WebTopbar from "./components/WebTopbar.vue"
+import LoadingSpinner from "./components/LoadingSpinner.vue"
 import { requestApi } from "./lib/api"
 import { clearSession, readSession, type Session } from "./lib/session"
-import AccountView from "./views/AccountView.vue"
-import AssessmentView from "./views/AssessmentView.vue"
-import ComparisonView from "./views/ComparisonView.vue"
-import ApplicationsView from "./views/ApplicationsView.vue"
-import EvidenceView from "./views/EvidenceView.vue"
-import CareerView from "./views/CareerView.vue"
-import InsightsView from "./views/InsightsView.vue"
-import MembershipView from "./views/MembershipView.vue"
-import JobsView from "./views/JobsView.vue"
-import OverviewView from "./views/OverviewView.vue"
-import ResumeView from "./views/ResumeView.vue"
-import ResumeEditorView from "./views/ResumeEditorView.vue"
+
+function asyncView(loader: () => Promise<{ default: Component }>): Component {
+  return defineAsyncComponent({
+    loader,
+    loadingComponent: LoadingSpinner,
+    delay: 120,
+    suspensible: false,
+  })
+}
+
+const viewComponents: Record<WorkspaceView, Component> = {
+  overview: asyncView(() => import("./views/OverviewView.vue")),
+  resume: asyncView(() => import("./views/ResumeView.vue")),
+  career: asyncView(() => import("./views/CareerView.vue")),
+  jobs: asyncView(() => import("./views/JobsView.vue")),
+  applications: asyncView(() => import("./views/ApplicationsView.vue")),
+  evidence: asyncView(() => import("./views/EvidenceView.vue")),
+  membership: asyncView(() => import("./views/MembershipView.vue")),
+  assessment: asyncView(() => import("./views/AssessmentView.vue")),
+  comparison: asyncView(() => import("./views/ComparisonView.vue")),
+  insights: asyncView(() => import("./views/InsightsView.vue")),
+  account: asyncView(() => import("./views/AccountView.vue")),
+}
+const ResumeEditorView = asyncView(() => import("./views/ResumeEditorView.vue"))
 
 const session = ref<Session | null>(readSession())
 const activeView = ref<WorkspaceView>("overview")
@@ -26,19 +39,7 @@ const dark = ref(false)
 const logoutLoading = ref(false)
 let themeSwitchTimer: number | undefined
 let themeInitialized = false
-const activeComponent = computed(() => ({
-  overview: OverviewView,
-  resume: ResumeView,
-  career: CareerView,
-  jobs: JobsView,
-  applications: ApplicationsView,
-  evidence: EvidenceView,
-  membership: MembershipView,
-  assessment: AssessmentView,
-  comparison: ComparisonView,
-  insights: InsightsView,
-  account: AccountView,
-}[activeView.value]))
+const activeComponent = computed(() => viewComponents[activeView.value])
 
 watch(dark, (value) => {
   const root = document.documentElement

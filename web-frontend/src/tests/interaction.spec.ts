@@ -228,4 +228,30 @@ describe("useAsyncAction", () => {
     expect(applications).toContain("可直接使用上方表单新增第一条记录。")
     expect(jobs).toContain("输入具体岗位名称后开始整理能力要求。")
   })
+
+  it("loads workspace views on demand with the shared loading state", () => {
+    const app = readFileSync(new URL("../App.vue", import.meta.url), "utf8")
+    expect(app).toContain("defineAsyncComponent")
+    expect(app).toContain('import LoadingSpinner from "./components/LoadingSpinner.vue"')
+    expect(app).toContain("loadingComponent: LoadingSpinner")
+    for (const view of [
+      "OverviewView",
+      "ResumeView",
+      "CareerView",
+      "JobsView",
+      "ApplicationsView",
+      "EvidenceView",
+      "MembershipView",
+      "AssessmentView",
+      "ComparisonView",
+      "InsightsView",
+      "AccountView",
+      "ResumeEditorView",
+    ]) {
+      expect(app).toContain(`import(\"./views/${view}.vue\")`)
+    }
+    expect(app).toContain('mode="out-in"')
+    expect(app).toContain('@navigate="activeView = $event"')
+    expect(app).toContain('@open-draft="editingDraftId = $event"')
+  })
 })
