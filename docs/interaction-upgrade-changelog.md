@@ -313,3 +313,30 @@ Chinese copy, page behavior, and business logic unchanged.
   adapter boundary and camelCase `dueDate` rendering.
 - This is test-only coverage. Production routes, payloads, mock data, Chinese
   copy, page structure, and business logic are unchanged.
+
+## 2026-08-26 Long-list rendering polish
+
+This iteration keeps all routes, API calls, list windows, mock data, Chinese
+copy, and business handlers unchanged.
+
+### `resume-miniprogram` H5
+
+- Applied the existing `ui-long-list-item` containment contract to resume draft
+  rows, matching applications, evidence, and saved-job lists.
+- The progressive window size and `scrolltolower` behavior remain unchanged;
+  this only reserves intrinsic row space and skips off-screen painting.
+
+### `web-frontend`
+
+- Added native `contain: layout style` to the existing draft, evidence,
+  application, task, and order list surfaces so unrelated page regions do not
+  participate in list reflow.
+- Existing row-level `content-visibility`, wide application-table horizontal
+  scrolling, responsive breakpoints, and accessibility states remain intact.
+
+### Verification
+
+- H5 focused interaction tests: 17/17 passed.
+- Web focused interaction tests: 18/18 passed.
+- Full H5 and Web unit suites plus both production builds passed after the
+  implementation; no backend or API files changed.
