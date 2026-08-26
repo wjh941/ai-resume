@@ -284,3 +284,22 @@ integration blockers found during browser QA.
   callers that need to distinguish cancellation from failure.
 - Added regression coverage for network rejection, malformed response bodies,
   and cancellation semantics.
+
+## 2026-08-25 Web response-contract compatibility
+
+This hardening keeps the existing Web routes, request payloads, mock data,
+Chinese copy, page behavior, and business logic unchanged.
+
+### `web-frontend`
+
+- Added the shared `readItems` helper for strict list-response validation.
+- Migrated the existing list adapters for drafts, overview counts, evidence,
+  applications and timelines, career tasks, and membership packages/orders.
+- List adapters accept both direct arrays and `{ items: [...] }` envelopes.
+- Malformed list shapes throw `ApiRequestError` with status `0`, making the
+  response boundary explicit without changing backend contracts.
+
+### Verification
+
+- Tasks 1 and 2 completed the helper and adapter migrations; Task 3 records
+  the integration hardening and verification evidence in the task report.
