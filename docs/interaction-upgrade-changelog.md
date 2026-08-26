@@ -422,3 +422,26 @@ modules, API contracts, mock data, Chinese copy, and H5 implementation intact.
 ### Verification
 
 - No API, business workflow, mock-mode, or H5 files changed.
+
+## 2026-08-26 Web workbench navigation composition
+
+This usability pass keeps every existing route, finished business module, API
+contract, mock dataset, Chinese copy, and H5 implementation intact.
+
+### `web-frontend`
+
+- Grouped the existing sidebar destinations into `准备资料`、`职业决策`、
+  `求职执行`、`复盘与账户` so users can follow a clear task path without
+  losing any page or navigation key.
+- Converted the existing 404 `Career profile not found` response on岗位对比
+  into a recoverable empty state with a link to the existing职业规划入口;
+  other request failures still use the shared error notice.
+- Kept route transitions, loading states, API payloads, and all business
+  handlers unchanged; group labels flatten on mobile for the existing compact
+  horizontal navigation.
+
+### Verification
+
+- Web unit tests: 119/119 passed; Web production build passed.
+- H5 unit tests: 117/117 passed; H5 production build passed.
+- No backend, API, mock-mode, or H5 business files changed.

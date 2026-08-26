@@ -125,6 +125,25 @@ describe("useAsyncAction", () => {
     expect(resume).toContain(":aria-label=")
   })
 
+  it("organizes existing destinations into task-oriented navigation groups", () => {
+    const sidebar = readFileSync(new URL("../components/WebSidebar.vue", import.meta.url), "utf8")
+    expect(sidebar).toContain("navigationGroups")
+    expect(sidebar).toContain("准备资料")
+    expect(sidebar).toContain("职业决策")
+    expect(sidebar).toContain("求职执行")
+    expect(sidebar).toContain("复盘与账户")
+    expect(sidebar).toContain("navigation-group")
+    expect(sidebar).toContain("item.key")
+  })
+
+  it("turns a missing career profile into an actionable comparison state", () => {
+    const comparison = readFileSync(new URL("../views/ComparisonView.vue", import.meta.url), "utf8")
+    expect(comparison).toContain("profileMissing")
+    expect(comparison).toContain("caught.status === 404")
+    expect(comparison).toContain("职业规划")
+    expect(comparison).toContain("profile-missing")
+  })
+
   it("provides accessible long-text expansion in read-only business content", () => {
     const componentUrl = new URL("../components/ExpandableText.vue", import.meta.url)
     expect(existsSync(fileURLToPath(componentUrl))).toBe(true)

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowRight, GitCompareArrows, RefreshCw } from "lucide-vue-next"
+import { ArrowRight, GitCompareArrows, Map, RefreshCw } from "lucide-vue-next"
 import { computed, onMounted, ref } from "vue"
 
 import AsyncButton from "../components/AsyncButton.vue"
@@ -17,11 +17,21 @@ const loading = ref(true)
 const comparing = ref(false)
 const error = ref("")
 const needsMembership = ref(false)
+const profileMissing = ref(false)
 const roles = computed(() => recommendations.value.map((item) => item.role.roleName).filter((role, index, all) => Boolean(role) && all.indexOf(role) === index))
 
 async function refresh(): Promise<void> {
-  loading.value = true; error.value = ""; needsMembership.value = false
-  try { const response = await loadCareerRecommendations(); recommendations.value = [...response.tiers.stretch, ...response.tiers.stable, ...response.tiers.safe] } catch (caught) { error.value = caught instanceof Error ? caught.message : "暂时无法读取岗位推荐，请稍后重试" }
+  loading.value = true; error.value = ""; needsMembership.value = false; profileMissing.value = false
+  try {
+    const response = await loadCareerRecommendations()
+    recommendations.value = [...response.tiers.stretch, ...response.tiers.stable, ...response.tiers.safe]
+  } catch (caught) {
+    if (caught instanceof ApiRequestError && caught.status === 404 && caught.message === "Career profile not found") {
+      profileMissing.value = true
+      return
+    }
+    error.value = caught instanceof Error ? caught.message : "暂时无法读取岗位推荐，请稍后重试"
+  }
   finally { loading.value = false }
 }
 async function compare(): Promise<void> {
@@ -35,8 +45,17 @@ onMounted(refresh)
 <template>
   <section class="view-layout comparison-view">
     <div class="view-heading"><div><h1 id="comparison-title">岗位对比</h1><p>把目标岗位放在同一张表里，比较匹配程度、证据缺口和下一步行动。</p></div><AsyncButton class="text-action" type="button" :loading="loading" @click="refresh"><RefreshCw :size="16" aria-hidden="true" />刷新推荐</AsyncButton></div>
-    <ErrorNotice v-if="error" :message="error" />
+    <ErrorNotice v-if="error && !profileMissing" :message="error" />
     <div v-if="loading" class="content-skeleton comparison-loading" aria-busy="true"><LoadingSpinner class="content-loading-spinner" label="正在读取岗位推荐" /><span /><span /></div>
+    <div v-else-if="profileMissing" class="empty-board profile-missing" role="status">
+      <span class="empty-board-icon" aria-hidden="true"><Map :size="24" /></span>
+      <div>
+        <span class="section-kicker">先完成资料</span>
+        <h2>还没有职业资料</h2>
+        <p>岗位推荐需要你的职业资料。请先在小程序的职业规划中保存资料，再回到这里继续比较岗位。</p>
+        <AsyncButton class="notice-action" type="button" @click="emit('navigate', 'career')">查看职业规划 <ArrowRight :size="15" aria-hidden="true" /></AsyncButton>
+      </div>
+    </div>
     <template v-else>
       <ComparisonRolePicker v-model:selected="selected" :roles="roles" :max-selectable="4" :pending="comparing" @submit="compare" />
       <div v-if="needsMembership" class="notice-with-action report-actions"><p>当前岗位对比能力需要会员权益，已保留你选择的岗位。</p><AsyncButton class="notice-action" type="button" @click="emit('navigate', 'membership')">查看会员权益</AsyncButton></div>
