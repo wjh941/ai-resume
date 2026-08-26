@@ -439,9 +439,16 @@ contract, mock dataset, Chinese copy, and H5 implementation intact.
 - Kept route transitions, loading states, API payloads, and all business
   handlers unchanged; group labels flatten on mobile for the existing compact
   horizontal navigation.
+- Restored the deterministic development-only fallback for the existing岗位查询
+  API when local AI credentials are empty; production still uses the explicit
+  unconfigured error until real model credentials are supplied.
+- Added a coral query anchor and a cobalt result surface so岗位机会 is visually
+  recognizable as the primary action, with matching dark-theme tokens.
 
 ### Verification
 
 - Web unit tests: 119/119 passed; Web production build passed.
 - H5 unit tests: 117/117 passed; H5 production build passed.
-- No backend, API, mock-mode, or H5 business files changed.
+- No API route or payload changed; H5 business files remain untouched.
+- Development fallback coverage: backend AI error-mapping and job-query tests
+  passed.

@@ -33,3 +33,19 @@ def test_development_without_ai_credentials_returns_deterministic_assessment(mon
     assert type(client).__name__ == "DevelopmentAIClient"
     assert result["answered_count"] == 1
     assert isinstance(result["action_plan"], dict)
+
+
+def test_development_without_ai_credentials_returns_deterministic_job_intelligence(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "development")
+    monkeypatch.setenv("AI_PROVIDER", "openai_compatible")
+    monkeypatch.setenv("AI_API_KEY", "")
+    monkeypatch.setenv("AI_MODEL", "")
+    settings = replace(load_settings(), app_env="development", ai_api_key="", ai_model="")
+
+    client = build_ai_client(settings)
+    result = asyncio.run(client.query_job("数据分析师"))
+
+    assert type(client).__name__ == "DevelopmentAIClient"
+    assert result.role_name == "数据分析师"
+    assert result.required_skills
+    assert result.responsibilities

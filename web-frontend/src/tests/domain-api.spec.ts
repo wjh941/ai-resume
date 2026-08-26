@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ApiRequestError, requestApi } from "../lib/api"
-import { compareRoles, listCareerTasks, loadCareerRecommendations } from "../lib/career"
+import { compareRoles, isCareerProfileMissingError, listCareerTasks, loadCareerRecommendations } from "../lib/career"
 import { getAssessmentQuestions, submitAssessment } from "../lib/assessment"
 import { getEvidenceSuggestions, listEvidence, saveEvidence } from "../lib/evidence"
 import { listDrafts } from "../lib/drafts"
@@ -416,6 +416,12 @@ describe("typed domain adapters", () => {
       method: "POST",
       body: JSON.stringify({ role_names: ["Data Engineer", "Analyst"] }),
     }))
+  })
+
+  it("recognizes the backend missing-career-profile contract", () => {
+    expect(isCareerProfileMissingError(new ApiRequestError("Career profile not found", 404))).toBe(true)
+    expect(isCareerProfileMissingError(new ApiRequestError("Career profile not found", 500))).toBe(false)
+    expect(isCareerProfileMissingError(new Error("Career profile not found"))).toBe(false)
   })
 
   it("propagates domain request failures", async () => {

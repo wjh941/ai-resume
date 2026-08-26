@@ -139,9 +139,16 @@ describe("useAsyncAction", () => {
   it("turns a missing career profile into an actionable comparison state", () => {
     const comparison = readFileSync(new URL("../views/ComparisonView.vue", import.meta.url), "utf8")
     expect(comparison).toContain("profileMissing")
-    expect(comparison).toContain("caught.status === 404")
+    expect(comparison).toContain("isCareerProfileMissingError(caught)")
     expect(comparison).toContain("职业规划")
     expect(comparison).toContain("profile-missing")
+  })
+
+  it("gives the primary job query a visible visual anchor", () => {
+    const styles = readFileSync(new URL("../styles/base.css", import.meta.url), "utf8")
+    expect(styles).toMatch(/\.role-query \{[^}]*border: 1px solid color-mix\(in srgb, var\(--coral\)/s)
+    expect(styles).toMatch(/\.job-result \{[^}]*box-shadow: inset 0 2px 0 var\(--primary\), var\(--shadow-panel\)/s)
+    expect(styles).toContain("--accent-tint:")
   })
 
   it("provides accessible long-text expansion in read-only business content", () => {

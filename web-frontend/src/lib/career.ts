@@ -1,4 +1,8 @@
-import { readItems, requestApi } from "./api"
+import { ApiRequestError, readItems, requestApi } from "./api"
+
+export function isCareerProfileMissingError(reason: unknown): boolean {
+  return reason instanceof ApiRequestError && reason.status === 404 && reason.message === "Career profile not found"
+}
 
 export type ScoreBreakdown = {
   key: string

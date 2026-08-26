@@ -33,6 +33,8 @@ presentation metadata in `WebSidebar.vue`, shared group styling in
   actionable empty state linking to the existing career-planning view.
 - [x] Style groups responsively; keep mobile navigation horizontal and avoid
   extra animation.
+- [x] Restore deterministic development-only job intelligence when local AI
+  credentials are absent, preserving the existing `/api/job/query` contract.
 
 ### Task 3: Document, verify, and ship
 

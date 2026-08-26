@@ -138,6 +138,54 @@ class UnconfiguredAIClient:
 class DevelopmentAIClient(UnconfiguredAIClient):
     """Deterministic development fallback for workflows without AI credentials."""
 
+    async def query_job(self, role_name: str) -> JobIntelligence:
+        """Keep the local demo's primary job-query workflow usable offline.
+
+        Production still selects ``UnconfiguredAIClient`` when credentials are
+        absent. These compact profiles are only a development fallback and are
+        intentionally framed by the API report as structured role knowledge.
+        """
+        normalized = role_name.casefold()
+        if any(word in normalized for word in ("frontend", "vue", "react", "前端")):
+            return JobIntelligence(
+                role_name=role_name.strip(),
+                salary_by_experience={"初级": "8k-14k（演示参考）", "中高级": "16k-28k（演示参考）"},
+                responsibilities=["负责产品界面开发与交互还原", "持续优化页面性能与可访问性"],
+                hard_requirements=["熟悉现代前端框架", "掌握工程化与调试方法"],
+                required_skills=["JavaScript", "TypeScript", "Vue或React"],
+                bonus_skills=["性能分析", "自动化测试"],
+                career_route=["前端开发工程师", "资深前端工程师", "前端技术负责人"],
+            )
+        if "agent" in normalized or "智能体" in normalized or "大模型" in normalized:
+            return JobIntelligence(
+                role_name=role_name.strip(),
+                salary_by_experience={"初级": "12k-20k（演示参考）", "中高级": "24k-40k（演示参考）"},
+                responsibilities=["设计并交付可靠的智能体工作流", "评估模型输出质量并持续迭代"],
+                hard_requirements=["能够调用模型与业务接口", "理解评测和安全边界"],
+                required_skills=["Python", "LLM应用开发", "Agent工作流"],
+                bonus_skills=["RAG", "提示词工程"],
+                career_route=["AI应用工程师", "智能体工程师", "AI解决方案负责人"],
+            )
+        if any(word in normalized for word in ("数据", "data", "分析", "analyst")):
+            return JobIntelligence(
+                role_name=role_name.strip(),
+                salary_by_experience={"初级": "8k-13k（演示参考）", "中高级": "15k-25k（演示参考）"},
+                responsibilities=["维护业务指标与数据口径", "完成专题分析并输出可执行结论"],
+                hard_requirements=["能独立拆解业务问题", "熟悉数据质量检查"],
+                required_skills=["SQL", "Excel", "Python", "数据可视化"],
+                bonus_skills=["统计基础", "实验设计"],
+                career_route=["数据分析师", "高级数据分析师", "数据产品或策略负责人"],
+            )
+        return JobIntelligence(
+            role_name=role_name.strip(),
+            salary_by_experience={"初级": "7k-12k（演示参考）", "中高级": "14k-24k（演示参考）"},
+            responsibilities=["围绕目标岗位完成核心交付", "协同团队推进问题解决与复盘"],
+            hard_requirements=["能够拆解任务并按时交付", "具备清晰沟通与文档能力"],
+            required_skills=["问题分析", "沟通协作", "项目执行"],
+            bonus_skills=["数据意识", "流程优化"],
+            career_route=[role_name.strip(), "资深岗位", "业务或项目负责人"],
+        )
+
     async def assess_career(
         self, questions: list[dict[str, object]], answers: dict[str, int]
     ) -> dict[str, object]:

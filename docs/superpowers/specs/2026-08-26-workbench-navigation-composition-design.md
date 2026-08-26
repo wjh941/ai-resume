@@ -17,6 +17,9 @@ list of modules.
   evidence, assessment, comparison, membership, insights, and account.
 - Add only navigation composition and recoverable presentation for a missing
   career profile; do not add a new profile editor or business capability.
+- Keep the existing `/api/job/query` contract and restore its deterministic
+  development-only fallback when local AI credentials are absent; production
+  remains explicitly unconfigured until real credentials are supplied.
 - Keep H5 source untouched.
 
 ## Direction
@@ -42,6 +45,14 @@ When recommendations fail with the existing 404 profile-not-found contract,
 the comparison view will show an inline empty state that explains the required
 precondition and links to the existing career-planning view. Other failures
 retain the shared error notice. Loading and request contracts remain unchanged.
+
+## Local job-query behavior
+
+The local development environment may intentionally omit AI credentials. In
+that mode the existing `DevelopmentAIClient` returns compact deterministic role
+intelligence so the core岗位查询 workflow remains testable and visible. These
+profiles are clearly framed by the existing structured-role report notice and
+are never selected for production.
 
 ## Verification
 

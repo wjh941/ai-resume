@@ -6,7 +6,7 @@ import AsyncButton from "../components/AsyncButton.vue"
 import ComparisonRolePicker from "../components/ComparisonRolePicker.vue"
 import LoadingSpinner from "../components/LoadingSpinner.vue"
 import { ApiRequestError } from "../lib/api"
-import { compareRoles, loadCareerRecommendations, type CareerComparisonResponse, type CareerRecommendation } from "../lib/career"
+import { compareRoles, isCareerProfileMissingError, loadCareerRecommendations, type CareerComparisonResponse, type CareerRecommendation } from "../lib/career"
 import type { WorkspaceView } from "../components/WebSidebar.vue"
 
 const emit = defineEmits<{ navigate: [view: WorkspaceView] }>()
@@ -26,7 +26,7 @@ async function refresh(): Promise<void> {
     const response = await loadCareerRecommendations()
     recommendations.value = [...response.tiers.stretch, ...response.tiers.stable, ...response.tiers.safe]
   } catch (caught) {
-    if (caught instanceof ApiRequestError && caught.status === 404 && caught.message === "Career profile not found") {
+    if (isCareerProfileMissingError(caught)) {
       profileMissing.value = true
       return
     }
