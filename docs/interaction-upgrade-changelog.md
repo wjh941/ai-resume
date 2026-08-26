@@ -314,6 +314,29 @@ Chinese copy, page behavior, and business logic unchanged.
 - This is test-only coverage. Production routes, payloads, mock data, Chinese
   copy, page structure, and business logic are unchanged.
 
+## 2026-08-26 Web view loading performance
+
+This iteration preserves all existing Web business modules, routes, API
+contracts, request payloads, mock data, Chinese copy, and H5 page behavior.
+
+### `web-frontend`
+
+- Converted the existing workspace views and resume editor to Vue async
+  components backed by native Vite dynamic imports.
+- Reused the shared `LoadingSpinner` during module fetches while retaining the
+  keyed `view-swap` transition, `WorkspaceView` keys, and existing navigation
+  events.
+- The measured Web entry JS asset decreased from 192.66 kB to 100.55 kB; the
+  business views are emitted as independent chunks and load on first access.
+
+### Verification
+
+- Focused Web interaction tests: 19/19 passed.
+- Web production build emitted independent view chunks and completed
+  successfully.
+- Full H5/Web test suites and both production builds passed after this entry;
+  no backend, API, mock, or H5 business files changed.
+
 ## 2026-08-26 Long-list rendering polish
 
 This iteration keeps all routes, API calls, list windows, mock data, Chinese
