@@ -14,6 +14,14 @@ export class ApiRequestError extends Error {
   }
 }
 
+export function readItems<T>(payload: T[] | { items?: T[] } | null | undefined): T[] {
+  if (Array.isArray(payload)) return payload
+  if (payload && typeof payload === "object" && "items" in payload && Array.isArray(payload.items)) {
+    return payload.items
+  }
+  throw new ApiRequestError(readMessage(undefined), 0)
+}
+
 function readMessage(body: ApiEnvelope<unknown> | null | undefined): string {
   return body?.detail || body?.message || "请求未完成，请稍后重试"
 }
