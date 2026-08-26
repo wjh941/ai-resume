@@ -3,16 +3,35 @@ import { CalendarDays, Check, Plus, RefreshCw } from "lucide-vue-next"
 import { onMounted, ref } from "vue"
 
 import { requestApi } from "../lib/api"
+import { listCareerTasks, type CareerTaskRecord } from "../lib/career"
 import AsyncButton from "../components/AsyncButton.vue"
 import LoadingSpinner from "../components/LoadingSpinner.vue"
 import type { WorkspaceView } from "../components/WebSidebar.vue"
 
-type CareerTask = {
+type BackendCareerTask = {
   id: string
+  plan_id: string
   title: string
-  description?: string
-  due_date?: string | null
+  description: string
+  due_date: string | null
   status: string
+  created_at: string
+  updated_at: string
+}
+
+type CareerTask = CareerTaskRecord
+
+function fromBackendTask(task: BackendCareerTask): CareerTask {
+  return {
+    id: task.id,
+    planId: task.plan_id,
+    title: task.title,
+    description: task.description,
+    dueDate: task.due_date,
+    status: task.status,
+    createdAt: task.created_at,
+    updatedAt: task.updated_at,
+  }
 }
 
 const planId = "web-workspace"
@@ -29,7 +48,7 @@ async function refresh() {
   loading.value = true
   error.value = ""
   try {
-    tasks.value = (await requestApi<{ items: CareerTask[] }>(`/api/career/tasks?plan_id=${planId}`)).items
+    tasks.value = await listCareerTasks(planId)
   } catch {
     error.value = "暂时无法读取行动清单，请稍后重试"
   } finally {
@@ -47,10 +66,10 @@ async function addTask() {
   saving.value = true
   error.value = ""
   try {
-    const task = await requestApi<CareerTask>("/api/career/tasks", {
+    const task = fromBackendTask(await requestApi<BackendCareerTask>("/api/career/tasks", {
       method: "POST",
       body: JSON.stringify({ plan_id: planId, title: title.value.trim(), due_date: dueDate.value || null, status: "pending" }),
-    })
+    }))
     tasks.value = [task, ...tasks.value]
     title.value = ""
     dueDate.value = ""
@@ -66,10 +85,10 @@ async function toggleTask(task: CareerTask) {
   const status = task.status === "completed" ? "pending" : "completed"
   pendingTaskId.value = task.id
   try {
-    const updated = await requestApi<CareerTask>(`/api/career/tasks/${task.id}`, {
+    const updated = fromBackendTask(await requestApi<BackendCareerTask>(`/api/career/tasks/${task.id}`, {
       method: "PATCH",
       body: JSON.stringify({ status }),
-    })
+    }))
     tasks.value = tasks.value.map((item) => item.id === task.id ? updated : item)
   } catch {
     error.value = "状态未更新，请稍后重试"
@@ -100,7 +119,7 @@ onMounted(refresh)
       <article v-for="task in tasks" :key="task.id" class="task-row" :class="{ 'is-complete': task.status === 'completed' }">
         <AsyncButton class="task-check" type="button" :loading="pendingTaskId === task.id" :disabled="Boolean(pendingTaskId)" :title="task.status === 'completed' ? '标记为未完成' : '标记为已完成'" :aria-label="task.status === 'completed' ? '标记为未完成' : '标记为已完成'" @click="toggleTask(task)"><Check :size="16" aria-hidden="true" /></AsyncButton>
         <div><h2>{{ task.title }}</h2><p v-if="task.description">{{ task.description }}</p></div>
-        <span v-if="task.due_date" class="due-date"><CalendarDays :size="15" aria-hidden="true" />{{ task.due_date }}</span>
+        <span v-if="task.dueDate" class="due-date"><CalendarDays :size="15" aria-hidden="true" />{{ task.dueDate }}</span>
       </article>
     </div>
     <div v-else class="empty-board"><CalendarDays :size="30" aria-hidden="true" /><div><h2>还没有行动项</h2><p>从一件能在本周完成的事开始，例如补充一个项目成果或梳理目标岗位要求。</p></div></div>

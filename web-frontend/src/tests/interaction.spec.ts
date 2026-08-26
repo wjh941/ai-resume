@@ -44,6 +44,13 @@ describe("useAsyncAction", () => {
     expect(source).toContain(':loading="pendingTaskId === task.id" :disabled="Boolean(pendingTaskId)"')
   })
 
+  it("uses the career task adapter and camelCase due dates", () => {
+    const source = readFileSync(new URL("../views/CareerView.vue", import.meta.url), "utf8")
+    expect(source).toContain('listCareerTasks, type CareerTaskRecord')
+    expect(source).toContain("tasks.value = await listCareerTasks(planId)")
+    expect(source).toContain("task.dueDate")
+  })
+
   it("locks application follow-up controls while one request is pending", () => {
     const source = readFileSync(new URL("../views/ApplicationsView.vue", import.meta.url), "utf8")
     expect(source).toContain(':loading="pendingKey === `timeline-load:${item.id}`" :disabled="Boolean(pendingKey)"')
