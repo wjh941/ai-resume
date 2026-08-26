@@ -123,7 +123,7 @@ onMounted(load)
       <text class="empty-helper">本机填写中的内容也会自动保留。</text>
       <button class="empty-action" @click="openResumeForm">前往填写简历</button>
     </view>
-    <view v-for="item in renderedItems" :key="item.id" class="draft">
+    <view v-for="item in renderedItems" :key="item.id" class="draft ui-long-list-item">
       <text class="draft-title">{{ item.jobTitle || item.resume.job.targetRole || "Untitled draft" }}</text>
       <text class="draft-meta">Updated {{ item.updatedAt }}</text>
       <view class="actions">

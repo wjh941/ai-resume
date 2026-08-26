@@ -245,6 +245,7 @@ describe("runWithLoading", () => {
       expect(page).toContain('v-for="item in renderedItems"')
     }
     expect(drafts).not.toContain('v-for="item in drafts"')
+    expect(drafts).toContain('class="draft ui-long-list-item"')
     expect(applications).not.toContain('v-for="item in visibleApplications"')
     expect(evidence).not.toContain('v-for="item in evidence"')
     expect(collection).not.toContain('v-for="item in favorites"')

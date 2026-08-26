@@ -237,6 +237,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .route-actions button:hover { color: var(--coral-strong); background: color-mix(in srgb, var(--citron) 24%, transparent); transform: translateY(-2px); }
 
 .record-list, .task-list, .application-table { display: grid; border-top: 1px solid var(--line); }
+.record-list, .task-list, .application-table, .evidence-list, .order-list { contain: layout style; }
 .application-record, .evidence-list > article, .record-list > .record-row, .task-list > .task-row, .order-list > .order-row { content-visibility: auto; contain: layout paint style; contain-intrinsic-size: auto 82px; }
 .application-record { contain-intrinsic-size: auto 124px; }
 .evidence-list > article { contain-intrinsic-size: auto 132px; }

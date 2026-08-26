@@ -222,6 +222,7 @@ describe("useAsyncAction", () => {
       expect(source).toContain("ProgressiveListSentinel")
     }
     expect(styles).toContain("overflow-x: auto")
+    expect(styles).toContain(".record-list, .task-list, .application-table, .evidence-list, .order-list")
     expect(styles).toContain("grid-template-columns: 40px minmax(220px, 1fr) 128px 170px minmax(250px, auto)")
     expect(resume).toContain("本机编辑内容会自动保留，手动保存后同步到服务端。")
     expect(applications).toContain("可直接使用上方表单新增第一条记录。")
