@@ -383,3 +383,23 @@ contracts, request behavior, mock data, Chinese copy, and H5 implementation.
 - Focused async-view interaction contracts: 20/20 passed.
 - Web production build completed and continued to emit independent view chunks.
 - No backend, API, mock, H5, or business-module files changed.
+
+## 2026-08-26 Web workspace visual polish
+
+This pass keeps every existing Web route, business module, API contract, mock
+dataset, Chinese copy, and H5 implementation unchanged.
+
+### `web-frontend`
+
+- Added a shared `--shadow-hover` token with light and dark theme values for
+  consistent surface depth.
+- Added restrained hover lift feedback for overview metrics, comparison cards,
+  membership packages, and valid assessment questions on pointer devices only.
+- Preserved invalid assessment emphasis, touch layouts, and reduced-motion
+  behavior; mobile devices do not receive hover-only motion.
+- Added balanced heading wrapping and a subtle sidebar elevation to improve
+  scanning hierarchy without changing page structure.
+
+### Verification
+
+- No business, API, mock-mode, or H5 files changed.
