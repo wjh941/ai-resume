@@ -151,6 +151,20 @@ describe("useAsyncAction", () => {
     expect(styles).toContain("--accent-tint:")
   })
 
+  it("renders complete, actionable job intelligence instead of a truncated summary", () => {
+    const jobs = readFileSync(new URL("../views/JobsView.vue", import.meta.url), "utf8")
+    expect(jobs).toContain("hard_requirements")
+    expect(jobs).toContain("required_skills")
+    expect(jobs).toContain("bonus_skills")
+    expect(jobs).toContain("career_route")
+    expect(jobs).toContain("interviewChecks")
+    expect(jobs).toContain("report?.evidence")
+    expect(jobs).toContain("report?.upgrade_notice")
+    expect(jobs).toContain("核验")
+    expect(jobs).not.toContain("responsibilities?.slice(0, 4)")
+    expect(jobs).not.toContain("slice(0, 8)")
+  })
+
   it("provides accessible long-text expansion in read-only business content", () => {
     const componentUrl = new URL("../components/ExpandableText.vue", import.meta.url)
     expect(existsSync(fileURLToPath(componentUrl))).toBe(true)

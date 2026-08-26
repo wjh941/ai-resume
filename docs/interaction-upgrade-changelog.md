@@ -492,3 +492,21 @@ workflow. No new business page or module was added.
 - Web interaction contract tests and production build passed.
 - H5 interaction contract tests and `build:h5` passed.
 - Native CSS/transform/opacity motion only; reduced-motion fallbacks retained.
+
+## 2026-08-26 岗位机会结果深度优化
+
+本轮仅优化现有岗位查询结果的阅读层和行动引导，保留 `/api/job/query`
+接口、请求参数、报告权限、缓存、mock 数据和既有业务流程不变。
+
+### `web-frontend` 岗位机会
+
+- 不再截断职责和技能：完整展示硬性门槛、必备技能、加分技能、核心职责、薪酬参考和职业路径。
+- 新增“先看结论”资料范围提示，明确结构化岗位知识不是实时招聘或薪资承诺。
+- 为每条门槛/职责生成确定性的面试核验问题，要求用户准备场景、动作、结果和证据。
+- 复用服务端报告层：精简版展示可执行行动，专业版展示完整行动和证据映射；缺少可选字段时显示明确的下一步提示。
+- 桌面三列信息卡在窄窗口自动堆叠，长文本仍使用既有展开组件，保留键盘和无障碍语义。
+
+### 验证
+
+- Web 全量单元测试与生产构建通过。
+- 后端岗位查询回归测试通过，mock/API 对接未改动。
