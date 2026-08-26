@@ -403,3 +403,22 @@ dataset, Chinese copy, and H5 implementation unchanged.
 ### Verification
 
 - No business, API, mock-mode, or H5 files changed.
+
+## 2026-08-26 Web workbench surface depth
+
+This visual refinement keeps all existing Web routes, finished business
+modules, API contracts, mock data, Chinese copy, and H5 implementation intact.
+
+### `web-frontend`
+
+- Added semantic `--surface-soft`, `--surface-inset`, and `--shadow-panel`
+  tokens with matching dark-theme values.
+- Reframed existing form tools with a softer elevated surface and existing
+  record lists with a quiet inset surface, creating hierarchy without adding
+  nested cards or changing layout structure.
+- Kept the pointer-only hover lift, invalid-state guard, mobile stacking, and
+  reduced-motion behavior from the previous polish pass.
+
+### Verification
+
+- No API, business workflow, mock-mode, or H5 files changed.

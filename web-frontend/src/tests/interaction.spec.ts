@@ -278,4 +278,14 @@ describe("useAsyncAction", () => {
     expect(styles).toContain(".assessment-question:not(.is-invalid):hover")
     expect(styles).toContain("transform: translateY(-2px)")
   })
+
+  it("assigns distinct surface roles to tools and records", () => {
+    const styles = readFileSync(new URL("../styles/base.css", import.meta.url), "utf8")
+    expect(styles).toContain("--surface-soft:")
+    expect(styles).toContain("--surface-inset:")
+    expect(styles).toContain("--shadow-panel:")
+    expect(styles).toMatch(/\.workbench-form \{[^}]*background: var\(--surface-soft\)[^}]*box-shadow: var\(--shadow-panel\)/s)
+    expect(styles).toMatch(/\.record-surface \{[^}]*background: var\(--surface-inset\)/s)
+    expect(styles).toContain(":root[data-theme=\"dark\"] .record-surface")
+  })
 })
