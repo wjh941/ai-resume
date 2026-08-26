@@ -5,6 +5,7 @@ import WebSidebar, { type WorkspaceView } from "./components/WebSidebar.vue"
 import LoginPanel from "./components/LoginPanel.vue"
 import WebTopbar from "./components/WebTopbar.vue"
 import LoadingSpinner from "./components/LoadingSpinner.vue"
+import AsyncViewError from "./components/AsyncViewError.vue"
 import { requestApi } from "./lib/api"
 import { clearSession, readSession, type Session } from "./lib/session"
 
@@ -12,8 +13,13 @@ function asyncView(loader: () => Promise<{ default: Component }>): Component {
   return defineAsyncComponent({
     loader,
     loadingComponent: LoadingSpinner,
+    errorComponent: AsyncViewError,
     delay: 120,
     suspensible: false,
+    onError(error, retry, fail, attempts) {
+      if (attempts <= 2) retry()
+      else fail(error)
+    },
   })
 }
 

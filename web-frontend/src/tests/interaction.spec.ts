@@ -254,4 +254,17 @@ describe("useAsyncAction", () => {
     expect(app).toContain('@navigate="activeView = $event"')
     expect(app).toContain('@open-draft="editingDraftId = $event"')
   })
+
+  it("shows a bounded async-view load failure instead of a blank stage", () => {
+    const app = readFileSync(new URL("../App.vue", import.meta.url), "utf8")
+    const errorView = readFileSync(new URL("../components/AsyncViewError.vue", import.meta.url), "utf8")
+    expect(app).toContain('import AsyncViewError from "./components/AsyncViewError.vue"')
+    expect(app).toContain("errorComponent: AsyncViewError")
+    expect(app).toContain("onError(error, retry, fail, attempts)")
+    expect(app).toContain("if (attempts <= 2) retry()")
+    expect(app).toContain("fail(error)")
+    expect(errorView).toContain("<ErrorNotice")
+    expect(errorView).toContain('message="页面加载失败，请刷新后重试"')
+    expect(errorView).toContain("compact")
+  })
 })
