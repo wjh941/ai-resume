@@ -303,3 +303,13 @@ Chinese copy, page behavior, and business logic unchanged.
 
 - Tasks 1 and 2 completed the helper and adapter migrations; Task 3 records
   the integration hardening and verification evidence in the task report.
+
+## 2026-08-26 Web response-contract test coverage
+
+### Test-only coverage
+
+- Added Web list-adapter envelope coverage for direct arrays and `{ items: [...] }`
+  responses, plus a CareerView source-level guard for the `listCareerTasks`
+  adapter boundary and camelCase `dueDate` rendering.
+- This is test-only coverage. Production routes, payloads, mock data, Chinese
+  copy, page structure, and business logic are unchanged.

@@ -49,6 +49,7 @@ describe("useAsyncAction", () => {
     expect(source).toContain('listCareerTasks, type CareerTaskRecord')
     expect(source).toContain("tasks.value = await listCareerTasks(planId)")
     expect(source).toContain("task.dueDate")
+    expect(source).toContain("{{ task.dueDate }}")
   })
 
   it("locks application follow-up controls while one request is pending", () => {
