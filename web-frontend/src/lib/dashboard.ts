@@ -1,12 +1,10 @@
-import { requestApi } from "./api"
+import { readItems, requestApi } from "./api"
 
 type Requester = <T>(path: string, init?: RequestInit) => Promise<T>
 
-type ItemsResponse = {
-  items: Array<{ id: string; status?: string }>
-}
+type ItemsResponse = Array<{ id: string; status?: string }> | { items?: Array<{ id: string; status?: string }> }
 
-type DraftListResponse = Array<{ id: string }>
+type DraftListResponse = Array<{ id: string }> | { items?: Array<{ id: string }> }
 
 export type OverviewState = {
   applicationCount: number
@@ -25,8 +23,8 @@ export async function loadOverview(
   ])
 
   return {
-    applicationCount: applications.items.length,
-    draftCount: drafts.length,
-    openTaskCount: tasks.items.filter((task) => task.status !== "completed").length,
+    applicationCount: readItems(applications).length,
+    draftCount: readItems(drafts).length,
+    openTaskCount: readItems(tasks).filter((task) => task.status !== "completed").length,
   }
 }

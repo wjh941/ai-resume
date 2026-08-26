@@ -1,4 +1,4 @@
-import { requestApi } from "./api"
+import { readItems, requestApi } from "./api"
 
 export type TemplateId = "business" | "technology" | "graduate" | "analytics"
 
@@ -137,8 +137,8 @@ function fromBackend(item: BackendDraft): DraftRecord {
 }
 
 export async function listDrafts(): Promise<DraftRecord[]> {
-  const data = await requestApi<{ items: BackendDraft[] } | BackendDraft[]>("/api/draft/list")
-  return (Array.isArray(data) ? data : data.items).map(fromBackend)
+  const payload = await requestApi<BackendDraft[] | { items?: BackendDraft[] }>("/api/draft/list")
+  return readItems(payload).map(fromBackend)
 }
 
 export async function getDraft(id: string): Promise<DraftRecord> {

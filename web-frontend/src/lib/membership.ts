@@ -1,4 +1,4 @@
-import { requestApi } from "./api"
+import { readItems, requestApi } from "./api"
 
 export type VipStatus = {
   vipLevel: string
@@ -76,8 +76,8 @@ export async function getVipStatus(): Promise<VipStatus> {
 }
 
 export async function listMembershipPackages(): Promise<MembershipPackage[]> {
-  const data = await requestApi<{ items: BackendPackage[] }>("/api/pay/package-list")
-  return data.items.map(fromPackage)
+  const payload = await requestApi<BackendPackage[] | { items?: BackendPackage[] }>("/api/pay/package-list")
+  return readItems(payload).map(fromPackage)
 }
 
 export async function createMembershipOrder(
@@ -103,6 +103,6 @@ export async function completeDemoPayment(orderId: string): Promise<{ order: Mem
 }
 
 export async function listOrders(): Promise<MembershipOrder[]> {
-  const data = await requestApi<{ items: BackendOrder[] }>("/api/user/order-list")
-  return data.items.map(fromOrder)
+  const payload = await requestApi<BackendOrder[] | { items?: BackendOrder[] }>("/api/user/order-list")
+  return readItems(payload).map(fromOrder)
 }

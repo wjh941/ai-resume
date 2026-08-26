@@ -1,4 +1,4 @@
-import { requestApi } from "./api"
+import { readItems, requestApi } from "./api"
 
 export type ApplicationStatus = "saved" | "applied" | "screening" | "interview" | "offer" | "rejected" | "closed"
 
@@ -118,8 +118,8 @@ export async function listApplications(filters: ApplicationFilters = {}): Promis
   if (filters.status) params.set("status", filters.status)
   if (filters.interviewDate) params.set("interview_date", filters.interviewDate)
   const query = params.toString()
-  const data = await requestApi<{ items: BackendApplication[] }>("/api/applications" + (query ? "?" + query : ""))
-  return data.items.map(fromBackend)
+  const payload = await requestApi<BackendApplication[] | { items?: BackendApplication[] }>("/api/applications" + (query ? "?" + query : ""))
+  return readItems(payload).map(fromBackend)
 }
 
 export async function saveApplication(input: ApplicationInput): Promise<ApplicationRecord> {
@@ -130,8 +130,8 @@ export async function saveApplication(input: ApplicationInput): Promise<Applicat
 }
 
 export async function listTimeline(id: string): Promise<ApplicationTimelineEvent[]> {
-  const data = await requestApi<{ items: BackendTimeline[] }>("/api/applications/" + encodeURIComponent(id) + "/timeline")
-  return data.items.map(fromTimeline)
+  const payload = await requestApi<BackendTimeline[] | { items?: BackendTimeline[] }>("/api/applications/" + encodeURIComponent(id) + "/timeline")
+  return readItems(payload).map(fromTimeline)
 }
 
 export async function addTimelineEvent(

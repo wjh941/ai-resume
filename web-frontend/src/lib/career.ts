@@ -1,4 +1,4 @@
-import { requestApi } from "./api"
+import { readItems, requestApi } from "./api"
 
 export type ScoreBreakdown = {
   key: string
@@ -223,8 +223,8 @@ export async function compareRoles(roleNames: string[]): Promise<CareerCompariso
 }
 
 export async function listCareerTasks(planId: string): Promise<CareerTaskRecord[]> {
-  const data = await requestApi<{ items: BackendTask[] }>("/api/career/tasks?plan_id=" + encodeURIComponent(planId))
-  return data.items.map(fromTask)
+  const payload = await requestApi<BackendTask[] | { items?: BackendTask[] }>("/api/career/tasks?plan_id=" + encodeURIComponent(planId))
+  return readItems(payload).map(fromTask)
 }
 
 export async function saveCareerTask(input: CareerTaskInput): Promise<CareerTaskRecord> {

@@ -1,4 +1,4 @@
-import { requestApi } from "./api"
+import { readItems, requestApi } from "./api"
 import type { ResumePayload } from "./drafts"
 
 export type EvidenceKind = "coursework" | "project" | "activity" | "internship" | "employment"
@@ -89,8 +89,8 @@ function toEvidence(input: EvidenceDraft) {
 }
 
 export async function listEvidence(): Promise<EvidenceRecord[]> {
-  const data = await requestApi<{ items: BackendEvidence[] }>("/api/evidence")
-  return data.items.map(fromEvidence)
+  const payload = await requestApi<BackendEvidence[] | { items?: BackendEvidence[] }>("/api/evidence")
+  return readItems(payload).map(fromEvidence)
 }
 
 export async function saveEvidence(input: EvidenceDraft): Promise<EvidenceRecord> {
@@ -105,11 +105,11 @@ export async function deleteEvidence(id: string): Promise<void> {
 }
 
 export async function getEvidenceSuggestions(roleName: string): Promise<EvidenceSuggestion[]> {
-  const data = await requestApi<{ items: BackendSuggestion[] }>("/api/resume/evidence-suggestions", {
+  const payload = await requestApi<BackendSuggestion[] | { items?: BackendSuggestion[] }>("/api/resume/evidence-suggestions", {
     method: "POST",
     body: JSON.stringify({ role_name: roleName }),
   })
-  return data.items.map((item) => ({
+  return readItems(payload).map((item) => ({
     sourceEvidenceId: item.source_evidence_id,
     sourceTitle: item.source_title,
     targetSection: item.target_section,
