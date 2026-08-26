@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { ApiRequestError, requestApi } from "../lib/api"
 import { compareRoles, listCareerTasks, loadCareerRecommendations } from "../lib/career"
 import { getAssessmentQuestions, submitAssessment } from "../lib/assessment"
-import { listEvidence, saveEvidence } from "../lib/evidence"
+import { getEvidenceSuggestions, listEvidence, saveEvidence } from "../lib/evidence"
 import { listDrafts } from "../lib/drafts"
 import { createMembershipOrder, listMembershipPackages, listOrders } from "../lib/membership"
 import { listApplications, listTimeline, saveApplication } from "../lib/applications"
@@ -174,14 +174,14 @@ describe("typed domain adapters", () => {
     } satisfies Partial<ApiRequestError>)
   })
 
-  it("maps application and timeline lists returned directly as arrays", async () => {
+  it("maps application and timeline list envelopes to camelCase", async () => {
     requestMock
-      .mockResolvedValueOnce([{
+      .mockResolvedValueOnce({ items: [{
         id: "a-1", company: "Acme", role_name: "Engineer", city: "Shanghai", source: "official",
         status: "saved", applied_at: null, next_action_at: null, interview_notes: "", draft_id: null,
         notes: "", created_at: "t1", updated_at: "t2",
-      }])
-      .mockResolvedValueOnce([{ id: "event-1", title: "Applied", description: "", occurred_at: "t1" }])
+      }] })
+      .mockResolvedValueOnce({ items: [{ id: "event-1", title: "Applied", description: "", occurred_at: "t1" }] })
 
     const applications = await listApplications()
     const timeline = await listTimeline("a-1")
@@ -190,33 +190,58 @@ describe("typed domain adapters", () => {
     expect(timeline[0]).toMatchObject({ id: "event-1", occurredAt: "t1" })
   })
 
-  it("maps career task lists returned directly as an array", async () => {
-    requestMock.mockResolvedValue([{
+  it("maps career task list envelopes to camelCase", async () => {
+    requestMock.mockResolvedValue({ items: [{
       id: "task-1", plan_id: "plan-1", title: "Task", description: "", due_date: null,
       status: "pending", created_at: "t1", updated_at: "t2",
-    }])
+    }] })
 
     const tasks = await listCareerTasks("plan-1")
 
     expect(tasks[0]).toMatchObject({ id: "task-1", planId: "plan-1" })
   })
 
-  it("maps membership package and order lists returned directly as arrays", async () => {
+  it("maps membership package and order list envelopes to camelCase", async () => {
     requestMock
-      .mockResolvedValueOnce([{
+      .mockResolvedValueOnce({ items: [{
         package_type: "monthly", name: "Monthly", vip_level: "plus", duration_days: 30,
         total_amount: 29, benefits: [],
-      }])
-      .mockResolvedValueOnce([{
+      }] })
+      .mockResolvedValueOnce({ items: [{
         order_id: "order-1", package_type: "monthly", total_amount: 29, payment_status: "paid",
         payment_channel: "demo", create_time: "t1", entitlement_expire_time: null,
-      }])
+      }] })
 
     const packages = await listMembershipPackages()
     const orders = await listOrders()
 
     expect(packages[0]).toMatchObject({ packageType: "monthly", durationDays: 30 })
     expect(orders[0]).toMatchObject({ orderId: "order-1", paymentStatus: "paid" })
+  })
+
+  it("maps evidence suggestion envelopes to camelCase", async () => {
+    requestMock.mockResolvedValue({ items: [{
+      source_evidence_id: "e-1",
+      source_title: "Launch",
+      target_section: "project",
+      title: "Platform launch",
+      role: "Lead",
+      description: "Built the platform",
+      risk_note: "Verify metrics",
+    }] })
+
+    const suggestions = await getEvidenceSuggestions("Data Engineer")
+
+    expect(suggestions[0]).toMatchObject({
+      sourceEvidenceId: "e-1",
+      sourceTitle: "Launch",
+      targetSection: "project",
+      riskNote: "Verify metrics",
+    })
+    expect(requestMock).toHaveBeenCalledWith("/api/resume/evidence-suggestions", expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({ role_name: "Data Engineer" }),
+    }))
   })
 
   it("creates membership orders with package and renewal fields", async () => {
