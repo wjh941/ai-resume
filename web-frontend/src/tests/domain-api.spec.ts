@@ -190,6 +190,46 @@ describe("typed domain adapters", () => {
     expect(timeline[0]).toMatchObject({ id: "event-1", occurredAt: "t1" })
   })
 
+  it("maps applications returned directly as an array", async () => {
+    requestMock.mockResolvedValue([
+      {
+        id: "a-direct",
+        company: "Acme",
+        role_name: "Designer",
+        city: "Shanghai",
+        source: "official",
+        status: "saved",
+        applied_at: null,
+        next_action_at: null,
+        interview_notes: "",
+        draft_id: null,
+        notes: "",
+        contact_info: "",
+        attachment_ref: "",
+        next_interview_at: null,
+        timeline: [],
+        created_at: "t1",
+        updated_at: "t2",
+      },
+    ])
+
+    const applications = await listApplications({ status: "saved" })
+
+    expect(applications[0]).toMatchObject({ id: "a-direct", roleName: "Designer" })
+    expect(requestMock).toHaveBeenCalledWith("/api/applications?status=saved")
+  })
+
+  it("maps timeline records returned directly as an array", async () => {
+    requestMock.mockResolvedValue([
+      { id: "event-direct", title: "Interview", description: "", occurred_at: "t1" },
+    ])
+
+    const timeline = await listTimeline("a-direct")
+
+    expect(timeline[0]).toMatchObject({ id: "event-direct", occurredAt: "t1" })
+    expect(requestMock).toHaveBeenCalledWith("/api/applications/a-direct/timeline")
+  })
+
   it("maps career task list envelopes to camelCase", async () => {
     requestMock.mockResolvedValue({ items: [{
       id: "task-1", plan_id: "plan-1", title: "Task", description: "", due_date: null,
@@ -199,6 +239,26 @@ describe("typed domain adapters", () => {
     const tasks = await listCareerTasks("plan-1")
 
     expect(tasks[0]).toMatchObject({ id: "task-1", planId: "plan-1" })
+  })
+
+  it("maps career tasks returned directly as an array", async () => {
+    requestMock.mockResolvedValue([
+      {
+        id: "task-direct",
+        plan_id: "plan-direct",
+        title: "Task",
+        description: "",
+        due_date: "2026-09-01",
+        status: "pending",
+        created_at: "t1",
+        updated_at: "t2",
+      },
+    ])
+
+    const tasks = await listCareerTasks("plan-direct")
+
+    expect(tasks[0]).toMatchObject({ id: "task-direct", planId: "plan-direct", dueDate: "2026-09-01" })
+    expect(requestMock).toHaveBeenCalledWith("/api/career/tasks?plan_id=plan-direct")
   })
 
   it("maps membership package and order list envelopes to camelCase", async () => {
@@ -219,6 +279,43 @@ describe("typed domain adapters", () => {
     expect(orders[0]).toMatchObject({ orderId: "order-1", paymentStatus: "paid" })
   })
 
+  it("maps membership packages returned directly as an array", async () => {
+    requestMock.mockResolvedValue([
+      {
+        package_type: "annual",
+        name: "Annual",
+        vip_level: "pro",
+        duration_days: 365,
+        total_amount: 299,
+        benefits: ["priority"],
+      },
+    ])
+
+    const packages = await listMembershipPackages()
+
+    expect(packages[0]).toMatchObject({ packageType: "annual", durationDays: 365 })
+    expect(requestMock).toHaveBeenCalledWith("/api/pay/package-list")
+  })
+
+  it("maps orders returned directly as an array", async () => {
+    requestMock.mockResolvedValue([
+      {
+        order_id: "order-direct",
+        package_type: "annual",
+        total_amount: 299,
+        payment_status: "paid",
+        payment_channel: "demo",
+        create_time: "t1",
+        entitlement_expire_time: "t2",
+      },
+    ])
+
+    const orders = await listOrders()
+
+    expect(orders[0]).toMatchObject({ orderId: "order-direct", paymentStatus: "paid" })
+    expect(requestMock).toHaveBeenCalledWith("/api/user/order-list")
+  })
+
   it("maps evidence suggestion envelopes to camelCase", async () => {
     requestMock.mockResolvedValue({ items: [{
       source_evidence_id: "e-1",
@@ -236,6 +333,33 @@ describe("typed domain adapters", () => {
       sourceEvidenceId: "e-1",
       sourceTitle: "Launch",
       targetSection: "project",
+      riskNote: "Verify metrics",
+    })
+    expect(requestMock).toHaveBeenCalledWith("/api/resume/evidence-suggestions", expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({ role_name: "Data Engineer" }),
+    }))
+  })
+
+  it("maps evidence suggestions returned directly as an array", async () => {
+    requestMock.mockResolvedValue([
+      {
+        source_evidence_id: "e-direct",
+        source_title: "Launch",
+        target_section: "employment",
+        title: "Platform launch",
+        role: "Lead",
+        description: "Built the platform",
+        risk_note: "Verify metrics",
+      },
+    ])
+
+    const suggestions = await getEvidenceSuggestions("Data Engineer")
+
+    expect(suggestions[0]).toMatchObject({
+      sourceEvidenceId: "e-direct",
+      sourceTitle: "Launch",
+      targetSection: "employment",
       riskNote: "Verify metrics",
     })
     expect(requestMock).toHaveBeenCalledWith("/api/resume/evidence-suggestions", expect.objectContaining({
