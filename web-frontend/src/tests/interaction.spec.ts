@@ -130,6 +130,12 @@ describe("useAsyncAction", () => {
     expect(styles).toMatch(/\.view-layout > \.notice-error \.notice-action[^}]*min-height: 44px/s)
   })
 
+  it("keeps the dashboard refresh control touch-safe and motion-safe", () => {
+    const overview = readFileSync(new URL("../views/OverviewView.vue", import.meta.url), "utf8")
+    expect(overview).toMatch(/\.overview-hero \.text-action\s*\{[^}]*min-height:\s*44px[^}]*min-width:\s*0[^}]*max-width:\s*100%[^}]*overflow-wrap:\s*anywhere/s)
+    expect(overview).toMatch(/@media \(prefers-reduced-motion:\s*reduce\)[\s\S]*\.overview-hero \.text-action[^}]*transform:\s*none\s*!important/s)
+  })
+
   it("contains off-screen Web records and disables theme motion when requested", () => {
     const styles = readFileSync(new URL("../styles/base.css", import.meta.url), "utf8")
     expect(styles).toContain("content-visibility: auto")

@@ -52,3 +52,19 @@ onMounted(refresh)
     </div>
   </section>
 </template>
+
+<style scoped>
+.overview-hero .text-action {
+  min-height: 44px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overview-hero .text-action {
+    transition: none !important;
+    transform: none !important;
+  }
+}
+</style>

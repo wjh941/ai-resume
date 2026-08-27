@@ -8,6 +8,12 @@ it("chooses the earliest incomplete due task before other candidates", () => {
   expect(state.focus.id).toBe("task-soon")
 })
 
+it("exposes the application next-action date as a Chinese due label", () => {
+  const state = buildOverviewState({ applications: [{ id: "app-1", company: "Acme", role_name: "Operations", next_action_at: "2099-03-04" }], drafts: [], tasks: [] })
+  expect(state.focus.kind).toBe("application")
+  expect(state.focus.dueLabel).toBe("截止：2099-03-04")
+})
+
 it("falls back to starter actions and exposes progress states for empty data", () => {
   const state = buildOverviewState({ applications: [], drafts: [], tasks: [] })
   expect(state.focus.target).toBe("resume")

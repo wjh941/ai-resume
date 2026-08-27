@@ -24,7 +24,7 @@ function candidatesFor(input: DashboardInput): FocusAction[] {
   const candidates: FocusAction[] = []
   const add = (action: FocusAction) => { if (!candidates.some((candidate) => candidate.kind === action.kind && candidate.id === action.id)) candidates.push(action) }
   const task = incompleteTasks[0]; if (task) add({ kind: "task", id: task.id, title: task.title || genericTitles.task, description: task.description, dueLabel: task.due_date ? `截止：${task.due_date}` : undefined, target: "career" })
-  const application = activeApplications[0]; if (application) add({ kind: "application", id: application.id, title: application.company && application.role_name ? `跟进：${application.company} - ${application.role_name}` : genericTitles.application, target: "applications" })
+  const application = activeApplications[0]; if (application) add({ kind: "application", id: application.id, title: application.company && application.role_name ? `跟进：${application.company} - ${application.role_name}` : genericTitles.application, dueLabel: application.next_action_at ? `截止：${application.next_action_at}` : undefined, target: "applications" })
   if (!drafts.length) add({ kind: "resume", title: genericTitles.resume, target: "resume" }); else if (!tasks.length) add({ kind: "career", title: genericTitles.career, target: "career" })
   if (!task && !application) add({ kind: "applications", title: genericTitles.applications, target: "applications" })
   for (const starter of [
