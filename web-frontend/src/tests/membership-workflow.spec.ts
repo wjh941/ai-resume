@@ -27,8 +27,16 @@ describe("membership workflow helpers", () => {
     expect(source).toContain(':disabled="!paymentEnabled')
     expect(source).toContain("{{ paymentNotice }}")
     expect(source).toContain("if (!paymentEnabled.value) {")
-    expect(source).toContain("notice.value = paymentNotice.value")
+    expect(source).toContain("capabilityNotice.value = paymentNotice.value")
     expect(source).toContain("if (paymentMode.value !== \"demo\") return")
+  })
+
+  it("does not render a disabled payment notice as a success message", () => {
+    const source = membershipView()
+
+    expect(source).toContain('const capabilityNotice = ref("")')
+    expect(source).toContain('v-if="capabilityNotice" class="source-notice"')
+    expect(source).not.toContain('v-if="capabilityNotice" class="notice-success"')
   })
 
   it("labels demo payment and only calls the demo callback in demo mode", () => {
