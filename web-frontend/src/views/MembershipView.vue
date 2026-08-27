@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { CheckCircle2, Crown, RefreshCw } from "lucide-vue-next"
-import { onMounted, ref } from "vue"
+import { computed, inject, onMounted, ref } from "vue"
 
 import AsyncButton from "../components/AsyncButton.vue"
 import LoadingSpinner from "../components/LoadingSpinner.vue"
@@ -8,9 +8,14 @@ import MembershipPackageCard from "../components/MembershipPackageCard.vue"
 import OrderRow from "../components/OrderRow.vue"
 import ProgressiveListSentinel from "../components/ProgressiveListSentinel.vue"
 import { useIncrementalList } from "../composables/useIncrementalList"
+import { CAPABILITIES_KEY, defaultCapabilities, type Capabilities } from "../lib/capabilities"
 import { completeDemoPayment, createMembershipOrder, getVipStatus, listMembershipPackages, listOrders, type MembershipOrder, type MembershipPackage, type VipStatus } from "../lib/membership"
 import { prependOrder, replaceOrder } from "../lib/membership-workflow"
 
+const capabilities = inject(CAPABILITIES_KEY, ref<Capabilities>(defaultCapabilities()))
+const paymentEnabled = computed(() => capabilities.value.payment.enabled && capabilities.value.payment.mode !== "disabled")
+const paymentMode = computed(() => capabilities.value.payment.mode)
+const paymentNotice = computed(() => capabilities.value.payment.notice)
 const vip = ref<VipStatus | null>(null)
 const packages = ref<MembershipPackage[]>([])
 const orders = ref<MembershipOrder[]>([])
@@ -39,8 +44,13 @@ async function purchase(packageType: MembershipPackage["packageType"], autoRenew
 }
 async function payDemo(): Promise<void> {
   if (!pendingOrder.value || payingOrderId.value) return
+  if (!paymentEnabled.value) {
+    notice.value = paymentNotice.value
+    return
+  }
+  if (paymentMode.value !== "demo") return
   payingOrderId.value = pendingOrder.value.orderId; phase.value = "paying"; error.value = ""
-  try { const result = await completeDemoPayment(pendingOrder.value.orderId); vip.value = result.vip; orders.value = replaceOrder(orders.value, result.order); pendingOrder.value = null; phase.value = "paid"; notice.value = "支付已确认，会员权益已刷新" } catch (caught) { phase.value = "error"; error.value = caught instanceof Error ? caught.message : "支付暂未完成，请稍后重试" } finally { payingOrderId.value = "" }
+  try { const result = await completeDemoPayment(pendingOrder.value.orderId); vip.value = result.vip; orders.value = replaceOrder(orders.value, result.order); pendingOrder.value = null; phase.value = "paid"; notice.value = "演示支付已确认，会员权益已刷新" } catch (caught) { phase.value = "error"; error.value = caught instanceof Error ? caught.message : "支付暂未完成，请稍后重试" } finally { payingOrderId.value = "" }
 }
 onMounted(refresh)
 </script>
@@ -53,8 +63,8 @@ onMounted(refresh)
     <template v-else>
       <section class="membership-entitlement decision-surface"><div class="record-symbol record-coral"><Crown :size="24" aria-hidden="true" /></div><div><span class="section-kicker">当前权益</span><h2>{{ vip?.vipLevel || "普通用户" }}</h2><p>到期时间：{{ vip?.expireTime || "暂无到期时间" }} · {{ vip?.autoRenew ? "已开启自动续费" : "未开启自动续费" }}</p></div></section>
       <section class="membership-packages decision-surface"><div class="panel-heading"><div><span class="section-kicker">服务套餐</span><h2>选择适合你的成长节奏</h2></div></div><div class="package-grid"><MembershipPackageCard v-for="item in packages" :key="item.packageType" :package="item" :current-vip="vip" :pending="pendingPackage === item.packageType" @purchase="purchase" /></div></section>
-      <section v-if="phase === 'awaiting-payment' && pendingOrder" class="payment-pending"><div><h2>订单待支付</h2><p>{{ pendingOrder.orderId }} · ¥{{ pendingOrder.totalAmount }} · 当前状态：{{ pendingOrder.paymentStatus }}</p></div><AsyncButton class="primary-button compact" type="button" :loading="phase === 'paying'" @click="payDemo">完成演示支付</AsyncButton></section>
-      <section v-if="phase === 'paid'" class="notice-success"><CheckCircle2 :size="17" aria-hidden="true" />订单已支付，权益状态已更新。</section>
+      <section v-if="phase === 'awaiting-payment' && pendingOrder" class="payment-pending"><div><h2>订单待支付</h2><p>{{ pendingOrder.orderId }} · ¥{{ pendingOrder.totalAmount }} · 当前状态：{{ pendingOrder.paymentStatus }}</p><p v-if="!paymentEnabled" class="source-notice" role="status">{{ paymentNotice }}</p></div><AsyncButton class="primary-button compact" type="button" :loading="phase === 'paying'" :disabled="!paymentEnabled || paymentMode !== 'demo'" @click="payDemo">{{ paymentMode === 'demo' ? "完成演示支付" : "完成支付" }}</AsyncButton></section>
+      <section v-if="phase === 'paid'" class="notice-success"><CheckCircle2 :size="17" aria-hidden="true" />演示支付已完成，权益状态已更新。</section>
       <section class="order-panel"><div class="panel-heading"><div><span class="section-kicker">订单记录</span><h2>支付状态</h2></div></div><div v-if="orders.length" class="order-list"><OrderRow v-for="order in renderedOrders" :key="order.orderId" :order="order" /><ProgressiveListSentinel :has-more="hasMoreOrders" @more="showMoreOrders" /></div><p v-else class="source-notice">还没有订单记录。</p></section>
     </template>
   </section>
