@@ -1,4 +1,5 @@
 import { requestApi } from "./api"
+import type { InjectionKey, Ref } from "vue"
 
 export type CapabilityMode = "real" | "demo" | "disabled"
 
@@ -18,6 +19,8 @@ export interface Capabilities {
 }
 
 export type CapabilityName = keyof Capabilities
+
+export const CAPABILITIES_KEY: InjectionKey<Readonly<Ref<Capabilities>>> = Symbol("capabilities")
 
 const names: Array<[CapabilityName, string, string]> = [
   ["resumeImport", "resume_import", "简历导入暂不可用。"],

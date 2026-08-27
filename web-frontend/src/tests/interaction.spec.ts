@@ -5,6 +5,36 @@ import { fileURLToPath } from "node:url"
 import { useAsyncAction } from "../composables/useAsyncAction"
 
 describe("useAsyncAction", () => {
+  it("provides default capabilities and refreshes them without blocking App rendering", () => {
+    const app = readFileSync(new URL("../App.vue", import.meta.url), "utf8")
+    expect(app).toContain("defaultCapabilities()")
+    expect(app).toContain("getCapabilities()")
+    expect(app).toContain("CAPABILITIES_KEY")
+    expect(app).toContain("provide(")
+    expect(app).toContain("void getCapabilities()")
+    expect(app).toContain('<LoginPanel v-if="!session"')
+  })
+
+  it("keeps SMS visible but gates its request when the capability is disabled", () => {
+    const login = readFileSync(new URL("../components/LoginPanel.vue", import.meta.url), "utf8")
+    expect(login).toContain("isCapabilityEnabled")
+    expect(login).toContain("smsLogin")
+    expect(login).toContain("send-code")
+    expect(login).toContain(":disabled=\"!smsLoginEnabled")
+    expect(login).toContain("smsLoginNotice")
+    expect(login).toContain("if (!isCapabilityEnabled")
+  })
+
+  it("keeps password login as the fallback while capabilities are pending or unavailable", () => {
+    const app = readFileSync(new URL("../App.vue", import.meta.url), "utf8")
+    const login = readFileSync(new URL("../components/LoginPanel.vue", import.meta.url), "utf8")
+    expect(app).toContain("ref(defaultCapabilities())")
+    expect(app).toContain("getCapabilities().then")
+    expect(login).toContain('ref<"password" | "phone">("password")')
+    expect(login).toContain("mode === 'password'")
+    expect(login).toContain("loginWithPassword")
+  })
+
   it("renders one primary focus, progress states, and recoverable continuation actions", () => {
     const overview = readFileSync(new URL("../views/OverviewView.vue", import.meta.url), "utf8")
     expect(overview).toContain("overview-focus")

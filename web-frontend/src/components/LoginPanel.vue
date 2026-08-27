@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ArrowRight, KeyRound, Smartphone } from "lucide-vue-next"
-import { computed, ref } from "vue"
+import { computed, inject, ref } from "vue"
 
 import { loginWithPassword, loginWithPhone, registerAccount } from "../lib/auth"
 import { requestApi } from "../lib/api"
+import { CAPABILITIES_KEY, defaultCapabilities, isCapabilityEnabled } from "../lib/capabilities"
 import type { Session } from "../lib/session"
 import AsyncButton from "./AsyncButton.vue"
 
@@ -21,6 +22,9 @@ const loading = ref(false)
 const sending = ref(false)
 const hint = ref("")
 const error = ref("")
+const capabilities = inject(CAPABILITIES_KEY, ref(defaultCapabilities()))
+const smsLoginEnabled = computed(() => isCapabilityEnabled(capabilities.value, "smsLogin"))
+const smsLoginNotice = computed(() => capabilities.value.smsLogin.notice)
 
 const submitLabel = computed(() => {
   if (mode.value === "phone") return "手机号登录"
@@ -28,6 +32,11 @@ const submitLabel = computed(() => {
 })
 
 async function sendCode() {
+  if (!isCapabilityEnabled(capabilities.value, "smsLogin")) {
+    error.value = smsLoginNotice.value
+    hint.value = smsLoginNotice.value
+    return
+  }
   if (loading.value || sending.value) return
   if (!/^1\d{10}$/.test(phone.value)) {
     error.value = "请填写正确的 11 位手机号"
@@ -54,6 +63,11 @@ async function submit() {
   if (loading.value || sending.value) return
   error.value = ""
   hint.value = ""
+  if (mode.value === "phone" && !isCapabilityEnabled(capabilities.value, "smsLogin")) {
+    error.value = smsLoginNotice.value
+    hint.value = smsLoginNotice.value
+    return
+  }
   loading.value = true
   try {
     const session = mode.value === "phone"
@@ -93,8 +107,9 @@ async function submit() {
         </div>
         <div class="login-tabs" role="tablist" aria-label="登录方式">
           <button type="button" :class="{ 'is-selected': mode === 'password' }" :disabled="loading || sending" role="tab" :aria-selected="mode === 'password'" @click="mode = 'password'">账号密码</button>
-          <button type="button" :class="{ 'is-selected': mode === 'phone' }" :disabled="loading || sending" role="tab" :aria-selected="mode === 'phone'" @click="mode = 'phone'">手机号验证</button>
+          <button type="button" :class="{ 'is-selected': mode === 'phone' }" :disabled="!smsLoginEnabled || loading || sending" role="tab" :aria-selected="mode === 'phone'" @click="mode = 'phone'">手机号验证</button>
         </div>
+        <p v-if="!smsLoginEnabled" class="form-hint capability-notice" aria-live="polite">{{ smsLoginNotice }}</p>
 
         <form class="login-form" :aria-describedby="error ? 'login-error' : undefined" @submit.prevent="submit">
           <template v-if="mode === 'password'">

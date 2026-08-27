@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, ref, watch, type Component } from "vue"
+import { computed, defineAsyncComponent, provide, readonly, ref, watch, type Component } from "vue"
 
 import WebSidebar, { type WorkspaceView } from "./components/WebSidebar.vue"
 import LoginPanel from "./components/LoginPanel.vue"
@@ -7,6 +7,7 @@ import WebTopbar from "./components/WebTopbar.vue"
 import LoadingSpinner from "./components/LoadingSpinner.vue"
 import AsyncViewError from "./components/AsyncViewError.vue"
 import { requestApi } from "./lib/api"
+import { CAPABILITIES_KEY, defaultCapabilities, getCapabilities } from "./lib/capabilities"
 import { clearSession, readSession, type Session } from "./lib/session"
 
 function asyncView(loader: () => Promise<{ default: Component }>): Component {
@@ -39,6 +40,13 @@ const viewComponents: Record<WorkspaceView, Component> = {
 const ResumeEditorView = asyncView(() => import("./views/ResumeEditorView.vue"))
 
 const session = ref<Session | null>(readSession())
+const capabilities = ref(defaultCapabilities())
+provide(CAPABILITIES_KEY, readonly(capabilities))
+void getCapabilities().then((value) => {
+  capabilities.value = value
+}).catch(() => {
+  // Keep default disabled capabilities when the optional health request fails.
+})
 const activeView = ref<WorkspaceView>("overview")
 const editingDraftId = ref<string | null>(null)
 const dark = ref(false)
