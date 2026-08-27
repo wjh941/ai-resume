@@ -5,6 +5,17 @@ import { fileURLToPath } from "node:url"
 import { useAsyncAction } from "../composables/useAsyncAction"
 
 describe("useAsyncAction", () => {
+  it("renders one primary focus, progress states, and recoverable continuation actions", () => {
+    const overview = readFileSync(new URL("../views/OverviewView.vue", import.meta.url), "utf8")
+    expect(overview).toContain("overview-focus")
+    expect(overview).toContain("focus-action")
+    expect(overview).toContain("focusOptions")
+    expect(overview).toContain("progress-list")
+    expect(overview).toContain("continue-list")
+    expect(overview).toContain("鎹竴浠?")
+    expect(overview).toContain('aria-live="polite"')
+  })
+
   it("keeps the future capability shell presentation-only", () => {
     const source = readFileSync(new URL("../components/FutureCapabilityShell.vue", import.meta.url), "utf8")
     expect(source).not.toContain("requestApi")
