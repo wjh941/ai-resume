@@ -1,6 +1,6 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { Activity, ArrowUpRight, CircleCheck, CircleDot, FilePenLine, KanbanSquare, ListChecks } from "lucide-vue-next"
-import { computed, onMounted, ref } from "vue"
+import { computed, nextTick, onMounted, ref } from "vue"
 import { ApiRequestError } from "../lib/api"
 import { loadOverview, type OverviewState } from "../lib/dashboard"
 import AnimatedNumber from "../components/AnimatedNumber.vue"
@@ -29,7 +29,7 @@ function rotateFocus() {
 function runFocus() {
   if (loading.value || !activeFocus.value) return
   focusStatus.value = `已选择：${activeFocus.value.title}`
-  emit("navigate", activeFocus.value.target)
+  void nextTick(() => emit("navigate", activeFocus.value!.target))
 }
 onMounted(refresh)
 </script>
@@ -44,11 +44,13 @@ onMounted(refresh)
     <ErrorNotice v-else-if="error" :message="error"><AsyncButton class="notice-action" type="button" :loading="loading" @click="refresh">重新读取</AsyncButton></ErrorNotice>
     <div v-else-if="overview" class="overview-workspace">
       <section class="overview-focus" aria-labelledby="focus-title">
+        <p v-if="activeFocus?.dueLabel" class="focus-due">{{ activeFocus.dueLabel }}</p>
         <article class="focus-panel"><div class="section-kicker">今日重点</div><!-- 鎹竴浠? --><h2 id="focus-title">今天先完成这一件事</h2><p v-if="activeFocus" class="focus-title">{{ activeFocus.title }}</p><p v-if="activeFocus?.description" class="focus-detail">{{ activeFocus.description }}</p><p v-if="focusStatus" class="focus-status" aria-live="polite">{{ focusStatus }}</p><div class="focus-controls"><button class="focus-action" type="button" :disabled="loading || !activeFocus" @click="runFocus">开始这项行动 <ArrowUpRight :size="17" aria-hidden="true" /></button><button v-if="overview.focusOptions.length > 1" class="text-action" type="button" :disabled="loading" @click="rotateFocus">换一件</button></div></article>
         <div class="progress-list" aria-label="求职进度"><div v-for="item in overview.progress" :key="item.kind" class="progress-row"><CircleCheck v-if="item.state === 'completed'" :size="18" aria-hidden="true" /><CircleDot v-else :size="18" aria-hidden="true" /><span>{{ item.label }}</span><strong>{{ item.state === 'completed' ? '已完成' : item.state === 'in-progress' ? '进行中' : '未开始' }}</strong><button type="button" :disabled="loading" @click="emit('navigate', item.kind)">进入 <ArrowUpRight :size="15" aria-hidden="true" /></button></div></div>
       </section>
       <section class="overview-strip" aria-label="工作概览快照"><article class="metric-block"><span class="metric-icon"><FilePenLine :size="21" aria-hidden="true" /></span><span>简历草稿</span><strong><AnimatedNumber :value="overview.draftCount" /></strong><small>已有内容可继续完善</small></article><article class="metric-block metric-mint"><span class="metric-icon"><ListChecks :size="21" aria-hidden="true" /></span><span>待完成行动</span><strong><AnimatedNumber :value="overview.openTaskCount" /></strong><small>把计划变成下一步动作</small></article><article class="metric-block metric-sky"><span class="metric-icon"><KanbanSquare :size="21" aria-hidden="true" /></span><span>投递记录</span><strong><AnimatedNumber :value="overview.applicationCount" /></strong><small>持续记录每次进展</small></article></section>
-      <section class="continue-list" aria-label="继续推进"><div class="section-heading"><div><h2>继续推进</h2><p>从上次停下的地方接着做。</p></div></div><div v-if="overview.hasWorkspaceData && overview.continuations.length" class="continue-items"><div v-for="item in overview.continuations.slice(0, 3)" :key="`${item.kind}-${item.id ?? item.title}`" class="continue-item"><span>{{ item.title }}</span><button type="button" :disabled="loading" @click="emit('navigate', item.target)">继续 <ArrowUpRight :size="15" aria-hidden="true" /></button></div></div><ol v-else class="starter-list"><li v-for="item in [{ label: '完善简历基础信息', target: 'resume' }, { label: '制定下一步行动', target: 'career' }, { label: '记录第一条投递', target: 'applications' }]" :key="item.target"><span>{{ item.label }}</span><button type="button" :disabled="loading" @click="emit('navigate', item.target)">开始 <ArrowUpRight :size="15" aria-hidden="true" /></button></li></ol></section>
+      <section class="continue-list" aria-label="继续推进"><div class="section-heading"><div><h2>继续推进</h2><p>从上次停下的地方接着做。</p></div></div><div v-if="overview.hasWorkspaceData && overview.continuations.length" class="continue-items"><div v-for="item in overview.continuations.slice(0, 3)" :key="`${item.kind}-${item.id ?? item.title}`" class="continue-item"><span>{{ item.title }}</span><button type="button" :disabled="loading" @click="emit('navigate', item.target)">继续 <ArrowUpRight :size="15" aria-hidden="true" /></button></div></div><p v-else-if="overview.hasWorkspaceData" class="continue-empty">当前没有需要继续的事项。</p><ol v-else class="starter-list"><li v-for="item in [{ label: '完善简历基础信息', target: 'resume' }, { label: '制定下一步行动', target: 'career' }, { label: '记录第一条投递', target: 'applications' }]" :key="item.target"><span>{{ item.label }}</span><button type="button" :disabled="loading" @click="emit('navigate', item.target)">开始 <ArrowUpRight :size="15" aria-hidden="true" /></button></li></ol></section>
     </div>
   </section>
 </template>
+

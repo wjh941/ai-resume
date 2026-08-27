@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+﻿import { describe, expect, it } from "vitest"
 import { existsSync, readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 
@@ -10,6 +10,11 @@ describe("useAsyncAction", () => {
     expect(overview).toContain("overview-focus")
     expect(overview).toContain("focus-action")
     expect(overview).toContain("focusOptions")
+    expect(overview).toContain("换一件")
+    expect(overview).toContain('v-if="overview.focusOptions.length > 1"')
+    expect(overview).toContain("focusStatus.value =")
+    expect(overview).toContain('emit("navigate", activeFocus.value!.target)')
+    expect(overview).toContain('v-else-if="overview.hasWorkspaceData"')
     expect(overview).toContain("progress-list")
     expect(overview).toContain("continue-list")
     expect(overview).toContain("鎹竴浠?")

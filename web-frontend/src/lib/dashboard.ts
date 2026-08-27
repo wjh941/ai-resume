@@ -5,7 +5,7 @@ export type RawTask = { id: string; title?: string; description?: string; due_da
 export type RawApplication = { id: string; company?: string; role_name?: string; status?: string; next_action_at?: string; updated_at?: string }
 export type RawDraft = { id: string; job_title?: string; updated_at?: string; resume?: { basic?: { name?: string; phone?: string; email?: string; city?: string }; job?: { target_role?: string } } }
 export type DashboardInput = { applications: RawApplication[] | { items?: RawApplication[] }; drafts: RawDraft[] | { items?: RawDraft[] }; tasks: RawTask[] | { items?: RawTask[] } }
-export type FocusAction = { kind: "task" | "application" | "resume" | "career" | "applications"; id?: string; title: string; description?: string; target: "resume" | "career" | "applications" }
+export type FocusAction = { kind: "task" | "application" | "resume" | "career" | "applications"; id?: string; title: string; description?: string; dueLabel?: string; target: "resume" | "career" | "applications" }
 export type ProgressItem = { kind: "resume" | "career" | "applications"; label: string; state: "not-started" | "in-progress" | "completed" }
 export type ContinuationItem = FocusAction
 export type OverviewState = { applicationCount: number; draftCount: number; openTaskCount: number; focus: FocusAction; focusOptions: FocusAction[]; progress: ProgressItem[]; continuations: ContinuationItem[]; hasWorkspaceData: boolean }
@@ -23,7 +23,7 @@ function candidatesFor(input: DashboardInput): FocusAction[] {
   const activeApplications = applications.filter((application) => !terminalApplications.has(application.status || "")).filter((application) => application.next_action_at).sort(compareByDate<RawApplication>("next_action_at"))
   const candidates: FocusAction[] = []
   const add = (action: FocusAction) => { if (!candidates.some((candidate) => candidate.kind === action.kind && candidate.id === action.id)) candidates.push(action) }
-  const task = incompleteTasks[0]; if (task) add({ kind: "task", id: task.id, title: task.title || genericTitles.task, description: task.description, target: "career" })
+  const task = incompleteTasks[0]; if (task) add({ kind: "task", id: task.id, title: task.title || genericTitles.task, description: task.description, dueLabel: task.due_date ? `截止：${task.due_date}` : undefined, target: "career" })
   const application = activeApplications[0]; if (application) add({ kind: "application", id: application.id, title: application.company && application.role_name ? `跟进：${application.company} - ${application.role_name}` : genericTitles.application, target: "applications" })
   if (!drafts.length) add({ kind: "resume", title: genericTitles.resume, target: "resume" }); else if (!tasks.length) add({ kind: "career", title: genericTitles.career, target: "career" })
   if (!task && !application) add({ kind: "applications", title: genericTitles.applications, target: "applications" })
