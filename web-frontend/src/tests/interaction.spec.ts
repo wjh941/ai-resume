@@ -108,6 +108,15 @@ describe("useAsyncAction", () => {
     expect(styles).toContain("@media (min-width: 1600px)")
   })
 
+  it("keeps the dashboard action layout bounded across viewport sizes", () => {
+    const styles = readFileSync(new URL("../styles/base.css", import.meta.url), "utf8")
+    expect(styles).toContain(".overview-focus")
+    expect(styles).toContain(".progress-list")
+    expect(styles).toContain(".continue-list")
+    expect(styles).toMatch(/@media \(max-width: 840px\)/)
+    expect(styles).toContain("min-width: 0")
+  })
+
   it("contains off-screen Web records and disables theme motion when requested", () => {
     const styles = readFileSync(new URL("../styles/base.css", import.meta.url), "utf8")
     expect(styles).toContain("content-visibility: auto")
