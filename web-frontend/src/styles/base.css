@@ -234,7 +234,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .overview-strip { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(180px, .8fr) minmax(180px, .8fr); gap: 12px; background: transparent; }
 .overview-focus { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(280px, .75fr); gap: 24px; min-width: 0; }
 .overview-focus > * { min-width: 0; }
-.focus-panel { display: grid; min-width: 0; gap: 12px; align-content: start; padding: 26px; border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--line)); border-top: 3px solid var(--primary); border-radius: var(--radius); background: var(--surface-raised); box-shadow: var(--shadow-panel); }
+.focus-panel { display: grid; min-width: 0; gap: 12px; align-content: start; padding: 26px; border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--line)); border-radius: var(--radius); background: var(--surface-raised); box-shadow: inset 0 3px 0 var(--primary), var(--shadow-panel); }
 .focus-panel .section-kicker { margin-bottom: 0; font-size: 11px; }
 .focus-panel h2 { max-width: 520px; margin: 0; font-size: 25px; line-height: 1.25; }
 .focus-title, .focus-detail, .focus-status { min-width: 0; overflow-wrap: anywhere; }
