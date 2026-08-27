@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { BookmarkPlus, BriefcaseBusiness, Search } from "lucide-vue-next"
-import { computed, ref, watch } from "vue"
+import { computed, inject, ref, watch } from "vue"
 
 import { requestApi } from "../lib/api"
 import AsyncButton from "../components/AsyncButton.vue"
 import ExpandableText from "../components/ExpandableText.vue"
 import type { WorkspaceView } from "../components/WebSidebar.vue"
+import { CAPABILITIES_KEY, defaultCapabilities, getCapabilities, isCapabilityEnabled, type Capabilities } from "../lib/capabilities"
 
 type JobResult = {
   role_name: string
@@ -28,6 +29,13 @@ type JobResult = {
 
 const roleName = ref("")
 const reportMode = ref<"simplified" | "professional">("simplified")
+const capabilities = inject(CAPABILITIES_KEY, ref<Capabilities>(defaultCapabilities()))
+const capabilityOverride = ref<Capabilities | null>(null)
+const effectiveCapabilities = computed(() => capabilityOverride.value ?? capabilities.value)
+const jobMatchingEnabled = computed(() => isCapabilityEnabled(effectiveCapabilities.value, "jobMatching"))
+const capabilityHint = computed(() => effectiveCapabilities.value.jobMatching.notice)
+const capabilityNotice = ref("")
+const capabilityRefreshing = ref(false)
 const result = ref<JobResult | null>(null)
 const loading = ref(false)
 const saving = ref(false)
@@ -55,6 +63,19 @@ const reportActions = computed(() => result.value?.report?.actions || [])
 const hasProfessionalReport = computed(() => result.value?.report?.mode === "professional")
 const emit = defineEmits<{ navigate: [view: WorkspaceView] }>()
 
+async function retryCapabilities() {
+  if (capabilityRefreshing.value) return
+  capabilityRefreshing.value = true
+  try {
+    capabilityOverride.value = await getCapabilities()
+    capabilityNotice.value = jobMatchingEnabled.value ? "" : capabilityHint.value
+  } catch {
+    capabilityNotice.value = capabilityHint.value
+  } finally {
+    capabilityRefreshing.value = false
+  }
+}
+
 watch(roleName, (value) => {
   if (value.trim()) roleFieldError.value = ""
 })
@@ -66,10 +87,15 @@ async function queryRole() {
     error.value = ""
     return
   }
+  if (reportMode.value === "professional" && !jobMatchingEnabled.value) {
+    capabilityNotice.value = capabilityHint.value
+    return
+  }
 
   loading.value = true
   roleFieldError.value = ""
   error.value = ""
+  capabilityNotice.value = ""
   try {
     result.value = await requestApi<JobResult>("/api/job/query", {
       method: "POST",
@@ -105,11 +131,16 @@ async function favorite() {
       <label><span>目标岗位</span><input v-model.trim="roleName" maxlength="200" placeholder="例如：数据分析师" :aria-invalid="Boolean(roleFieldError)" :aria-describedby="roleFieldError ? 'jobs-role-error' : undefined" /><small v-if="roleFieldError" id="jobs-role-error" class="form-error">{{ roleFieldError }}</small></label>
       <div class="mode-switch" role="group" aria-label="报告表达方式">
         <button type="button" :disabled="loading" :class="{ 'is-selected': reportMode === 'simplified' }" @click="reportMode = 'simplified'">精简版</button>
-        <button type="button" :disabled="loading" :class="{ 'is-selected': reportMode === 'professional' }" @click="reportMode = 'professional'">专业版</button>
+        <button type="button" :disabled="loading" :aria-disabled="!jobMatchingEnabled" :class="{ 'is-selected': reportMode === 'professional', 'is-unavailable': !jobMatchingEnabled }" :title="!jobMatchingEnabled ? capabilityHint : undefined" @click="reportMode = 'professional'">专业版</button>
       </div>
+      <small v-if="!jobMatchingEnabled" class="mode-notice">{{ capabilityHint }}</small>
       <AsyncButton class="primary-button compact" type="submit" :loading="loading"><Search :size="17" aria-hidden="true" />{{ loading ? "分析中" : "查询岗位" }}</AsyncButton>
     </form>
     <ErrorNotice v-if="error" id="jobs-error" :message="error" />
+    <ErrorNotice v-if="capabilityNotice" id="jobs-capability-error" :message="capabilityNotice">
+      <AsyncButton class="notice-action" type="button" :loading="capabilityRefreshing" @click="retryCapabilities">重试能力状态</AsyncButton>
+      <AsyncButton class="notice-action" type="button" @click="emit('navigate', 'membership')">查看会员权益</AsyncButton>
+    </ErrorNotice>
 
     <article v-if="result" class="job-result">
       <div class="result-heading">
