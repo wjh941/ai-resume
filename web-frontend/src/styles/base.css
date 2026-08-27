@@ -245,12 +245,17 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .focus-controls { display: flex; min-width: 0; flex-wrap: wrap; gap: 10px; align-items: center; padding-top: 6px; }
 .focus-action { display: inline-flex; min-width: 0; min-height: 44px; align-items: center; justify-content: center; gap: 8px; max-width: 100%; padding: 0 17px; overflow-wrap: anywhere; color: #fff; border: 0; border-radius: var(--radius); background: var(--primary); font-weight: 760; }
 .focus-action:hover:not(:disabled) { background: var(--primary-strong); transform: translateY(-1px); }
+.focus-controls .text-action { min-height: 44px; min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.view-layout > .notice-error .notice-action { min-height: 44px; min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 .progress-list { display: grid; min-width: 0; gap: 0; align-content: start; padding: 8px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .progress-row { display: grid; min-width: 0; grid-template-columns: 20px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; min-height: 54px; padding: 9px 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 72%, transparent); }
 .progress-row:last-child { border-bottom: 0; }
 .progress-row > span { min-width: 0; overflow-wrap: anywhere; color: var(--ink); font-size: 13px; }
-.progress-row > svg { color: var(--muted); }
-.progress-row strong { color: var(--success); font-size: 11px; font-weight: 760; white-space: nowrap; }
+.progress-row > svg, .progress-row strong { color: var(--muted); }
+.progress-row[data-state="completed"] > svg, .progress-row[data-state="completed"] strong { color: var(--success); }
+.progress-row[data-state="in-progress"] > svg, .progress-row[data-state="in-progress"] strong { color: var(--primary); }
+.progress-row[data-state="not-started"] > svg, .progress-row[data-state="not-started"] strong { color: var(--muted); }
+.progress-row strong { font-size: 11px; font-weight: 760; white-space: nowrap; }
 .progress-row button, .continue-item button, .starter-list button { display: inline-flex; min-width: 0; min-height: 44px; align-items: center; justify-content: center; gap: 5px; max-width: 100%; padding: 0 10px; overflow-wrap: anywhere; color: var(--primary); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-raised); font-size: 12px; font-weight: 760; }
 .progress-row button:hover, .continue-item button:hover, .starter-list button:hover { border-color: var(--primary); background: var(--primary-tint); }
 .continue-list { display: grid; min-width: 0; gap: 16px; }
@@ -748,7 +753,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .loading-spinner-ring { animation-duration: 1200ms; }
   .notice-success::before { animation: none; transform: rotate(-45deg) scale(1); }
   .metric-block, .comparison-card, .membership-package, .assessment-question { transition: none !important; }
-  .focus-action, .progress-row button, .continue-item button, .starter-list button { transition: none !important; transform: none !important; }
+  .focus-action, .focus-controls .text-action, .view-layout > .notice-error .notice-action, .progress-row button, .continue-item button, .starter-list button { transition: none !important; transform: none !important; }
   .capsule-tag, .capsule-tag-inner, .capsule-elastic, .capsule-progress-fill, .liquid-slider-fill, .workspace-navigation { transition: none !important; animation: none !important; }
   .capsule-tag.is-settling::before, .capsule-submit.particle-burst .capsule-particle { animation: none !important; }
   .web-sidebar.is-drawer-open .workspace-navigation { transform: translateY(0); opacity: 1; pointer-events: auto; }

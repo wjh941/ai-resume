@@ -117,6 +117,19 @@ describe("useAsyncAction", () => {
     expect(styles).toContain("min-width: 0")
   })
 
+  it("assigns dashboard progress states and stable touch targets", () => {
+    const overview = readFileSync(new URL("../views/OverviewView.vue", import.meta.url), "utf8")
+    const styles = readFileSync(new URL("../styles/base.css", import.meta.url), "utf8")
+    expect(overview).toContain(':data-state="item.state"')
+    expect(styles).toContain('.progress-row[data-state="completed"]')
+    expect(styles).toContain('.progress-row[data-state="in-progress"]')
+    expect(styles).toContain('.progress-row[data-state="not-started"]')
+    expect(styles).toContain(".focus-controls .text-action")
+    expect(styles).toContain(".view-layout > .notice-error .notice-action")
+    expect(styles).toMatch(/\.focus-controls \.text-action[^}]*min-height: 44px/s)
+    expect(styles).toMatch(/\.view-layout > \.notice-error \.notice-action[^}]*min-height: 44px/s)
+  })
+
   it("contains off-screen Web records and disables theme motion when requested", () => {
     const styles = readFileSync(new URL("../styles/base.css", import.meta.url), "utf8")
     expect(styles).toContain("content-visibility: auto")
