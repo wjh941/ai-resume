@@ -15,6 +15,7 @@ describe("useAsyncAction", () => {
     expect(overview).toContain("focusStatus.value =")
     expect(overview).toContain('emit("navigate", activeFocus.value!.target)')
     expect(overview).toContain('v-else-if="overview.hasWorkspaceData"')
+    expect(overview.match(/class="focus-due"/g) ?? []).toHaveLength(1)
     expect(overview).toContain("progress-list")
     expect(overview).toContain("continue-list")
     expect(overview).toContain("鎹竴浠?")

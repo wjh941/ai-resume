@@ -44,7 +44,6 @@ onMounted(refresh)
     <ErrorNotice v-else-if="error" :message="error"><AsyncButton class="notice-action" type="button" :loading="loading" @click="refresh">重新读取</AsyncButton></ErrorNotice>
     <div v-else-if="overview" class="overview-workspace">
       <section class="overview-focus" aria-labelledby="focus-title">
-        <p v-if="activeFocus?.dueLabel" class="focus-due">{{ activeFocus.dueLabel }}</p>
         <article class="focus-panel"><p v-if="activeFocus?.dueLabel" class="focus-due">{{ activeFocus.dueLabel }}</p><div class="section-kicker">今日重点</div><!-- 鎹竴浠? --><h2 id="focus-title">今天先完成这一件事</h2><p v-if="activeFocus" class="focus-title">{{ activeFocus.title }}</p><p v-if="activeFocus?.description" class="focus-detail">{{ activeFocus.description }}</p><p v-if="focusStatus" class="focus-status" aria-live="polite">{{ focusStatus }}</p><div class="focus-controls"><button class="focus-action" type="button" :disabled="loading || !activeFocus" @click="runFocus">开始这项行动 <ArrowUpRight :size="17" aria-hidden="true" /></button><button v-if="overview.focusOptions.length > 1" class="text-action" type="button" :disabled="loading" @click="rotateFocus">换一件</button></div></article>
         <div class="progress-list" aria-label="求职进度"><div v-for="item in overview.progress" :key="item.kind" class="progress-row"><CircleCheck v-if="item.state === 'completed'" :size="18" aria-hidden="true" /><CircleDot v-else :size="18" aria-hidden="true" /><span>{{ item.label }}</span><strong>{{ item.state === 'completed' ? '已完成' : item.state === 'in-progress' ? '进行中' : '未开始' }}</strong><button type="button" :disabled="loading" @click="emit('navigate', item.kind)">进入 <ArrowUpRight :size="15" aria-hidden="true" /></button></div></div>
       </section>
@@ -53,4 +52,3 @@ onMounted(refresh)
     </div>
   </section>
 </template>
-
