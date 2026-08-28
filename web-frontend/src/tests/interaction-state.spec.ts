@@ -40,7 +40,9 @@ describe("interaction state helpers", () => {
       expect(source).not.toContain("capabilityOverride")
       expect(source).not.toContain("getCapabilities")
       expect(source).toContain("context.refresh()")
-      expect(source).toContain(":loading=\"context.refreshing\"")
+      expect(source).toContain("const capabilityRefreshing = computed(() => context.refreshing.value)")
+      expect(source).toContain(":loading=\"capabilityRefreshing\"")
+      expect(source).not.toContain(":loading=\"context.refreshing\"")
       expect(source).toContain("context.capabilities")
     }
   })

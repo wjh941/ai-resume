@@ -33,6 +33,7 @@ const context = inject(CAPABILITIES_KEY) ?? createCapabilityContext()
 const jobMatchingEnabled = computed(() => isCapabilityEnabled(context.capabilities.value, "jobMatching"))
 const capabilityHint = computed(() => context.capabilities.value.jobMatching.notice)
 const capabilityNotice = ref("")
+const capabilityRefreshing = computed(() => context.refreshing.value)
 const result = ref<JobResult | null>(null)
 const loading = ref(false)
 const saving = ref(false)
@@ -132,7 +133,7 @@ async function favorite() {
     </form>
     <ErrorNotice v-if="error" id="jobs-error" :message="error" />
     <ErrorNotice v-if="capabilityNotice" id="jobs-capability-error" :message="capabilityNotice">
-      <AsyncButton class="notice-action" type="button" :loading="context.refreshing" @click="retryCapabilities">重试能力状态</AsyncButton>
+      <AsyncButton class="notice-action" type="button" :loading="capabilityRefreshing" @click="retryCapabilities">重试能力状态</AsyncButton>
       <AsyncButton class="notice-action" type="button" @click="emit('navigate', 'membership')">查看会员权益</AsyncButton>
     </ErrorNotice>
 

@@ -23,6 +23,7 @@ const context = inject(CAPABILITIES_KEY) ?? createCapabilityContext()
 const jobMatchingEnabled = computed(() => isCapabilityEnabled(context.capabilities.value, "jobMatching"))
 const capabilityHint = computed(() => context.capabilities.value.jobMatching.notice)
 const capabilityNotice = ref("")
+const capabilityRefreshing = computed(() => context.refreshing.value)
 const report = ref<Report | null>(null)
 const loading = ref(false)
 const error = ref("")
@@ -77,7 +78,7 @@ async function queryInsights() {
     </form>
     <ErrorNotice v-if="error" id="insights-error" :message="error" />
     <ErrorNotice v-if="capabilityNotice" id="insights-capability-error" :message="capabilityNotice">
-      <AsyncButton class="notice-action" type="button" :loading="context.refreshing" @click="retryCapabilities">重试能力状态</AsyncButton>
+      <AsyncButton class="notice-action" type="button" :loading="capabilityRefreshing" @click="retryCapabilities">重试能力状态</AsyncButton>
       <AsyncButton class="notice-action" type="button" @click="emit('navigate', 'membership')">查看会员权益</AsyncButton>
     </ErrorNotice>
     <article v-if="report" class="insight-result decision-surface decision-emphasis"><div><span class="report-mode-label">{{ report.mode === 'professional' ? '专业版' : '精简版' }}</span><h2>{{ report.summary }}</h2></div><section><h3>建议行动</h3><ol><li v-for="action in report.actions" :key="action">{{ action }}</li></ol></section><section v-if="report.evidence.length"><h3>资料依据</h3><div class="evidence-list"><article v-for="item in report.evidence" :key="`${item.title}-${item.date}`"><strong>{{ item.title }}</strong><p>{{ item.detail }}</p><small>{{ item.date }} · {{ item.scope }}</small></article></div></section><p class="source-notice">{{ report.source_notice }}</p><p v-if="report.upgrade_notice" class="upgrade-notice">{{ report.upgrade_notice }}</p></article>
