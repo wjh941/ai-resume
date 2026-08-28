@@ -27,7 +27,7 @@ export interface CapabilityContext {
 
 export type CapabilityName = keyof Capabilities
 
-export const CAPABILITIES_KEY: InjectionKey<Readonly<Ref<Capabilities>>> = Symbol("capabilities")
+export const CAPABILITIES_KEY: InjectionKey<CapabilityContext> = Symbol("capabilities")
 
 const names: Array<[CapabilityName, string, string]> = [
   ["resumeImport", "resume_import", "简历导入暂不可用。"],

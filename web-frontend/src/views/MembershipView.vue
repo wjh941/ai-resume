@@ -8,14 +8,14 @@ import MembershipPackageCard from "../components/MembershipPackageCard.vue"
 import OrderRow from "../components/OrderRow.vue"
 import ProgressiveListSentinel from "../components/ProgressiveListSentinel.vue"
 import { useIncrementalList } from "../composables/useIncrementalList"
-import { CAPABILITIES_KEY, defaultCapabilities, type Capabilities } from "../lib/capabilities"
+import { CAPABILITIES_KEY, createCapabilityContext } from "../lib/capabilities"
 import { completeDemoPayment, createMembershipOrder, getVipStatus, listMembershipPackages, listOrders, type MembershipOrder, type MembershipPackage, type VipStatus } from "../lib/membership"
 import { prependOrder, replaceOrder } from "../lib/membership-workflow"
 
-const capabilities = inject(CAPABILITIES_KEY, ref<Capabilities>(defaultCapabilities()))
-const paymentEnabled = computed(() => capabilities.value.payment.enabled && capabilities.value.payment.mode !== "disabled")
-const paymentMode = computed(() => capabilities.value.payment.mode)
-const paymentNotice = computed(() => capabilities.value.payment.notice)
+const context = inject(CAPABILITIES_KEY) ?? createCapabilityContext()
+const paymentEnabled = computed(() => context.capabilities.value.payment.enabled && context.capabilities.value.payment.mode !== "disabled")
+const paymentMode = computed(() => context.capabilities.value.payment.mode)
+const paymentNotice = computed(() => context.capabilities.value.payment.notice)
 const vip = ref<VipStatus | null>(null)
 const packages = ref<MembershipPackage[]>([])
 const orders = ref<MembershipOrder[]>([])

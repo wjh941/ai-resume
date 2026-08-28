@@ -32,6 +32,19 @@ describe("interaction state helpers", () => {
     expect(insights).toContain('if (reportMode.value === "professional" && !jobMatchingEnabled.value)')
   })
 
+  it("uses the shared capability refresh state for job and insight retries", () => {
+    const jobs = readFileSync(new URL("../views/JobsView.vue", import.meta.url), "utf8")
+    const insights = readFileSync(new URL("../views/InsightsView.vue", import.meta.url), "utf8")
+
+    for (const source of [jobs, insights]) {
+      expect(source).not.toContain("capabilityOverride")
+      expect(source).not.toContain("getCapabilities")
+      expect(source).toContain("context.refresh()")
+      expect(source).toContain(":loading=\"context.refreshing\"")
+      expect(source).toContain("context.capabilities")
+    }
+  })
+
   it("keeps simplified payloads, loading duplicate guards, and backend errors intact", () => {
     const jobs = readFileSync(new URL("../views/JobsView.vue", import.meta.url), "utf8")
     const insights = readFileSync(new URL("../views/InsightsView.vue", import.meta.url), "utf8")

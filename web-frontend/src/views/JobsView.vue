@@ -6,7 +6,7 @@ import { requestApi } from "../lib/api"
 import AsyncButton from "../components/AsyncButton.vue"
 import ExpandableText from "../components/ExpandableText.vue"
 import type { WorkspaceView } from "../components/WebSidebar.vue"
-import { CAPABILITIES_KEY, defaultCapabilities, getCapabilities, isCapabilityEnabled, type Capabilities } from "../lib/capabilities"
+import { CAPABILITIES_KEY, createCapabilityContext, isCapabilityEnabled } from "../lib/capabilities"
 
 type JobResult = {
   role_name: string
@@ -29,13 +29,10 @@ type JobResult = {
 
 const roleName = ref("")
 const reportMode = ref<"simplified" | "professional">("simplified")
-const capabilities = inject(CAPABILITIES_KEY, ref<Capabilities>(defaultCapabilities()))
-const capabilityOverride = ref<Capabilities | null>(null)
-const effectiveCapabilities = computed(() => capabilityOverride.value ?? capabilities.value)
-const jobMatchingEnabled = computed(() => isCapabilityEnabled(effectiveCapabilities.value, "jobMatching"))
-const capabilityHint = computed(() => effectiveCapabilities.value.jobMatching.notice)
+const context = inject(CAPABILITIES_KEY) ?? createCapabilityContext()
+const jobMatchingEnabled = computed(() => isCapabilityEnabled(context.capabilities.value, "jobMatching"))
+const capabilityHint = computed(() => context.capabilities.value.jobMatching.notice)
 const capabilityNotice = ref("")
-const capabilityRefreshing = ref(false)
 const result = ref<JobResult | null>(null)
 const loading = ref(false)
 const saving = ref(false)
@@ -64,15 +61,12 @@ const hasProfessionalReport = computed(() => result.value?.report?.mode === "pro
 const emit = defineEmits<{ navigate: [view: WorkspaceView] }>()
 
 async function retryCapabilities() {
-  if (capabilityRefreshing.value) return
-  capabilityRefreshing.value = true
+  if (context.refreshing.value) return
   try {
-    capabilityOverride.value = await getCapabilities()
+    await context.refresh()
     capabilityNotice.value = jobMatchingEnabled.value ? "" : capabilityHint.value
   } catch {
     capabilityNotice.value = capabilityHint.value
-  } finally {
-    capabilityRefreshing.value = false
   }
 }
 
@@ -138,7 +132,7 @@ async function favorite() {
     </form>
     <ErrorNotice v-if="error" id="jobs-error" :message="error" />
     <ErrorNotice v-if="capabilityNotice" id="jobs-capability-error" :message="capabilityNotice">
-      <AsyncButton class="notice-action" type="button" :loading="capabilityRefreshing" @click="retryCapabilities">重试能力状态</AsyncButton>
+      <AsyncButton class="notice-action" type="button" :loading="context.refreshing" @click="retryCapabilities">重试能力状态</AsyncButton>
       <AsyncButton class="notice-action" type="button" @click="emit('navigate', 'membership')">查看会员权益</AsyncButton>
     </ErrorNotice>
 

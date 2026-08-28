@@ -5,14 +5,27 @@ import { fileURLToPath } from "node:url"
 import { useAsyncAction } from "../composables/useAsyncAction"
 
 describe("useAsyncAction", () => {
-  it("provides default capabilities and refreshes them without blocking App rendering", () => {
+  it("provides one shared capability context and refreshes it without blocking App rendering", () => {
     const app = readFileSync(new URL("../App.vue", import.meta.url), "utf8")
-    expect(app).toContain("defaultCapabilities()")
-    expect(app).toContain("getCapabilities()")
+    expect(app).toContain("createCapabilityContext()")
     expect(app).toContain("CAPABILITIES_KEY")
-    expect(app).toContain("provide(")
-    expect(app).toContain("void getCapabilities()")
+    expect(app).toContain("provide(CAPABILITIES_KEY, context)")
+    expect(app).toContain("void context.refresh()")
     expect(app).toContain('<LoginPanel v-if="!session"')
+  })
+
+  it("injects the shared capability context across capability-aware consumers", () => {
+    const app = readFileSync(new URL("../App.vue", import.meta.url), "utf8")
+    const login = readFileSync(new URL("../components/LoginPanel.vue", import.meta.url), "utf8")
+    const membership = readFileSync(new URL("../views/MembershipView.vue", import.meta.url), "utf8")
+    const jobs = readFileSync(new URL("../views/JobsView.vue", import.meta.url), "utf8")
+    const insights = readFileSync(new URL("../views/InsightsView.vue", import.meta.url), "utf8")
+
+    for (const source of [login, membership, jobs, insights]) {
+      expect(source).toContain("inject(CAPABILITIES_KEY")
+      expect(source).toContain("context.capabilities")
+    }
+    expect(app).toContain("provide(CAPABILITIES_KEY, context)")
   })
 
   it("keeps SMS visible but gates its request when the capability is disabled", () => {
@@ -28,8 +41,8 @@ describe("useAsyncAction", () => {
   it("keeps password login as the fallback while capabilities are pending or unavailable", () => {
     const app = readFileSync(new URL("../App.vue", import.meta.url), "utf8")
     const login = readFileSync(new URL("../components/LoginPanel.vue", import.meta.url), "utf8")
-    expect(app).toContain("ref(defaultCapabilities())")
-    expect(app).toContain("getCapabilities().then")
+    expect(app).toContain("createCapabilityContext()")
+    expect(app).toContain("void context.refresh()")
     expect(login).toContain('ref<"password" | "phone">("password")')
     expect(login).toContain("mode === 'password'")
     expect(login).toContain("loginWithPassword")

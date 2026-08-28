@@ -4,7 +4,7 @@ import { computed, inject, ref } from "vue"
 
 import { loginWithPassword, loginWithPhone, registerAccount } from "../lib/auth"
 import { requestApi } from "../lib/api"
-import { CAPABILITIES_KEY, defaultCapabilities, isCapabilityEnabled } from "../lib/capabilities"
+import { CAPABILITIES_KEY, createCapabilityContext, isCapabilityEnabled } from "../lib/capabilities"
 import type { Session } from "../lib/session"
 import AsyncButton from "./AsyncButton.vue"
 
@@ -22,9 +22,9 @@ const loading = ref(false)
 const sending = ref(false)
 const hint = ref("")
 const error = ref("")
-const capabilities = inject(CAPABILITIES_KEY, ref(defaultCapabilities()))
-const smsLoginEnabled = computed(() => isCapabilityEnabled(capabilities.value, "smsLogin"))
-const smsLoginNotice = computed(() => capabilities.value.smsLogin.notice)
+const context = inject(CAPABILITIES_KEY) ?? createCapabilityContext()
+const smsLoginEnabled = computed(() => isCapabilityEnabled(context.capabilities.value, "smsLogin"))
+const smsLoginNotice = computed(() => context.capabilities.value.smsLogin.notice)
 
 const submitLabel = computed(() => {
   if (mode.value === "phone") return "手机号登录"
@@ -32,7 +32,7 @@ const submitLabel = computed(() => {
 })
 
 async function sendCode() {
-  if (!isCapabilityEnabled(capabilities.value, "smsLogin")) {
+  if (!isCapabilityEnabled(context.capabilities.value, "smsLogin")) {
     error.value = smsLoginNotice.value
     hint.value = smsLoginNotice.value
     return
@@ -63,7 +63,7 @@ async function submit() {
   if (loading.value || sending.value) return
   error.value = ""
   hint.value = ""
-  if (mode.value === "phone" && !isCapabilityEnabled(capabilities.value, "smsLogin")) {
+  if (mode.value === "phone" && !isCapabilityEnabled(context.capabilities.value, "smsLogin")) {
     error.value = smsLoginNotice.value
     hint.value = smsLoginNotice.value
     return
