@@ -20,6 +20,7 @@ describe("membership workflow helpers", () => {
 
   it("disables pending payment and explains when the payment capability is unavailable", () => {
     const source = membershipView()
+    const card = readFileSync(new URL("../components/MembershipPackageCard.vue", import.meta.url), "utf8")
 
     expect(source).toContain("CAPABILITIES_KEY")
     expect(source).toContain("paymentEnabled")
@@ -29,6 +30,18 @@ describe("membership workflow helpers", () => {
     expect(source).toContain("if (!paymentEnabled.value) {")
     expect(source).toContain("capabilityNotice.value = paymentNotice.value")
     expect(source).toContain("if (paymentMode.value !== \"demo\") return")
+    expect(source).toContain(":payment-enabled=\"paymentEnabled\"")
+    expect(source).toContain(":payment-notice=\"paymentNotice\"")
+    expect(card).toContain("paymentEnabled: boolean")
+    expect(card).toContain("paymentNotice: string")
+    expect(card).toContain(':disabled="!paymentEnabled"')
+    expect(card).toContain("{{ paymentNotice }}")
+
+    const purchaseStart = source.indexOf("async function purchase")
+    const purchaseGuard = source.indexOf("if (!paymentEnabled.value)", purchaseStart)
+    const createOrder = source.indexOf("createMembershipOrder", purchaseStart)
+    expect(purchaseGuard).toBeGreaterThan(purchaseStart)
+    expect(purchaseGuard).toBeLessThan(createOrder)
   })
 
   it("does not render a disabled payment notice as a success message", () => {
