@@ -1,4 +1,5 @@
 import { requestApi } from "./api"
+import { readonly, ref } from "vue"
 import type { InjectionKey, Ref } from "vue"
 
 export type CapabilityMode = "real" | "demo" | "disabled"
@@ -16,6 +17,12 @@ export interface Capabilities {
   payment: Capability
   pushNotifications: Capability
   jobMatching: Capability
+}
+
+export interface CapabilityContext {
+  capabilities: Readonly<Ref<Capabilities>>
+  refreshing: Readonly<Ref<boolean>>
+  refresh: () => Promise<Capabilities>
 }
 
 export type CapabilityName = keyof Capabilities
@@ -66,11 +73,39 @@ export function mapCapabilities(payload: unknown): Capabilities {
   return mapped
 }
 
-export async function getCapabilities(): Promise<Capabilities> {
+export async function getCapabilities(fallback = defaultCapabilities()): Promise<Capabilities> {
   try {
     return mapCapabilities(await requestApi<unknown>("/health"))
   } catch {
-    return defaultCapabilities()
+    return fallback
+  }
+}
+
+export function createCapabilityContext(): CapabilityContext {
+  const capabilities = ref(defaultCapabilities())
+  const refreshing = ref(false)
+  let inFlight: Promise<Capabilities> | null = null
+
+  function refresh(): Promise<Capabilities> {
+    if (inFlight) return inFlight
+
+    refreshing.value = true
+    inFlight = getCapabilities(capabilities.value)
+      .then((value) => {
+        capabilities.value = value
+        return value
+      })
+      .finally(() => {
+        refreshing.value = false
+        inFlight = null
+      })
+    return inFlight
+  }
+
+  return {
+    capabilities: readonly(capabilities),
+    refreshing: readonly(refreshing),
+    refresh,
   }
 }
 

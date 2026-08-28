@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { requestApi } from "../lib/api"
 import {
+  createCapabilityContext,
   defaultCapabilities,
   getCapabilities,
   isCapabilityEnabled,
@@ -80,6 +81,11 @@ describe("capabilities", () => {
 
     requestApiMock.mockRejectedValueOnce(new Error("offline"))
     await expect(getCapabilities()).resolves.toEqual(defaultCapabilities())
+
+    const fallback = defaultCapabilities()
+    fallback.payment = { enabled: true, mode: "demo", notice: "本地回退" }
+    requestApiMock.mockRejectedValueOnce(new Error("offline"))
+    await expect(getCapabilities(fallback)).resolves.toEqual(fallback)
   })
 
   it("only enables non-disabled capabilities", () => {
@@ -91,5 +97,60 @@ describe("capabilities", () => {
     expect(isCapabilityEnabled(capabilities, "resumeImport")).toBe(true)
     expect(isCapabilityEnabled(capabilities, "smsLogin")).toBe(false)
     expect(isCapabilityEnabled(capabilities, "payment")).toBe(false)
+  })
+
+  it("starts a shared context with disabled capabilities and no refresh in progress", () => {
+    const context = createCapabilityContext()
+
+    expect(context.capabilities.value).toEqual(defaultCapabilities())
+    expect(context.refreshing.value).toBe(false)
+  })
+
+  it("tracks the refresh lifecycle and replaces capabilities on success", async () => {
+    let resolveRequest!: (value: unknown) => void
+    requestApiMock.mockReturnValueOnce(new Promise((resolve) => { resolveRequest = resolve }))
+    const context = createCapabilityContext()
+
+    const refresh = context.refresh()
+    expect(context.refreshing.value).toBe(true)
+
+    resolveRequest({ features: { payment: { enabled: true, mode: "real", notice: "可支付" } } })
+    await expect(refresh).resolves.toMatchObject({ payment: { enabled: true } })
+    expect(context.capabilities.value.payment.enabled).toBe(true)
+    expect(context.refreshing.value).toBe(false)
+  })
+
+  it("deduplicates concurrent refresh calls", async () => {
+    let resolveRequest!: (value: unknown) => void
+    requestApiMock.mockReturnValueOnce(new Promise((resolve) => { resolveRequest = resolve }))
+    const context = createCapabilityContext()
+
+    const first = context.refresh()
+    const second = context.refresh()
+    expect(requestApiMock).toHaveBeenCalledTimes(1)
+
+    resolveRequest({ features: {} })
+    await Promise.all([first, second])
+  })
+
+  it("keeps defaults after the first refresh fails", async () => {
+    requestApiMock.mockRejectedValueOnce(new Error("offline"))
+    const context = createCapabilityContext()
+
+    await expect(context.refresh()).resolves.toEqual(defaultCapabilities())
+    expect(context.capabilities.value).toEqual(defaultCapabilities())
+    expect(context.refreshing.value).toBe(false)
+  })
+
+  it("preserves the latest valid state when a later refresh fails", async () => {
+    requestApiMock
+      .mockResolvedValueOnce({ features: { payment: { enabled: true, mode: "real", notice: "可支付" } } })
+      .mockRejectedValueOnce(new Error("offline"))
+    const context = createCapabilityContext()
+
+    await context.refresh()
+    const current = context.capabilities.value
+    await expect(context.refresh()).resolves.toEqual(current)
+    expect(context.capabilities.value).toEqual(current)
   })
 })
