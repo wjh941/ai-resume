@@ -64,6 +64,10 @@ async function queryInsights() {
     capabilityNotice.value = capabilityHint.value
     return
   }
+  if (reportMode.value === "professional" && capabilityRefreshing.value) {
+    capabilityNotice.value = capabilityHint.value
+    return
+  }
   loading.value = true
   error.value = ""
   capabilityNotice.value = ""

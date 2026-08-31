@@ -271,6 +271,20 @@ describe.each([
     expect(wrapper.find(`#${reasonId}`).text()).toContain("检查中")
   })
 
+  it("blocks professional submission while capability refresh is in flight", async () => {
+    const test = testCapabilities({ jobMatching: enabled("Matching enabled") })
+    test.refreshing.value = true
+    const wrapper = mount(component, {
+      global: { provide: { [CAPABILITIES_KEY]: test.context }, stubs: viewStubs },
+    })
+    await wrapper.find(roleInput).setValue("Data analyst")
+    ;(wrapper.vm as unknown as { reportMode: "simplified" | "professional" }).reportMode = "professional"
+    await wrapper.find("form").trigger("submit")
+    await flushPromises()
+
+    expect(requestApiMock).not.toHaveBeenCalledWith(querySelector, expect.anything())
+  })
+
   it("labels demo professional results and discloses non-real-time source data", async () => {
     const test = testCapabilities({ jobMatching: { enabled: true, mode: "demo", notice: "Local demo matching" } })
     const wrapper = mount(component, {
