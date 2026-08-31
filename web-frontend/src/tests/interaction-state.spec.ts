@@ -47,6 +47,45 @@ describe("interaction state helpers", () => {
     }
   })
 
+  it("derives full job matching state and a demo-aware professional label", () => {
+    const jobs = readFileSync(new URL("../views/JobsView.vue", import.meta.url), "utf8")
+    const insights = readFileSync(new URL("../views/InsightsView.vue", import.meta.url), "utf8")
+
+    for (const source of [jobs, insights]) {
+      expect(source).toContain('const jobMatchingState = computed<"loading" | "real" | "demo" | "disabled">')
+      expect(source).toContain('return "loading"')
+      expect(source).toContain('return "disabled"')
+      expect(source).toContain('return capability.mode')
+      expect(source).toContain('const professionalModeLabel = computed(() => jobMatchingState.value === "demo" ? "专业版（演示）" : "专业版")')
+      expect(source).toContain("const capabilityHint = computed(() => context.capabilities.value.jobMatching.notice)")
+    }
+  })
+
+  it("falls back from professional mode on capability downgrade without changing inputs", () => {
+    const jobs = readFileSync(new URL("../views/JobsView.vue", import.meta.url), "utf8")
+    const insights = readFileSync(new URL("../views/InsightsView.vue", import.meta.url), "utf8")
+
+    for (const source of [jobs, insights]) {
+      expect(source).toContain("watch(jobMatchingEnabled, (enabled, wasEnabled) =>")
+      expect(source).toContain('if (wasEnabled && !enabled && reportMode.value === "professional")')
+      expect(source).toContain('reportMode.value = "simplified"')
+      expect(source).toContain("if (!wasEnabled && enabled) capabilityNotice.value = \"\"")
+      expect(source).not.toContain("roleName.value = \"\"")
+      expect(source).not.toContain("year.value = \"\"")
+    }
+  })
+
+  it("clears notices only after enabled refreshes and preserves them after failures", () => {
+    const jobs = readFileSync(new URL("../views/JobsView.vue", import.meta.url), "utf8")
+    const insights = readFileSync(new URL("../views/InsightsView.vue", import.meta.url), "utf8")
+
+    for (const source of [jobs, insights]) {
+      expect(source).toContain("await context.refresh()")
+      expect(source).toContain('capabilityNotice.value = jobMatchingEnabled.value ? "" : capabilityHint.value')
+      expect(source).toMatch(/catch \{\s*\/\/[^\n]*\s*\}/)
+    }
+  })
+
   it("keeps simplified payloads, loading duplicate guards, and backend errors intact", () => {
     const jobs = readFileSync(new URL("../views/JobsView.vue", import.meta.url), "utf8")
     const insights = readFileSync(new URL("../views/InsightsView.vue", import.meta.url), "utf8")
