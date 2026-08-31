@@ -338,6 +338,13 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .mode-switch button { min-width: 74px; padding: 0 11px; color: var(--muted); border: 0; background: transparent; font-size: 13px; }
 .mode-switch button:hover:not(.is-selected) { color: var(--ink); background: color-mix(in srgb, var(--surface-raised) 72%, transparent); }
 .mode-switch button.is-selected { color: var(--primary-strong); background: var(--primary-tint); font-weight: 750; }
+.mode-notice { grid-column: 1 / -1; min-width: 0; padding: 8px 10px; margin: 0; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; background: var(--surface-inset); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.mode-notice.is-demo { color: var(--primary-strong); border-color: color-mix(in srgb, var(--primary) 24%, var(--line)); background: color-mix(in srgb, var(--primary-tint) 72%, var(--surface)); }
+.mode-notice.is-unavailable { color: color-mix(in srgb, var(--warning) 78%, var(--ink)); border-color: color-mix(in srgb, var(--warning) 28%, var(--line)); background: color-mix(in srgb, var(--warning) 10%, var(--surface)); }
+.mode-recovery-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.mode-switch button.is-unavailable { color: var(--muted); opacity: .52; cursor: not-allowed; filter: saturate(.55); background: var(--surface-inset); }
+.mode-switch button.is-selected.is-unavailable { color: var(--muted) !important; background: var(--surface-inset) !important; font-weight: 650; }
+.mode-switch [aria-disabled="true"] { cursor: not-allowed; }
 .mode-switch button:active:not(:disabled) { transform: scale(var(--press-scale)); }
 .job-result, .insight-result, .account-scope { display: grid; gap: 26px; padding: 28px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .role-query { border: 1px solid color-mix(in srgb, var(--coral) 34%, var(--line)); background: var(--accent-tint); box-shadow: var(--shadow-panel); }
@@ -727,6 +734,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .result-heading { align-items: flex-start; flex-direction: column; }
   .job-reference-notice { flex-direction: column; gap: 5px; }
   .editor-section-heading { align-items: flex-start; flex-direction: column; }
+  .mode-recovery-actions { align-items: stretch; }
+  .mode-recovery-actions .notice-action { flex: 1 1 150px; }
 }
 @media (min-width: 1600px) {
   .workspace-stage { max-width: 1360px; padding-inline: clamp(68px, 5vw, 96px); }

@@ -454,4 +454,21 @@ describe("useAsyncAction", () => {
     expect(styles).toContain("group-swipe")
     expect(styles).toContain("liquid-slider-fill")
   })
+
+  it("defines visual trust-state contracts for analysis modes", () => {
+    const styles = readFileSync(new URL("../styles/base.css", import.meta.url), "utf8")
+
+    expect(styles).toContain(".mode-notice")
+    expect(styles).toContain(".mode-notice.is-demo")
+    expect(styles).toContain(".mode-notice.is-unavailable")
+    expect(styles).toContain(".mode-switch button.is-unavailable")
+    expect(styles).toContain('[aria-disabled="true"]')
+    expect(styles).toMatch(/\.mode-switch button\.is-unavailable \{[^}]*opacity:\s*[^;]+;[^}]*cursor:\s*not-allowed/s)
+    expect(styles).toMatch(/\.mode-switch button\.is-selected\.is-unavailable \{[^}]*background:[^}]*!important/s)
+    expect(styles).toMatch(/\.mode-notice\.is-demo \{[^}]*var\(--primary[^}]*var\(--primary-tint/s)
+    expect(styles).not.toMatch(/\.mode-notice\.is-demo \{[^}]*var\(--(?:success|accent|coral)/s)
+    expect(styles).toMatch(/\.mode-recovery-actions \{[^}]*display:\s*flex;[^}]*flex-wrap:\s*wrap/s)
+    expect(styles).toContain("@media (max-width: 480px)")
+    expect(styles).toContain(".mode-recovery-actions .notice-action")
+  })
 })
