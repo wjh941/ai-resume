@@ -178,14 +178,20 @@ describe.each([
     component: JobsView,
     querySelector: "/api/job/query",
     roleInput: 'input[maxlength="200"]',
+    reasonId: "jobs-professional-mode-reason",
     result: { role_name: "Data analyst" },
     simplifiedPayload: { role_name: "Data analyst", report_mode: "simplified" },
+    demoResult: {
+      role_name: "Data analyst",
+      report: { mode: "professional", summary: "Demo summary", actions: [], source_notice: "Source", evidence: [] },
+    },
   },
   {
     name: "InsightsView",
     component: InsightsView,
     querySelector: "/api/career/annual-insights/query",
     roleInput: 'input[maxlength="120"]',
+    reasonId: "insights-professional-mode-reason",
     result: {
       report: {
         mode: "simplified",
@@ -195,9 +201,18 @@ describe.each([
         evidence: [],
       },
     },
+    demoResult: {
+      report: {
+        mode: "professional",
+        summary: "Demo summary",
+        actions: [],
+        source_notice: "Source",
+        evidence: [],
+      },
+    },
     simplifiedPayload: { role_name: "Data analyst", year: 2024, report_mode: "simplified" },
   },
-])("$name capability gates", ({ component, querySelector, roleInput, result, simplifiedPayload }) => {
+])("$name capability gates", ({ component, querySelector, roleInput, reasonId, result, demoResult, simplifiedPayload }) => {
   function mountView() {
     const test = testCapabilities({ jobMatching: disabled("Professional matching is unavailable") })
     const wrapper = mount(component, {
@@ -206,19 +221,71 @@ describe.each([
     return { wrapper, ...test }
   }
 
-  it("blocks professional queries, shows the capability error, and exposes retry", async () => {
-    const { wrapper, refresh } = mountView()
+  it("disables professional mode with a linked reason and keeps recovery actions in the mode area", async () => {
+    const { wrapper } = mountView()
     await wrapper.find(roleInput).setValue("Data analyst")
-    await wrapper.find("button.is-unavailable").trigger("click")
+    const professional = wrapper.find("button.is-unavailable")
+    expect(professional.element).toHaveProperty("disabled", true)
+    expect(professional.attributes("aria-describedby")).toBe(reasonId)
+    expect(wrapper.find(`#${reasonId}`).text()).toContain("Professional matching is unavailable")
+    expect(wrapper.find(".mode-switch").text()).toContain("重试服务状态")
+    expect(wrapper.find(".mode-switch").text()).toContain("查看会员权益")
+
+    await professional.trigger("click")
+    expect(wrapper.find("button.is-selected").text()).toContain("精简版")
+    ;(wrapper.vm as unknown as { reportMode: "simplified" | "professional" }).reportMode = "professional"
+    await wrapper.find("form").trigger("submit")
+    await flushPromises()
+    expect(requestApiMock).not.toHaveBeenCalledWith(querySelector, expect.anything())
+    await wrapper.find(".mode-switch button.notice-action:last-child").trigger("click")
+    expect(wrapper.emitted("navigate")).toEqual([["membership"]])
+  })
+
+  it("retries the shared capability state without automatically submitting a query", async () => {
+    const { wrapper, refresh, state } = mountView()
+    refresh.mockImplementationOnce(async () => {
+      state.value = { ...state.value, jobMatching: enabled("Matching enabled") }
+      return state.value
+    })
+    await wrapper.find(roleInput).setValue("Data analyst")
+    const retry = wrapper.findAll(".mode-switch button.notice-action").find((button) => button.text().includes("重试服务状态"))
+    expect(retry).toBeDefined()
+    await retry!.trigger("click")
+    await flushPromises()
+
+    expect(refresh).toHaveBeenCalledTimes(1)
+    expect(requestApiMock).not.toHaveBeenCalledWith(querySelector, expect.anything())
+    expect(wrapper.find("button.is-unavailable").exists()).toBe(false)
+  })
+
+  it("describes the shared loading state and disables professional mode", async () => {
+    const test = testCapabilities({ jobMatching: enabled("Matching enabled") })
+    test.refreshing.value = true
+    const wrapper = mount(component, {
+      global: { provide: { [CAPABILITIES_KEY]: test.context }, stubs: viewStubs },
+    })
+
+    const professional = wrapper.findAll("button").find((button) => button.text().includes("专业版"))!
+    expect(professional.element).toHaveProperty("disabled", true)
+    expect(professional.attributes("aria-describedby")).toBe(reasonId)
+    expect(wrapper.find(`#${reasonId}`).text()).toContain("检查中")
+  })
+
+  it("labels demo professional results and discloses non-real-time source data", async () => {
+    const test = testCapabilities({ jobMatching: { enabled: true, mode: "demo", notice: "Local demo matching" } })
+    const wrapper = mount(component, {
+      global: { provide: { [CAPABILITIES_KEY]: test.context }, stubs: viewStubs },
+    })
+    requestApiMock.mockResolvedValueOnce(demoResult)
+    await wrapper.find(roleInput).setValue("Data analyst")
+    const professional = wrapper.findAll("button").find((button) => button.text().includes("专业版"))!
+    await professional.trigger("click")
     await wrapper.find("form").trigger("submit")
     await flushPromises()
 
-    expect(requestApiMock).not.toHaveBeenCalledWith(querySelector, expect.anything())
-    expect(wrapper.find('[role="alert"]').text()).toContain("Professional matching is unavailable")
-    const retry = wrapper.find("button.notice-action")
-    expect(retry.exists()).toBe(true)
-    await retry.trigger("click")
-    expect(refresh).toHaveBeenCalledTimes(1)
+    expect(wrapper.find("button.is-selected").text()).toContain("专业版（演示）")
+    expect(wrapper.find(".report-mode-label").text()).toContain("专业版（演示）")
+    expect(wrapper.text()).toContain("本地/演示数据不代表实时职位或真实市场洞察")
   })
 
   it("keeps simplified queries on the unchanged endpoint and payload", async () => {
@@ -252,10 +319,6 @@ describe("shared capability context runtime", () => {
     const forms = wrapper.findAll("form")
     await forms[0].find('input[maxlength="200"]').setValue("Data analyst")
     await forms[1].find('input[maxlength="120"]').setValue("Data analyst")
-    await forms[0].find("button.is-unavailable").trigger("click")
-    await forms[1].find("button.is-unavailable").trigger("click")
-    await forms[0].trigger("submit")
-    await forms[1].trigger("submit")
     await wrapper.vm.$nextTick()
 
     const retries = wrapper.findAll("button.notice-action")

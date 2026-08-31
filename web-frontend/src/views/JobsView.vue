@@ -39,6 +39,9 @@ const jobMatchingState = computed<"loading" | "real" | "demo" | "disabled">(() =
 })
 const professionalModeLabel = computed(() => jobMatchingState.value === "demo" ? "专业版（演示）" : "专业版")
 const capabilityHint = computed(() => context.capabilities.value.jobMatching.notice)
+const professionalModeReason = computed(() => jobMatchingState.value === "loading" ? "检查中，请稍候。" : capabilityHint.value)
+const showProfessionalReason = computed(() => jobMatchingState.value === "loading" || jobMatchingState.value === "disabled")
+const demoSourceNotice = "本地/演示数据不代表实时职位或真实市场洞察。"
 const capabilityNotice = ref("")
 const capabilityRefreshing = computed(() => context.refreshing.value)
 const result = ref<JobResult | null>(null)
@@ -138,9 +141,13 @@ async function favorite() {
       <label><span>目标岗位</span><input v-model.trim="roleName" maxlength="200" placeholder="例如：数据分析师" :aria-invalid="Boolean(roleFieldError)" :aria-describedby="roleFieldError ? 'jobs-role-error' : undefined" /><small v-if="roleFieldError" id="jobs-role-error" class="form-error">{{ roleFieldError }}</small></label>
       <div class="mode-switch" role="group" aria-label="报告表达方式">
         <button type="button" :disabled="loading" :class="{ 'is-selected': reportMode === 'simplified' }" @click="reportMode = 'simplified'">精简版</button>
-        <button type="button" :disabled="loading" :aria-disabled="!jobMatchingEnabled" :class="{ 'is-selected': reportMode === 'professional', 'is-unavailable': !jobMatchingEnabled }" :title="!jobMatchingEnabled ? capabilityHint : undefined" @click="reportMode = 'professional'">{{ professionalModeLabel }}</button>
+        <button type="button" :disabled="loading || !jobMatchingEnabled || capabilityRefreshing" :aria-disabled="!jobMatchingEnabled || capabilityRefreshing" :aria-describedby="showProfessionalReason ? 'jobs-professional-mode-reason' : undefined" :class="{ 'is-selected': reportMode === 'professional', 'is-unavailable': !jobMatchingEnabled }" :title="!jobMatchingEnabled ? capabilityHint : undefined" @click="reportMode = 'professional'">{{ professionalModeLabel }}</button>
+        <small v-if="showProfessionalReason" id="jobs-professional-mode-reason" class="mode-notice">{{ professionalModeReason }}</small>
+        <div v-if="!jobMatchingEnabled" class="mode-recovery-actions">
+          <AsyncButton class="notice-action" type="button" :loading="capabilityRefreshing" @click="retryCapabilities">重试服务状态</AsyncButton>
+          <AsyncButton class="notice-action" type="button" @click="emit('navigate', 'membership')">查看会员权益</AsyncButton>
+        </div>
       </div>
-      <small v-if="!jobMatchingEnabled" class="mode-notice">{{ capabilityHint }}</small>
       <AsyncButton class="primary-button compact" type="submit" :loading="loading"><Search :size="17" aria-hidden="true" />{{ loading ? "分析中" : "查询岗位" }}</AsyncButton>
     </form>
     <ErrorNotice v-if="error" id="jobs-error" :message="error" />
@@ -158,7 +165,7 @@ async function favorite() {
         <div class="heading-actions"><AsyncButton class="text-action" type="button" @click="emit('navigate', 'comparison')">加入岗位对比</AsyncButton><AsyncButton class="text-action" type="button" :loading="saving" @click="favorite"><BookmarkPlus :size="16" aria-hidden="true" />收藏岗位</AsyncButton></div>
       </div>
 
-      <div class="job-reference-notice" role="note"><strong>先看结论</strong><span>{{ result.report?.source_notice || "以下内容来自结构化岗位知识，用于准备和复核正式 JD。" }}</span></div>
+      <div class="job-reference-notice" role="note"><strong>先看结论</strong><span>{{ result.report?.source_notice || "以下内容来自结构化岗位知识，用于准备和复核正式 JD。" }}</span><span v-if="hasProfessionalReport && jobMatchingState === 'demo'" class="source-notice demo-source-notice">{{ demoSourceNotice }}</span></div>
 
       <div class="job-intelligence-grid">
         <section class="job-intelligence-card job-intelligence-card-primary"><div class="job-card-heading"><h3>硬性门槛</h3><span>筛选优先级高</span></div><ul v-if="hardRequirements.length" class="plain-list"><li v-for="item in hardRequirements" :key="item">{{ item }}</li></ul><p v-else class="job-muted">暂未提供硬性门槛，请以正式 JD 为准。</p></section>
