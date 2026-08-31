@@ -300,6 +300,12 @@ describe.each([
     expect(wrapper.find("button.is-selected").text()).toContain("专业版（演示）")
     expect(wrapper.find(".report-mode-label").text()).toContain("专业版（演示）")
     expect(wrapper.text()).toContain("本地/演示数据不代表实时职位或真实市场洞察")
+
+    // A rendered report keeps the capability provenance it was generated with.
+    test.state.value = { ...test.state.value, jobMatching: disabled("Professional matching is unavailable") }
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find(".report-mode-label").text()).toContain("专业版（演示）")
+    expect(wrapper.text()).toContain("本地/演示数据不代表实时职位或真实市场洞察")
   })
 
   it("keeps simplified queries on the unchanged endpoint and payload", async () => {

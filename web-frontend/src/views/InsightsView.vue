@@ -27,6 +27,8 @@ const jobMatchingState = computed<"loading" | "real" | "demo" | "disabled">(() =
   if (!capability.enabled || capability.mode === "disabled") return "disabled"
   return capability.mode
 })
+const resultCapabilityMode = ref<"real" | "demo" | null>(null)
+const resultModeLabel = computed(() => resultCapabilityMode.value === "demo" ? "专业版（演示）" : "专业版")
 const professionalModeLabel = computed(() => jobMatchingState.value === "demo" ? "专业版（演示）" : "专业版")
 const capabilityHint = computed(() => context.capabilities.value.jobMatching.notice)
 const professionalModeReason = computed(() => jobMatchingState.value === "loading" ? "检查中，请稍候。" : capabilityHint.value)
@@ -68,6 +70,9 @@ async function queryInsights() {
     capabilityNotice.value = capabilityHint.value
     return
   }
+  const requestedCapabilityMode = reportMode.value === "professional" && (jobMatchingState.value === "real" || jobMatchingState.value === "demo")
+    ? jobMatchingState.value
+    : null
   loading.value = true
   error.value = ""
   capabilityNotice.value = ""
@@ -77,6 +82,7 @@ async function queryInsights() {
       body: JSON.stringify({ role_name: roleName.value.trim(), year: Number(year.value), report_mode: reportMode.value }),
     })
     report.value = response.report
+    resultCapabilityMode.value = response.report.mode === "professional" ? requestedCapabilityMode : null
   } catch {
     error.value = "年度洞察暂时无法查询。请检查权限或稍后重试。"
   } finally {
@@ -99,7 +105,7 @@ async function queryInsights() {
       <AsyncButton class="notice-action" type="button" :loading="capabilityRefreshing" @click="retryCapabilities">重试能力状态</AsyncButton>
       <AsyncButton class="notice-action" type="button" @click="emit('navigate', 'membership')">查看会员权益</AsyncButton>
     </ErrorNotice>
-    <article v-if="report" class="insight-result decision-surface decision-emphasis"><div><span class="report-mode-label">{{ report.mode === 'professional' ? professionalModeLabel : '精简版' }}</span><h2>{{ report.summary }}</h2></div><section><h3>建议行动</h3><ol><li v-for="action in report.actions" :key="action">{{ action }}</li></ol></section><section v-if="report.evidence.length"><h3>资料依据</h3><div class="evidence-list"><article v-for="item in report.evidence" :key="`${item.title}-${item.date}`"><strong>{{ item.title }}</strong><p>{{ item.detail }}</p><small>{{ item.date }} · {{ item.scope }}</small></article></div></section><p class="source-notice">{{ report.source_notice }}</p><p v-if="report.mode === 'professional' && jobMatchingState === 'demo'" class="source-notice demo-source-notice" role="note">{{ demoSourceNotice }}</p><p v-if="report.upgrade_notice" class="upgrade-notice">{{ report.upgrade_notice }}</p></article>
+    <article v-if="report" class="insight-result decision-surface decision-emphasis"><div><span class="report-mode-label">{{ report.mode === 'professional' ? resultModeLabel : '精简版' }}</span><h2>{{ report.summary }}</h2></div><section><h3>建议行动</h3><ol><li v-for="action in report.actions" :key="action">{{ action }}</li></ol></section><section v-if="report.evidence.length"><h3>资料依据</h3><div class="evidence-list"><article v-for="item in report.evidence" :key="`${item.title}-${item.date}`"><strong>{{ item.title }}</strong><p>{{ item.detail }}</p><small>{{ item.date }} · {{ item.scope }}</small></article></div></section><p class="source-notice">{{ report.source_notice }}</p><p v-if="report.mode === 'professional' && resultCapabilityMode === 'demo'" class="source-notice demo-source-notice" role="note">{{ demoSourceNotice }}</p><p v-if="report.upgrade_notice" class="upgrade-notice">{{ report.upgrade_notice }}</p></article>
     <div v-else-if="!loading" class="empty-board"><BookOpenCheck :size="30" aria-hidden="true" /><div><h2>输入岗位和资料年份</h2><p>精简版提供通俗易懂的行动提示；专业版在拥有权限时会显示资料依据和更完整的行动计划。</p></div></div>
   </section>
 </template>

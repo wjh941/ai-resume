@@ -37,6 +37,8 @@ const jobMatchingState = computed<"loading" | "real" | "demo" | "disabled">(() =
   if (!capability.enabled || capability.mode === "disabled") return "disabled"
   return capability.mode
 })
+const resultCapabilityMode = ref<"real" | "demo" | null>(null)
+const resultModeLabel = computed(() => resultCapabilityMode.value === "demo" ? "专业版（演示）" : "专业版")
 const professionalModeLabel = computed(() => jobMatchingState.value === "demo" ? "专业版（演示）" : "专业版")
 const capabilityHint = computed(() => context.capabilities.value.jobMatching.notice)
 const professionalModeReason = computed(() => jobMatchingState.value === "loading" ? "检查中，请稍候。" : capabilityHint.value)
@@ -106,15 +108,21 @@ async function queryRole() {
     return
   }
 
+  const requestedCapabilityMode = reportMode.value === "professional" && (jobMatchingState.value === "real" || jobMatchingState.value === "demo")
+    ? jobMatchingState.value
+    : null
+
   loading.value = true
   roleFieldError.value = ""
   error.value = ""
   capabilityNotice.value = ""
   try {
-    result.value = await requestApi<JobResult>("/api/job/query", {
+    const nextResult = await requestApi<JobResult>("/api/job/query", {
       method: "POST",
       body: JSON.stringify({ role_name: roleName.value.trim(), report_mode: reportMode.value }),
     })
+    result.value = nextResult
+    resultCapabilityMode.value = nextResult.report?.mode === "professional" ? requestedCapabilityMode : null
   } catch {
     error.value = "岗位分析暂时不可用。请确认 AI 服务已配置，或稍后重试。"
   } finally {
@@ -169,7 +177,7 @@ async function favorite() {
         <div class="heading-actions"><AsyncButton class="text-action" type="button" @click="emit('navigate', 'comparison')">加入岗位对比</AsyncButton><AsyncButton class="text-action" type="button" :loading="saving" @click="favorite"><BookmarkPlus :size="16" aria-hidden="true" />收藏岗位</AsyncButton></div>
       </div>
 
-      <div class="job-reference-notice" role="note"><strong>先看结论</strong><span>{{ result.report?.source_notice || "以下内容来自结构化岗位知识，用于准备和复核正式 JD。" }}</span><span v-if="hasProfessionalReport && jobMatchingState === 'demo'" class="source-notice demo-source-notice">{{ demoSourceNotice }}</span></div>
+      <div class="job-reference-notice" role="note"><strong>先看结论</strong><span>{{ result.report?.source_notice || "以下内容来自结构化岗位知识，用于准备和复核正式 JD。" }}</span><span v-if="hasProfessionalReport && resultCapabilityMode === 'demo'" class="source-notice demo-source-notice">{{ demoSourceNotice }}</span></div>
 
       <div class="job-intelligence-grid">
         <section class="job-intelligence-card job-intelligence-card-primary"><div class="job-card-heading"><h3>硬性门槛</h3><span>筛选优先级高</span></div><ul v-if="hardRequirements.length" class="plain-list"><li v-for="item in hardRequirements" :key="item">{{ item }}</li></ul><p v-else class="job-muted">暂未提供硬性门槛，请以正式 JD 为准。</p></section>
@@ -186,7 +194,7 @@ async function favorite() {
 
       <section class="job-interview-panel"><div class="job-section-heading"><div><h3>面试核验清单</h3><p>不要只背技能名，按“场景—动作—结果—证据”准备回答。</p></div><strong>{{ interviewChecks.length }} 题</strong></div><div v-if="interviewChecks.length" class="interview-check-list"><details v-for="(check, index) in interviewChecks" :key="check.prompt" :open="index === 0"><summary><span>{{ String(index + 1).padStart(2, '0') }}</span><b>{{ check.label }}</b></summary><p>{{ check.prompt }}</p></details></div><p v-else class="job-muted">暂无可生成的核验问题，请先补充岗位职责或要求。</p></section>
 
-      <section class="report-actions"><div class="job-section-heading"><div><h3>下一步建议</h3><p v-if="hasProfessionalReport">专业版已结合岗位要点整理完整行动路径。</p><p v-else>先完成下面三步，再根据真实 JD 调整优先级。</p></div><span class="report-mode-label">{{ hasProfessionalReport ? professionalModeLabel : '精简版' }}</span></div><ol v-if="reportActions.length"><li v-for="action in reportActions" :key="action">{{ action }}</li></ol><p v-else class="job-muted">暂无行动建议，请先整理一条与目标岗位相关的真实经历。</p><p>{{ result.report?.source_notice }}</p><p v-if="!hasProfessionalReport && result.report?.upgrade_notice" class="upgrade-notice">{{ result.report.upgrade_notice }}</p><details v-if="reportEvidence.length" class="report-evidence"><summary>查看专业证据映射（{{ reportEvidence.length }} 条）</summary><ul class="plain-list"><li v-for="evidence in reportEvidence" :key="`${evidence.title}-${evidence.scope}`"><strong>{{ evidence.title || '岗位要点' }}</strong><span>{{ evidence.detail }}</span></li></ul></details></section>
+      <section class="report-actions"><div class="job-section-heading"><div><h3>下一步建议</h3><p v-if="hasProfessionalReport">专业版已结合岗位要点整理完整行动路径。</p><p v-else>先完成下面三步，再根据真实 JD 调整优先级。</p></div><span class="report-mode-label">{{ hasProfessionalReport ? resultModeLabel : '精简版' }}</span></div><ol v-if="reportActions.length"><li v-for="action in reportActions" :key="action">{{ action }}</li></ol><p v-else class="job-muted">暂无行动建议，请先整理一条与目标岗位相关的真实经历。</p><p>{{ result.report?.source_notice }}</p><p v-if="!hasProfessionalReport && result.report?.upgrade_notice" class="upgrade-notice">{{ result.report.upgrade_notice }}</p><details v-if="reportEvidence.length" class="report-evidence"><summary>查看专业证据映射（{{ reportEvidence.length }} 条）</summary><ul class="plain-list"><li v-for="evidence in reportEvidence" :key="`${evidence.title}-${evidence.scope}`"><strong>{{ evidence.title || '岗位要点' }}</strong><span>{{ evidence.detail }}</span></li></ul></details></section>
     </article>
     <div v-else-if="!loading" class="empty-board"><span class="empty-board-icon" aria-hidden="true"><BriefcaseBusiness :size="24" aria-hidden="true" /></span><div><h2>从一个目标岗位开始</h2><p>查询结果用于组织准备和核验方向，不代表实时岗位数量、薪资区间或录用概率。</p><p>输入具体岗位名称后开始整理能力要求。</p></div></div>
   </section>
