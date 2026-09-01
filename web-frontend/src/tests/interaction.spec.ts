@@ -65,6 +65,24 @@ describe("useAsyncAction", () => {
     expect(overview).toContain('aria-live="polite"')
   })
 
+  it("routes continuation resume items to the existing draft editor event", () => {
+    const overview = readFileSync(new URL("../views/OverviewView.vue", import.meta.url), "utf8")
+
+    expect(overview).toContain("function openContinuation(item: ContinuationItem)")
+    expect(overview).toContain('if (item.kind === "resume" && item.id)')
+    expect(overview).toContain('emit("open-draft", item.id)')
+    expect(overview).toContain('emit("navigate", item.target)')
+    expect(overview).toContain("focusStatus.value =")
+  })
+
+  it("keeps continuation buttons accessible and distinguishes resume editing", () => {
+    const overview = readFileSync(new URL("../views/OverviewView.vue", import.meta.url), "utf8")
+
+    expect(overview).toContain('item.kind === "resume" ? "缁х画缂栬緫" : "缁х画"')
+    expect(overview).toContain(":aria-label=")
+    expect(overview).toContain("openContinuation(item)")
+  })
+
   it("keeps the future capability shell presentation-only", () => {
     const source = readFileSync(new URL("../components/FutureCapabilityShell.vue", import.meta.url), "utf8")
     expect(source).not.toContain("requestApi")

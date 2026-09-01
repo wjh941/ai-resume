@@ -49,6 +49,16 @@ it("excludes the selected focus from ordered continuations", () => {
   expect(state.continuations.map((item) => item.id)).toEqual(["app"])
 })
 
+it("keeps draft ids on continuation items for direct editor entry", () => {
+  const state = buildOverviewState({
+    applications: [],
+    drafts: [{ id: "draft-42", job_title: "Product Designer" }],
+    tasks: [{ id: "task-1", title: "Prepare portfolio", status: "pending" }],
+  })
+
+  expect(state.continuations.some((item) => item.kind === "resume" && item.id === "draft-42" && item.target === "resume")).toBe(true)
+})
+
 it("aggregates application, draft, and incomplete task counts from existing APIs", async () => {
   const request = vi.fn().mockResolvedValueOnce({ items: [{ id: "application-1" }, { id: "application-2" }] }).mockResolvedValueOnce([{ id: "draft-1" }]).mockResolvedValueOnce({ items: [{ status: "open" }, { status: "completed" }] })
   await expect(loadOverview(request)).resolves.toMatchObject({ applicationCount: 2, draftCount: 1, openTaskCount: 1 })
