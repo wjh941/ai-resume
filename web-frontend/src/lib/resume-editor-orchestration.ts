@@ -1,4 +1,4 @@
-import { ref, watch } from "vue"
+import { ref, watch, type Ref } from "vue"
 
 import { createDebouncedTask } from "./debounced-task"
 import type { DraftRecord } from "./drafts"
@@ -21,13 +21,24 @@ export type ResumeEditorOrchestrationOptions = {
   registerBeforeUnmount: RegisterLifecycle
 }
 
-export function createResumeEditorOrchestration(options: ResumeEditorOrchestrationOptions) {
+export function createResumeEditorOrchestration(options: ResumeEditorOrchestrationOptions): {
+  draft: ReturnType<typeof ref<DraftRecord | null>>
+  fieldErrors: ReturnType<typeof ref<Record<string, string>>>
+  validationActive: ReturnType<typeof ref<boolean>>
+  localSaveState: ReturnType<typeof ref<LocalSaveState>>
+  hydrated: ReturnType<typeof ref<boolean>>
+  saving: ReturnType<typeof ref<boolean>>
+  isDirty: Ref<boolean>
+  hydrate: (serverDraft: DraftRecord) => Promise<void>
+  save: () => Promise<ResumeEditorSaveResult>
+} {
   const draft = ref<DraftRecord | null>(null)
   const fieldErrors = ref<Record<string, string>>({})
   const validationActive = ref(false)
   const localSaveState = ref<LocalSaveState>("idle")
   const hydrated = ref(false)
   const saving = ref(false)
+  const isDirty = ref(false)
   let checkpointPaused = false
   let draftRevision = 0
   let unmounted = false
@@ -39,6 +50,7 @@ export function createResumeEditorOrchestration(options: ResumeEditorOrchestrati
       localSaveState.value = "saved"
     } catch {
       localSaveState.value = "error"
+      isDirty.value = true
     }
   }
   const localCheckpoint = createDebouncedTask(persistLocalCheckpoint, 800)
@@ -47,6 +59,7 @@ export function createResumeEditorOrchestration(options: ResumeEditorOrchestrati
     if (!currentDraft) return
     if (validationActive.value) fieldErrors.value = options.validate(currentDraft)
     if (!hydrated.value || checkpointPaused) return
+    isDirty.value = true
     draftRevision += 1
     localSaveState.value = "saving"
     localCheckpoint.schedule()
@@ -68,6 +81,7 @@ export function createResumeEditorOrchestration(options: ResumeEditorOrchestrati
     checkpointPaused = true
     try {
       draft.value = loaded
+      isDirty.value = loaded !== serverDraft
       await options.settleDraft()
       hydrated.value = true
     } finally {
@@ -81,18 +95,23 @@ export function createResumeEditorOrchestration(options: ResumeEditorOrchestrati
     options.onSaveStart?.()
     validationActive.value = true
     fieldErrors.value = options.validate(draft.value)
-    if (Object.keys(fieldErrors.value).length) return "invalid"
+    if (Object.keys(fieldErrors.value).length) {
+      isDirty.value = true
+      return "invalid"
+    }
     const savedRevision = draftRevision
 
     saving.value = true
     try {
       const saved = await options.saveRemote(draft.value)
       if (draftRevision !== savedRevision) {
+        isDirty.value = true
         localCheckpoint.flush()
         if (!unmounted) options.onSaved(saved)
         return "saved"
       }
       localCheckpoint.cancel()
+      isDirty.value = false
       if (unmounted) {
         try {
           options.clearCheckpoint(saved.id)
@@ -116,6 +135,7 @@ export function createResumeEditorOrchestration(options: ResumeEditorOrchestrati
       options.onSaved(saved)
       return "saved"
     } catch {
+      isDirty.value = true
       options.onRemoteError()
       return "error"
     } finally {
@@ -123,5 +143,5 @@ export function createResumeEditorOrchestration(options: ResumeEditorOrchestrati
     }
   }
 
-  return { draft, fieldErrors, validationActive, localSaveState, hydrated, saving, hydrate, save }
+  return { draft, fieldErrors, validationActive, localSaveState, hydrated, saving, isDirty, hydrate, save }
 }

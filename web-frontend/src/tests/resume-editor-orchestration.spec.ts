@@ -84,11 +84,13 @@ describe("createResumeEditorOrchestration", () => {
     const { checkpoint, saveRemote, controller } = setup()
 
     await controller.hydrate(validDraft())
+    expect(controller.isDirty.value).toBe(false)
     vi.runAllTimers()
     expect(checkpoint).not.toHaveBeenCalled()
 
     controller.draft.value!.resume.basic.city = "北京"
     await nextTick()
+    expect(controller.isDirty.value).toBe(true)
     vi.advanceTimersByTime(500)
     controller.draft.value!.resume.basic.city = "深圳"
     await nextTick()
@@ -101,6 +103,17 @@ describe("createResumeEditorOrchestration", () => {
     expect(checkpoint).toHaveBeenCalledTimes(1)
     expect(checkpoint).toHaveBeenLastCalledWith(controller.draft.value)
     expect(controller.localSaveState.value).toBe("saved")
+  })
+
+  it("starts dirty when hydration restores a newer checkpoint", async () => {
+    const checkpoint = validDraft()
+    checkpoint.resume.basic.city = "Beijing"
+    checkpoint.updatedAt = "2026-08-24T11:00:00Z"
+    const { controller } = setup({ restoreCheckpoint: () => checkpoint })
+
+    await controller.hydrate(validDraft())
+
+    expect(controller.isDirty.value).toBe(true)
   })
 
   it("falls back to the server draft when storage access fails during hydration", async () => {
@@ -189,6 +202,7 @@ describe("createResumeEditorOrchestration", () => {
     await nextTick()
 
     await expect(controller.save()).resolves.toBe("saved")
+    expect(controller.isDirty.value).toBe(false)
     expect(events).toEqual(["checkpoint", "remote", "clear"])
     expect(onSaved).toHaveBeenCalledTimes(1)
     expect(controller.saving.value).toBe(false)
@@ -256,8 +270,23 @@ describe("createResumeEditorOrchestration", () => {
     await expect(saving).resolves.toBe("saved")
     expect(controller.draft.value!.resume.basic.city).toBe("保存中修改")
     expect(checkpointedCities).toEqual(["保存前", "保存中修改"])
+    expect(controller.isDirty.value).toBe(true)
     expect(clearCheckpoint).not.toHaveBeenCalled()
     expect(onSaved).toHaveBeenCalledWith(saved)
+  })
+
+  it("retains dirty state when the remote save fails", async () => {
+    const { controller, onRemoteError } = setup({
+      saveRemote: async () => { throw new Error("offline") },
+    })
+    await controller.hydrate(validDraft())
+    controller.draft.value!.resume.basic.city = "failed"
+    await nextTick()
+
+    await expect(controller.save()).resolves.toBe("error")
+
+    expect(controller.isDirty.value).toBe(true)
+    expect(onRemoteError).toHaveBeenCalledTimes(1)
   })
 
   it("preserves a changed checkpoint after unmounting during remote save", async () => {
