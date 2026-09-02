@@ -409,7 +409,8 @@ describe("useAsyncAction", () => {
     expect(normalizedApplications).toMatch(/saveApplication\(input\)[\s\S]*if \(!isFollowupDirty\.value\) resetFollowup\(\)/)
     expect(normalizedApplications).toMatch(/async function remove\(item: ApplicationRecord\): Promise<void> \{ if \(pendingKey\.value\) return if \(isDirty\.value\) \{ showLeaveConfirmation\.value = true; return \}/)
     expect(normalizedApplications).toMatch(/deleteApplication\(item\.id\)[\s\S]*expandedId\.value = null; resetFollowup\(\); showLeaveConfirmation\.value = false/)
-    expect(normalizedApplications.match(/followupBaseline\.value = createApplicationFormSnapshot\(emptyForm, timelineForm\.value, reminderAt\.value\); showLeaveConfirmation\.value = false/g) ?? []).toHaveLength(2)
+    expect(normalizedApplications).toContain("createApplicationFormSnapshot(emptyForm, timelineForm.value, followupBaseline.value.reminderAt)")
+    expect(normalizedApplications).toContain("createApplicationFormSnapshot(emptyForm, followupBaseline.value.timeline, reminderAt.value)")
     expect(normalizedApplications).toMatch(/function collapseTimeline\(\): void \{ if \(isDirty\.value\) \{ showLeaveConfirmation\.value = true; return \} expandedId\.value = null resetFollowup\(\) showLeaveConfirmation\.value = false/)
   })
 

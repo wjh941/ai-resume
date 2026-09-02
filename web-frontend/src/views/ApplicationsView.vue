@@ -116,12 +116,12 @@ async function toggleTimeline(item: ApplicationRecord): Promise<void> {
 async function addEvent(item: ApplicationRecord): Promise<void> {
   if (!timelineForm.value.title.trim() || pendingKey.value) return
   pendingKey.value = `timeline-add:${item.id}`
-  try { const event = await addTimelineEvent(item.id, { title: timelineForm.value.title.trim(), description: timelineForm.value.description.trim(), occurredAt: toIso(timelineForm.value.occurredAt) || new Date().toISOString() }); Object.assign(item, appendTimelineEvent(item, event)); timelineForm.value = { ...emptyTimeline }; followupBaseline.value = createApplicationFormSnapshot(emptyForm, timelineForm.value, reminderAt.value); showLeaveConfirmation.value = false } catch { error.value = "跟进事件暂未保存，请稍后重试" } finally { pendingKey.value = "" }
+  try { const event = await addTimelineEvent(item.id, { title: timelineForm.value.title.trim(), description: timelineForm.value.description.trim(), occurredAt: toIso(timelineForm.value.occurredAt) || new Date().toISOString() }); Object.assign(item, appendTimelineEvent(item, event)); timelineForm.value = { ...emptyTimeline }; followupBaseline.value = createApplicationFormSnapshot(emptyForm, timelineForm.value, followupBaseline.value.reminderAt); showLeaveConfirmation.value = false } catch { error.value = "跟进事件暂未保存，请稍后重试" } finally { pendingKey.value = "" }
 }
 async function setReminder(item: ApplicationRecord): Promise<void> {
   if (!reminderAt.value || pendingKey.value) return
   pendingKey.value = `reminder:${item.id}`
-  try { await saveReminder(item.id, toIso(reminderAt.value) || reminderAt.value); item.nextActionAt = reminderAt.value.slice(0, 10); reminderAt.value = ""; followupBaseline.value = createApplicationFormSnapshot(emptyForm, timelineForm.value, reminderAt.value); showLeaveConfirmation.value = false } catch { error.value = "提醒暂未保存，请稍后重试" } finally { pendingKey.value = "" }
+  try { await saveReminder(item.id, toIso(reminderAt.value) || reminderAt.value); item.nextActionAt = reminderAt.value.slice(0, 10); reminderAt.value = ""; followupBaseline.value = createApplicationFormSnapshot(emptyForm, followupBaseline.value.timeline, reminderAt.value); showLeaveConfirmation.value = false } catch { error.value = "提醒暂未保存，请稍后重试" } finally { pendingKey.value = "" }
 }
 async function remove(item: ApplicationRecord): Promise<void> {
   if (pendingKey.value) return
