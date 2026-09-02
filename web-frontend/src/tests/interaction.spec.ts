@@ -404,6 +404,8 @@ describe("useAsyncAction", () => {
     expect(applications).toContain("collapseTimeline()")
     expect(normalizedApplications).toMatch(/function startEdit\(item: ApplicationRecord\): void \{ if \(isDirty\.value\) \{ showLeaveConfirmation\.value = true; return \}/)
     expect(normalizedApplications).toMatch(/saveApplication\(input\)[\s\S]*resetForm\(\); resetFollowup\(\)/)
+    expect(normalizedApplications.match(/followupBaseline\.value = createApplicationFormSnapshot\(emptyForm, timelineForm\.value, reminderAt\.value\); showLeaveConfirmation\.value = false/g) ?? []).toHaveLength(2)
+    expect(normalizedApplications).toMatch(/function collapseTimeline\(\): void \{ if \(isDirty\.value\) \{ showLeaveConfirmation\.value = true; return \} expandedId\.value = null resetFollowup\(\) showLeaveConfirmation\.value = false/)
   })
 
   it("observes a late-mounted progressive list sentinel with a manual fallback", () => {
