@@ -408,10 +408,11 @@ describe("useAsyncAction", () => {
     expect(normalizedApplications).toMatch(/saveApplication\(input\)[\s\S]*resetForm\(\); if \(!isFollowupDirty\.value\) resetFollowup\(\)/)
     expect(normalizedApplications).toMatch(/saveApplication\(input\)[\s\S]*if \(!isFollowupDirty\.value\) resetFollowup\(\)/)
     expect(normalizedApplications).toMatch(/async function remove\(item: ApplicationRecord\): Promise<void> \{ if \(pendingKey\.value\) return if \(isDirty\.value\) \{ showLeaveConfirmation\.value = true; return \}/)
-    expect(normalizedApplications).toMatch(/deleteApplication\(item\.id\)[\s\S]*expandedId\.value = null; resetFollowup\(\); showLeaveConfirmation\.value = false/)
+    expect(normalizedApplications).toMatch(/deleteApplication\(item\.id\)[\s\S]*if \(expandedId\.value === item\.id\) \{ expandedId\.value = null; resetFollowup\(\); showLeaveConfirmation\.value = false \}/)
     expect(normalizedApplications).toContain("createApplicationFormSnapshot(emptyForm, timelineForm.value, followupBaseline.value.reminderAt)")
     expect(normalizedApplications).toContain("createApplicationFormSnapshot(emptyForm, followupBaseline.value.timeline, reminderAt.value)")
     expect(normalizedApplications).toMatch(/function collapseTimeline\(\): void \{ if \(isDirty\.value\) \{ showLeaveConfirmation\.value = true; return \} expandedId\.value = null resetFollowup\(\) showLeaveConfirmation\.value = false/)
+    expect(normalizedApplications).toMatch(/expandedId\.value = item\.id resetFollowup\(\) showLeaveConfirmation\.value = false followupBaseline\.value = createApplicationFormSnapshot/)
   })
 
   it("observes a late-mounted progressive list sentinel with a manual fallback", () => {
