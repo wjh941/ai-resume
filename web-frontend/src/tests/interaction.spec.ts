@@ -88,6 +88,9 @@ describe("useAsyncAction", () => {
 
     expect(overview).toContain('if (item.kind === "resume" && item.id)')
     expect(overview).toContain('emit("open-draft", item.id)')
+    expect(overview).toContain('if (item.kind === "resume")')
+    expect(overview).toContain('emit("navigate", "resume")')
+    expect(overview).toContain('return\n  }\n  emit("navigate", item.target)')
     expect(overview).toContain('emit("navigate", item.target)')
   })
 

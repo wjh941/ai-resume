@@ -37,6 +37,10 @@ function openContinuation(item: ContinuationItem): void {
     emit("open-draft", item.id)
     return
   }
+  if (item.kind === "resume") {
+    emit("navigate", "resume")
+    return
+  }
   emit("navigate", item.target)
 }
 onMounted(refresh)
