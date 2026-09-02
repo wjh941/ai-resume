@@ -78,9 +78,17 @@ describe("useAsyncAction", () => {
   it("keeps continuation buttons accessible and distinguishes resume editing", () => {
     const overview = readFileSync(new URL("../views/OverviewView.vue", import.meta.url), "utf8")
 
-    expect(overview).toContain('item.kind === "resume" ? "缁х画缂栬緫" : "缁х画"')
+    expect(overview).toContain('item.kind === "resume" ? "继续编辑" : "继续"')
     expect(overview).toContain(":aria-label=")
     expect(overview).toContain("openContinuation(item)")
+  })
+
+  it("falls back to resume navigation when a continuation has no draft id", () => {
+    const overview = readFileSync(new URL("../views/OverviewView.vue", import.meta.url), "utf8")
+
+    expect(overview).toContain('if (item.kind === "resume" && item.id)')
+    expect(overview).toContain('emit("open-draft", item.id)')
+    expect(overview).toContain('emit("navigate", item.target)')
   })
 
   it("keeps the future capability shell presentation-only", () => {
