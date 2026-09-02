@@ -40,6 +40,7 @@ const {
   fieldErrors,
   localSaveState,
   saving,
+  isDirty,
   hydrate,
   save: saveEditor,
 } = createResumeEditorOrchestration({
@@ -53,6 +54,15 @@ const {
   onSaved: (saved) => emit("saved", saved),
   onRemoteError: () => { error.value = "简历草稿暂未保存，请检查登录状态后重试" },
   registerBeforeUnmount: onBeforeUnmount,
+})
+
+const showLeaveConfirmation = ref(false)
+const discardError = ref("")
+const localSaveStatus = computed(() => {
+  if (localSaveState.value === "saving") return "正在保存到本机"
+  if (localSaveState.value === "error") return "本机自动保存失败，请手动保存"
+  if (isDirty.value) return "已保存到本机，尚未同步"
+  return "已同步到云端"
 })
 
 const skillsText = computed({
@@ -117,7 +127,36 @@ async function save(): Promise<void> {
 }
 
 function cancel(): void {
-  runPendingGuardedAction(loading.value || saving.value, () => emit("cancel"))
+  runPendingGuardedAction(loading.value || saving.value, () => {
+    if (!isDirty.value) {
+      emit("cancel")
+      return
+    }
+    discardError.value = ""
+    showLeaveConfirmation.value = true
+  })
+}
+
+function continueEditing(): void {
+  showLeaveConfirmation.value = false
+  discardError.value = ""
+  void nextTick(() => document.getElementById("resume-job-title")?.focus())
+}
+
+function discardAndReturn(): void {
+  if (loading.value || saving.value) return
+  try {
+    clearDraftCheckpoint(window.localStorage, props.draftId)
+    showLeaveConfirmation.value = false
+    emit("cancel")
+  } catch {
+    discardError.value = "暂时无法清除本地草稿，请重试"
+  }
+}
+
+function handleBeforeUnload(event: BeforeUnloadEvent): void {
+  event.preventDefault()
+  event.returnValue = ""
 }
 
 function handleShortcut(event: KeyboardEvent): void {
@@ -136,7 +175,14 @@ onMounted(() => {
   window.addEventListener("keydown", handleShortcut)
   void load()
 })
-onBeforeUnmount(() => window.removeEventListener("keydown", handleShortcut))
+watch(isDirty, (dirty) => {
+  if (dirty) window.addEventListener("beforeunload", handleBeforeUnload)
+  else window.removeEventListener("beforeunload", handleBeforeUnload)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", handleShortcut)
+  window.removeEventListener("beforeunload", handleBeforeUnload)
+})
 </script>
 
 <template>
@@ -241,7 +287,15 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleShortcut))
       </section>
 
       <div class="local-save-status" aria-live="polite">
-        {{ localSaveState === "saving" ? "正在保存到本机" : localSaveState === "saved" ? "已保存到本机" : localSaveState === "error" ? "本机自动保存失败，请手动保存" : "" }}
+        {{ localSaveStatus }}
+      </div>
+      <div v-if="showLeaveConfirmation" class="leave-confirmation" role="alert" aria-live="polite">
+        <span>当前编辑尚未同步到云端，确定返回吗？</span>
+        <div class="heading-actions">
+          <AsyncButton class="text-action" type="button" @click="continueEditing">继续编辑</AsyncButton>
+          <AsyncButton class="danger-action" type="button" :disabled="loading || saving" @click="discardAndReturn">放弃并返回</AsyncButton>
+        </div>
+        <ErrorNotice v-if="discardError" :message="discardError" />
       </div>
       <AsyncButton class="primary-button" type="submit" :loading="saving"><Save :size="17" aria-hidden="true" />保存草稿</AsyncButton>
     </form>

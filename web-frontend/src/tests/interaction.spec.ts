@@ -357,6 +357,26 @@ describe("useAsyncAction", () => {
     expect(applications).toContain(':disabled="loading || Boolean(pendingKey)"')
   })
 
+  it("protects dirty resume edits before leaving the editor", () => {
+    const editor = readFileSync(new URL("../views/ResumeEditorView.vue", import.meta.url), "utf8")
+    const normalizedEditor = editor.replace(/\s+/g, " ")
+
+    expect(editor).toContain("isDirty")
+    expect(editor).toContain("localSaveState")
+    expect(editor).toContain("clearDraftCheckpoint")
+    expect(editor).toContain('"正在保存到本机"')
+    expect(editor).toContain('"已保存到本机，尚未同步"')
+    expect(editor).toContain('"已同步到云端"')
+    expect(editor).toContain('"本机自动保存失败，请手动保存"')
+    expect(editor).toContain("showLeaveConfirmation")
+    expect(editor).toContain("继续编辑")
+    expect(editor).toContain("放弃并返回")
+    expect(editor).toMatch(/clearDraftCheckpoint\(window\.localStorage, props\.draftId\)[\s\S]*emit\("cancel"\)/)
+    expect(editor).toContain('window.addEventListener("beforeunload"')
+    expect(editor).toContain('window.removeEventListener("beforeunload"')
+    expect(normalizedEditor).toMatch(/event\.preventDefault\(\) event\.returnValue = ""/)
+  })
+
   it("observes a late-mounted progressive list sentinel with a manual fallback", () => {
     const sentinel = readFileSync(new URL("../components/ProgressiveListSentinel.vue", import.meta.url), "utf8")
 
