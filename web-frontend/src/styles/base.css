@@ -327,6 +327,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .inline-form input, .application-form input, .application-form select, .role-query input, .insight-query input { width: 100%; min-height: 42px; padding: 0 10px; color: var(--ink); border: 1px solid var(--line); border-radius: 6px; background: var(--surface-raised); }
 .inline-form input:focus, .application-form input:focus, .application-form select:focus, .role-query input:focus, .insight-query input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent); }
 .primary-button.compact { min-height: 42px; padding: 0 13px; font-size: 13px; box-shadow: none; }
+.application-leave-confirmation { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 13px 15px; border: 1px solid color-mix(in srgb, var(--warning) 30%, var(--line)); border-radius: var(--radius); color: var(--ink); background: color-mix(in srgb, var(--warning) 10%, var(--surface)); }
+.application-leave-confirmation p { min-width: 0; margin: 0; color: var(--ink); font-size: 13px; line-height: 1.55; overflow-wrap: anywhere; }
+.application-leave-confirmation-actions { display: flex; flex: 0 1 auto; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; min-width: 0; }
 .task-row { grid-template-columns: 32px minmax(0, 1fr) auto; }
 .task-row.is-complete h2, .task-row.is-complete p { color: var(--muted); text-decoration: line-through; }
 .task-check { display: grid; width: 40px; height: 40px; place-items: center; color: transparent; border: 1px solid var(--line); border-radius: 50%; background: var(--surface-raised); }
@@ -736,6 +739,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .editor-section-heading { align-items: flex-start; flex-direction: column; }
   .mode-recovery-actions { align-items: stretch; }
   .mode-recovery-actions .notice-action { flex: 1 1 150px; }
+  .application-leave-confirmation { flex-wrap: wrap; }
+  .application-leave-confirmation-actions { flex: 1 1 100%; justify-content: flex-start; }
 }
 @media (min-width: 1600px) {
   .workspace-stage { max-width: 1360px; padding-inline: clamp(68px, 5vw, 96px); }

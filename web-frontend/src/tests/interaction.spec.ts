@@ -378,6 +378,24 @@ describe("useAsyncAction", () => {
     expect(normalizedEditor).toMatch(/event\.preventDefault\(\) event\.returnValue = ""/)
   })
 
+  it("protects dirty application edits before leaving the tracker", () => {
+    const applications = readFileSync(new URL("../views/ApplicationsView.vue", import.meta.url), "utf8")
+    const styles = readFileSync(new URL("../styles/base.css", import.meta.url), "utf8")
+
+    expect(applications).toContain("createApplicationFormSnapshot")
+    expect(applications).toContain("isApplicationFormDirty")
+    expect(applications).toContain("isDirty")
+    expect(applications).toContain('window.addEventListener("beforeunload"')
+    expect(applications).toContain('window.removeEventListener("beforeunload"')
+    expect(applications).toContain("showLeaveConfirmation")
+    expect(applications).toContain("continueEditing")
+    expect(applications).toContain("discardChanges")
+    expect(applications).toContain('role="alert"')
+    expect(styles).toContain(".application-leave-confirmation")
+    expect(styles).toMatch(/\.application-leave-confirmation[^}]*display:\s*flex/s)
+    expect(styles).toMatch(/@media \(max-width: 480px\)[\s\S]*\.application-leave-confirmation[^}]*flex-wrap:\s*wrap/s)
+  })
+
   it("observes a late-mounted progressive list sentinel with a manual fallback", () => {
     const sentinel = readFileSync(new URL("../components/ProgressiveListSentinel.vue", import.meta.url), "utf8")
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Building2, CalendarClock, ChevronDown, ChevronUp, Clock3, Pencil, Plus, RefreshCw, Save, Trash2, X } from "lucide-vue-next"
-import { computed, onBeforeUnmount, onMounted, ref } from "vue"
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue"
 
 import AsyncButton from "../components/AsyncButton.vue"
 import ExpandableText from "../components/ExpandableText.vue"
@@ -8,6 +8,7 @@ import LoadingSpinner from "../components/LoadingSpinner.vue"
 import ProgressiveListSentinel from "../components/ProgressiveListSentinel.vue"
 import { useIncrementalList } from "../composables/useIncrementalList"
 import { addTimelineEvent, deleteApplication, listApplications, listTimeline, saveApplication, saveReminder, type ApplicationInput, type ApplicationRecord, type ApplicationStatus } from "../lib/applications"
+import { createApplicationFormSnapshot, isApplicationFormDirty, type ApplicationFormValues, type ApplicationTimelineValues } from "../lib/application-form-state"
 import { appendTimelineEvent, removeApplication, replaceApplication } from "../lib/application-workflow"
 import { runPendingGuardedAction, resolveApplicationsCloseAction, resolveWorkspaceShortcut } from "../lib/keyboard-shortcuts"
 
@@ -19,10 +20,20 @@ const editingId = ref<string | null>(null)
 const expandedId = ref<string | null>(null)
 const pendingKey = ref("")
 const filterStatus = ref<"" | ApplicationStatus>("")
-const form = ref({ company: "", roleName: "", city: "", status: "saved" as ApplicationStatus, source: "", appliedAt: "", nextActionAt: "", nextInterviewAt: "", interviewNotes: "", notes: "", contactInfo: "", attachmentRef: "", draftId: "" })
-const timelineForm = ref({ title: "", description: "", occurredAt: "" })
+const emptyForm: ApplicationFormValues = { company: "", roleName: "", city: "", status: "saved", source: "", appliedAt: "", nextActionAt: "", nextInterviewAt: "", interviewNotes: "", notes: "", contactInfo: "", attachmentRef: "", draftId: "" }
+const emptyTimeline: ApplicationTimelineValues = { title: "", description: "", occurredAt: "" }
+const form = ref<ApplicationFormValues>({ ...emptyForm })
+const timelineForm = ref<ApplicationTimelineValues>({ ...emptyTimeline })
 const reminderAt = ref("")
+const formBaseline = ref(createApplicationFormSnapshot(form.value, emptyTimeline, ""))
+const followupBaseline = ref(createApplicationFormSnapshot(emptyForm, timelineForm.value, reminderAt.value))
+const showLeaveConfirmation = ref(false)
 const editing = computed(() => editingId.value !== null)
+const isDirty = computed(() => {
+  const formSnapshot = createApplicationFormSnapshot(form.value, emptyTimeline, "")
+  const followupSnapshot = createApplicationFormSnapshot(emptyForm, timelineForm.value, reminderAt.value)
+  return isApplicationFormDirty(formSnapshot, formBaseline.value) || isApplicationFormDirty(followupSnapshot, followupBaseline.value)
+})
 const {
   visibleItems: renderedApplications,
   hasMore: hasMoreApplications,
@@ -30,14 +41,39 @@ const {
   reset: resetVisibleApplications,
 } = useIncrementalList(items)
 
-function resetForm(): void { editingId.value = null; form.value = { company: "", roleName: "", city: "", status: "saved", source: "", appliedAt: "", nextActionAt: "", nextInterviewAt: "", interviewNotes: "", notes: "", contactInfo: "", attachmentRef: "", draftId: "" } }
-function cancelEditing(): void { runPendingGuardedAction(loading.value || Boolean(pendingKey.value), resetForm) }
+function resetForm(): void {
+  editingId.value = null
+  form.value = { ...emptyForm }
+  formBaseline.value = createApplicationFormSnapshot(form.value, emptyTimeline, "")
+  showLeaveConfirmation.value = false
+}
+function resetFollowup(): void {
+  timelineForm.value = { ...emptyTimeline }
+  reminderAt.value = ""
+  followupBaseline.value = createApplicationFormSnapshot(emptyForm, timelineForm.value, reminderAt.value)
+}
+function continueEditing(): void { showLeaveConfirmation.value = false }
+function discardChanges(): void {
+  resetForm()
+  resetFollowup()
+  expandedId.value = null
+  showLeaveConfirmation.value = false
+}
+function cancelEditing(): void {
+  runPendingGuardedAction(loading.value || Boolean(pendingKey.value), () => {
+    if (isDirty.value) { showLeaveConfirmation.value = true; return }
+    resetForm()
+  })
+}
 function toIso(value: string): string | null { return value ? new Date(value).toISOString() : null }
 function toDate(value: string | null): string { return value ? value.slice(0, 10) : "" }
 function toDateTime(value: string | null): string { return value ? value.slice(0, 16) : "" }
 function startEdit(item: ApplicationRecord): void {
   editingId.value = item.id
   form.value = { company: item.company, roleName: item.roleName, city: item.city, status: item.status, source: item.source, appliedAt: toDate(item.appliedAt), nextActionAt: toDate(item.nextActionAt), nextInterviewAt: toDateTime(item.nextInterviewAt), interviewNotes: item.interviewNotes, notes: item.notes, contactInfo: item.contactInfo, attachmentRef: item.attachmentRef, draftId: item.draftId || "" }
+  formBaseline.value = createApplicationFormSnapshot(form.value, emptyTimeline, "")
+  resetFollowup()
+  showLeaveConfirmation.value = false
   window.scrollTo({ top: 0, behavior: "smooth" })
 }
 async function refresh(): Promise<void> { loading.value = true; error.value = ""; try { items.value = await listApplications(filterStatus.value ? { status: filterStatus.value } : {}); resetVisibleApplications() } catch { error.value = "暂时无法读取投递记录，请稍后重试" } finally { loading.value = false } }
@@ -60,6 +96,8 @@ function handleStatusChange(item: ApplicationRecord, event: Event): void {
 async function toggleTimeline(item: ApplicationRecord): Promise<void> {
   if (expandedId.value === item.id) { expandedId.value = null; return }
   expandedId.value = item.id
+  resetFollowup()
+  followupBaseline.value = createApplicationFormSnapshot(emptyForm, timelineForm.value, reminderAt.value)
   if (item.timeline.length || pendingKey.value) return
   pendingKey.value = `timeline-load:${item.id}`
   try { item.timeline = await listTimeline(item.id) } catch { error.value = "暂时无法读取跟进时间线" } finally { pendingKey.value = "" }
@@ -67,12 +105,12 @@ async function toggleTimeline(item: ApplicationRecord): Promise<void> {
 async function addEvent(item: ApplicationRecord): Promise<void> {
   if (!timelineForm.value.title.trim() || pendingKey.value) return
   pendingKey.value = `timeline-add:${item.id}`
-  try { const event = await addTimelineEvent(item.id, { title: timelineForm.value.title.trim(), description: timelineForm.value.description.trim(), occurredAt: toIso(timelineForm.value.occurredAt) || new Date().toISOString() }); Object.assign(item, appendTimelineEvent(item, event)); timelineForm.value = { title: "", description: "", occurredAt: "" } } catch { error.value = "跟进事件暂未保存，请稍后重试" } finally { pendingKey.value = "" }
+  try { const event = await addTimelineEvent(item.id, { title: timelineForm.value.title.trim(), description: timelineForm.value.description.trim(), occurredAt: toIso(timelineForm.value.occurredAt) || new Date().toISOString() }); Object.assign(item, appendTimelineEvent(item, event)); timelineForm.value = { ...emptyTimeline }; followupBaseline.value = createApplicationFormSnapshot(emptyForm, timelineForm.value, reminderAt.value) } catch { error.value = "跟进事件暂未保存，请稍后重试" } finally { pendingKey.value = "" }
 }
 async function setReminder(item: ApplicationRecord): Promise<void> {
   if (!reminderAt.value || pendingKey.value) return
   pendingKey.value = `reminder:${item.id}`
-  try { await saveReminder(item.id, toIso(reminderAt.value) || reminderAt.value); item.nextActionAt = reminderAt.value.slice(0, 10); reminderAt.value = "" } catch { error.value = "提醒暂未保存，请稍后重试" } finally { pendingKey.value = "" }
+  try { await saveReminder(item.id, toIso(reminderAt.value) || reminderAt.value); item.nextActionAt = reminderAt.value.slice(0, 10); reminderAt.value = ""; followupBaseline.value = createApplicationFormSnapshot(emptyForm, timelineForm.value, reminderAt.value) } catch { error.value = "提醒暂未保存，请稍后重试" } finally { pendingKey.value = "" }
 }
 async function remove(item: ApplicationRecord): Promise<void> {
   if (pendingKey.value || !window.confirm("确认删除这条投递记录吗？")) return
@@ -92,11 +130,23 @@ function handleShortcut(event: KeyboardEvent): void {
   else expandedId.value = null
 }
 
+function handleBeforeUnload(event: BeforeUnloadEvent): void {
+  event.preventDefault()
+  event.returnValue = ""
+}
+
 onMounted(() => {
   window.addEventListener("keydown", handleShortcut)
   void refresh()
 })
-onBeforeUnmount(() => window.removeEventListener("keydown", handleShortcut))
+watch(isDirty, (dirty) => {
+  if (dirty) window.addEventListener("beforeunload", handleBeforeUnload)
+  else window.removeEventListener("beforeunload", handleBeforeUnload)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", handleShortcut)
+  window.removeEventListener("beforeunload", handleBeforeUnload)
+})
 </script>
 
 <template>
@@ -110,6 +160,13 @@ onBeforeUnmount(() => window.removeEventListener("keydown", handleShortcut))
       <AsyncButton class="primary-button compact" type="submit" :loading="pendingKey === 'create' || pendingKey.startsWith('save:')"><Save v-if="editing" :size="17" aria-hidden="true" /><Plus v-else :size="17" aria-hidden="true" />{{ editing ? "保存修改" : "新增记录" }}</AsyncButton>
       <AsyncButton v-if="editing" class="text-action compact" type="button" :disabled="loading || Boolean(pendingKey)" :aria-disabled="loading || Boolean(pendingKey) || undefined" @click="cancelEditing"><X :size="15" aria-hidden="true" />取消编辑</AsyncButton>
     </form>
+    <div v-if="showLeaveConfirmation" class="application-leave-confirmation" role="alert" aria-live="polite">
+      <p>当前有未保存的投递信息，确定要离开编辑吗？</p>
+      <div class="application-leave-confirmation-actions">
+        <AsyncButton class="text-action compact" type="button" @click="continueEditing">继续编辑</AsyncButton>
+        <AsyncButton class="danger-action compact" type="button" :disabled="loading || Boolean(pendingKey)" :aria-disabled="loading || Boolean(pendingKey) || undefined" @click="discardChanges">放弃并返回</AsyncButton>
+      </div>
+    </div>
     <div class="application-toolbar"><label><span>筛选状态</span><select v-model="filterStatus" :disabled="loading" @change="refresh"><option value="">全部状态</option><option v-for="(label, value) in statusLabels" :key="value" :value="value">{{ label }}</option></select></label><span class="toolbar-hint">共 {{ items.length }} 条记录</span></div>
     <ErrorNotice v-if="error" id="applications-error" :message="error"><AsyncButton class="notice-action" type="button" :loading="loading" @click="refresh">重试</AsyncButton></ErrorNotice>
     <div v-else-if="loading" class="content-skeleton application-loading" aria-busy="true"><LoadingSpinner class="content-loading-spinner" label="正在读取投递记录" /><span /><span /></div>
