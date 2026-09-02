@@ -32,8 +32,26 @@ export function createApplicationFormSnapshot(
   reminderAt: string,
 ): ApplicationFormSnapshot {
   return {
-    form: { ...form },
-    timeline: { ...timeline },
+    form: {
+      company: form.company,
+      roleName: form.roleName,
+      city: form.city,
+      status: form.status,
+      source: form.source,
+      appliedAt: form.appliedAt,
+      nextActionAt: form.nextActionAt,
+      nextInterviewAt: form.nextInterviewAt,
+      interviewNotes: form.interviewNotes,
+      notes: form.notes,
+      contactInfo: form.contactInfo,
+      attachmentRef: form.attachmentRef,
+      draftId: form.draftId,
+    },
+    timeline: {
+      title: timeline.title,
+      description: timeline.description,
+      occurredAt: timeline.occurredAt,
+    },
     reminderAt,
   }
 }

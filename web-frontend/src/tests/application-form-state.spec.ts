@@ -69,4 +69,32 @@ describe("application form snapshots", () => {
     expect(baseline.timeline.title).toBe("Phone screen")
     expect(baseline.reminderAt).toBe("2026-09-04T09:00")
   })
+
+  it("treats equivalent values with reordered source keys as clean", () => {
+    const baseline = snapshot()
+    const sourceForm = form()
+    const sourceTimeline = timeline()
+    const reorderedForm: ApplicationFormValues = {
+      draftId: sourceForm.draftId,
+      attachmentRef: sourceForm.attachmentRef,
+      contactInfo: sourceForm.contactInfo,
+      notes: sourceForm.notes,
+      interviewNotes: sourceForm.interviewNotes,
+      nextInterviewAt: sourceForm.nextInterviewAt,
+      nextActionAt: sourceForm.nextActionAt,
+      appliedAt: sourceForm.appliedAt,
+      source: sourceForm.source,
+      status: sourceForm.status,
+      city: sourceForm.city,
+      roleName: sourceForm.roleName,
+      company: sourceForm.company,
+    }
+    const reorderedTimeline: ApplicationTimelineValues = {
+      occurredAt: sourceTimeline.occurredAt,
+      description: sourceTimeline.description,
+      title: sourceTimeline.title,
+    }
+
+    expect(isApplicationFormDirty(createApplicationFormSnapshot(reorderedForm, reorderedTimeline, baseline.reminderAt), baseline)).toBe(false)
+  })
 })

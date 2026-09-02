@@ -29,10 +29,13 @@ const formBaseline = ref(createApplicationFormSnapshot(form.value, emptyTimeline
 const followupBaseline = ref(createApplicationFormSnapshot(emptyForm, timelineForm.value, reminderAt.value))
 const showLeaveConfirmation = ref(false)
 const editing = computed(() => editingId.value !== null)
+const isFollowupDirty = computed(() => {
+  const followupSnapshot = createApplicationFormSnapshot(emptyForm, timelineForm.value, reminderAt.value)
+  return isApplicationFormDirty(followupSnapshot, followupBaseline.value)
+})
 const isDirty = computed(() => {
   const formSnapshot = createApplicationFormSnapshot(form.value, emptyTimeline, "")
-  const followupSnapshot = createApplicationFormSnapshot(emptyForm, timelineForm.value, reminderAt.value)
-  return isApplicationFormDirty(formSnapshot, formBaseline.value) || isApplicationFormDirty(followupSnapshot, followupBaseline.value)
+  return isApplicationFormDirty(formSnapshot, formBaseline.value) || isFollowupDirty.value
 })
 const {
   visibleItems: renderedApplications,
@@ -88,7 +91,7 @@ async function submit(): Promise<void> {
   if (!form.value.roleName.trim() || pendingKey.value) return
   pendingKey.value = editingId.value ? `save:${editingId.value}` : "create"; error.value = ""
   const input: ApplicationInput = { id: editingId.value || "", company: form.value.company.trim() || "[待确认]", roleName: form.value.roleName.trim(), city: form.value.city.trim(), source: form.value.source.trim(), status: form.value.status, appliedAt: form.value.appliedAt || null, nextActionAt: form.value.nextActionAt || null, interviewNotes: form.value.interviewNotes.trim(), draftId: form.value.draftId.trim() || null, notes: form.value.notes.trim(), contactInfo: form.value.contactInfo.trim(), attachmentRef: form.value.attachmentRef.trim(), nextInterviewAt: toIso(form.value.nextInterviewAt) }
-  try { const saved = await saveApplication(input); items.value = editingId.value ? replaceApplication(items.value, saved) : [saved, ...items.value]; resetForm(); resetFollowup() } catch { error.value = "投递记录暂未保存，请检查填写内容后重试" } finally { pendingKey.value = "" }
+  try { const saved = await saveApplication(input); items.value = editingId.value ? replaceApplication(items.value, saved) : [saved, ...items.value]; resetForm(); if (!isFollowupDirty.value) resetFollowup() } catch { error.value = "投递记录暂未保存，请检查填写内容后重试" } finally { pendingKey.value = "" }
 }
 async function changeStatus(item: ApplicationRecord, status: ApplicationStatus): Promise<void> {
   if (status === item.status || pendingKey.value) return
@@ -121,9 +124,11 @@ async function setReminder(item: ApplicationRecord): Promise<void> {
   try { await saveReminder(item.id, toIso(reminderAt.value) || reminderAt.value); item.nextActionAt = reminderAt.value.slice(0, 10); reminderAt.value = ""; followupBaseline.value = createApplicationFormSnapshot(emptyForm, timelineForm.value, reminderAt.value); showLeaveConfirmation.value = false } catch { error.value = "提醒暂未保存，请稍后重试" } finally { pendingKey.value = "" }
 }
 async function remove(item: ApplicationRecord): Promise<void> {
-  if (pendingKey.value || !window.confirm("确认删除这条投递记录吗？")) return
+  if (pendingKey.value) return
+  if (isDirty.value) { showLeaveConfirmation.value = true; return }
+  if (!window.confirm("确认删除这条投递记录吗？")) return
   pendingKey.value = `delete:${item.id}`
-  try { await deleteApplication(item.id); items.value = removeApplication(items.value, item.id); if (expandedId.value === item.id) expandedId.value = null } catch { error.value = "投递记录暂未删除，请稍后重试" } finally { pendingKey.value = "" }
+  try { await deleteApplication(item.id); items.value = removeApplication(items.value, item.id); expandedId.value = null; resetFollowup() } catch { error.value = "投递记录暂未删除，请稍后重试" } finally { pendingKey.value = "" }
 }
 function handleShortcut(event: KeyboardEvent): void {
   const action = resolveApplicationsCloseAction(

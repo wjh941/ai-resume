@@ -330,6 +330,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .application-leave-confirmation { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 13px 15px; border: 1px solid color-mix(in srgb, var(--warning) 30%, var(--line)); border-radius: var(--radius); color: var(--ink); background: color-mix(in srgb, var(--warning) 10%, var(--surface)); }
 .application-leave-confirmation p { min-width: 0; margin: 0; color: var(--ink); font-size: 13px; line-height: 1.55; overflow-wrap: anywhere; }
 .application-leave-confirmation-actions { display: flex; flex: 0 1 auto; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; min-width: 0; }
+.application-leave-confirmation-actions .compact { min-height: 44px; }
 .task-row { grid-template-columns: 32px minmax(0, 1fr) auto; }
 .task-row.is-complete h2, .task-row.is-complete p { color: var(--muted); text-decoration: line-through; }
 .task-check { display: grid; width: 40px; height: 40px; place-items: center; color: transparent; border: 1px solid var(--line); border-radius: 50%; background: var(--surface-raised); }
