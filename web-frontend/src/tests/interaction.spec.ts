@@ -73,6 +73,7 @@ describe("useAsyncAction", () => {
     expect(overview).toContain('emit("open-draft", item.id)')
     expect(overview).toContain('emit("navigate", item.target)')
     expect(overview).toContain("focusStatus.value =")
+    expect(overview).toContain("void nextTick(() => {")
   })
 
   it("keeps continuation buttons accessible and distinguishes resume editing", () => {
@@ -90,8 +91,8 @@ describe("useAsyncAction", () => {
     expect(overview).toContain('emit("open-draft", item.id)')
     expect(overview).toContain('if (item.kind === "resume")')
     expect(overview).toContain('emit("navigate", "resume")')
-    expect(overview).toContain('return\n  }\n  emit("navigate", item.target)')
-    expect(overview).toContain('emit("navigate", item.target)')
+    expect(overview).toMatch(/if \(item\.kind === "resume" && item\.id\) \{[\s\S]*emit\("open-draft", item\.id\)[\s\S]*return[\s\S]*if \(item\.kind === "resume"\) \{[\s\S]*emit\("navigate", "resume"\)[\s\S]*return[\s\S]*emit\("navigate", item\.target\)/)
+    expect(overview).toContain("void nextTick(() => {")
   })
 
   it("keeps the future capability shell presentation-only", () => {

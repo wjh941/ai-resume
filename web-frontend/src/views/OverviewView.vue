@@ -33,15 +33,17 @@ function runFocus() {
 }
 function openContinuation(item: ContinuationItem): void {
   focusStatus.value = "已选择：" + item.title
-  if (item.kind === "resume" && item.id) {
-    emit("open-draft", item.id)
-    return
-  }
-  if (item.kind === "resume") {
-    emit("navigate", "resume")
-    return
-  }
-  emit("navigate", item.target)
+  void nextTick(() => {
+    if (item.kind === "resume" && item.id) {
+      emit("open-draft", item.id)
+      return
+    }
+    if (item.kind === "resume") {
+      emit("navigate", "resume")
+      return
+    }
+    emit("navigate", item.target)
+  })
 }
 onMounted(refresh)
 </script>
