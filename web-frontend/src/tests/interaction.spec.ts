@@ -409,7 +409,14 @@ describe("useAsyncAction", () => {
     }
     expect(app).toContain('mode="out-in"')
     expect(app).toContain('@navigate="activeView = $event"')
+  })
+
+  it("forwards overview draft openings to the existing editor state", () => {
+    const app = readFileSync(new URL("../App.vue", import.meta.url), "utf8")
+
     expect(app).toContain('@open-draft="editingDraftId = $event"')
+    expect(app).toContain('v-if="editingDraftId"')
+    expect(app).toContain(':draft-id="editingDraftId"')
   })
 
   it("shows a bounded async-view load failure instead of a blank stage", () => {
