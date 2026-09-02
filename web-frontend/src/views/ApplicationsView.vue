@@ -68,7 +68,13 @@ function cancelEditing(): void {
 function toIso(value: string): string | null { return value ? new Date(value).toISOString() : null }
 function toDate(value: string | null): string { return value ? value.slice(0, 10) : "" }
 function toDateTime(value: string | null): string { return value ? value.slice(0, 16) : "" }
+function collapseTimeline(): void {
+  if (isDirty.value) { showLeaveConfirmation.value = true; return }
+  expandedId.value = null
+  resetFollowup()
+}
 function startEdit(item: ApplicationRecord): void {
+  if (isDirty.value) { showLeaveConfirmation.value = true; return }
   editingId.value = item.id
   form.value = { company: item.company, roleName: item.roleName, city: item.city, status: item.status, source: item.source, appliedAt: toDate(item.appliedAt), nextActionAt: toDate(item.nextActionAt), nextInterviewAt: toDateTime(item.nextInterviewAt), interviewNotes: item.interviewNotes, notes: item.notes, contactInfo: item.contactInfo, attachmentRef: item.attachmentRef, draftId: item.draftId || "" }
   formBaseline.value = createApplicationFormSnapshot(form.value, emptyTimeline, "")
@@ -81,7 +87,7 @@ async function submit(): Promise<void> {
   if (!form.value.roleName.trim() || pendingKey.value) return
   pendingKey.value = editingId.value ? `save:${editingId.value}` : "create"; error.value = ""
   const input: ApplicationInput = { id: editingId.value || "", company: form.value.company.trim() || "[待确认]", roleName: form.value.roleName.trim(), city: form.value.city.trim(), source: form.value.source.trim(), status: form.value.status, appliedAt: form.value.appliedAt || null, nextActionAt: form.value.nextActionAt || null, interviewNotes: form.value.interviewNotes.trim(), draftId: form.value.draftId.trim() || null, notes: form.value.notes.trim(), contactInfo: form.value.contactInfo.trim(), attachmentRef: form.value.attachmentRef.trim(), nextInterviewAt: toIso(form.value.nextInterviewAt) }
-  try { const saved = await saveApplication(input); items.value = editingId.value ? replaceApplication(items.value, saved) : [saved, ...items.value]; resetForm() } catch { error.value = "投递记录暂未保存，请检查填写内容后重试" } finally { pendingKey.value = "" }
+  try { const saved = await saveApplication(input); items.value = editingId.value ? replaceApplication(items.value, saved) : [saved, ...items.value]; resetForm(); resetFollowup() } catch { error.value = "投递记录暂未保存，请检查填写内容后重试" } finally { pendingKey.value = "" }
 }
 async function changeStatus(item: ApplicationRecord, status: ApplicationStatus): Promise<void> {
   if (status === item.status || pendingKey.value) return
@@ -94,7 +100,8 @@ function handleStatusChange(item: ApplicationRecord, event: Event): void {
   void changeStatus(item, value)
 }
 async function toggleTimeline(item: ApplicationRecord): Promise<void> {
-  if (expandedId.value === item.id) { expandedId.value = null; return }
+  if (isDirty.value) { showLeaveConfirmation.value = true; return }
+  if (expandedId.value === item.id) { collapseTimeline(); return }
   expandedId.value = item.id
   resetFollowup()
   followupBaseline.value = createApplicationFormSnapshot(emptyForm, timelineForm.value, reminderAt.value)
@@ -127,7 +134,7 @@ function handleShortcut(event: KeyboardEvent): void {
   if (!action) return
   event.preventDefault()
   if (action === "reset") cancelEditing()
-  else expandedId.value = null
+  else collapseTimeline()
 }
 
 function handleBeforeUnload(event: BeforeUnloadEvent): void {

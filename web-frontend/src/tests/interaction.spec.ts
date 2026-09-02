@@ -396,6 +396,16 @@ describe("useAsyncAction", () => {
     expect(styles).toMatch(/@media \(max-width: 480px\)[\s\S]*\.application-leave-confirmation[^}]*flex-wrap:\s*wrap/s)
   })
 
+  it("guards application transitions and settles all form layers after save", () => {
+    const applications = readFileSync(new URL("../views/ApplicationsView.vue", import.meta.url), "utf8")
+    const normalizedApplications = applications.replace(/\s+/g, " ")
+
+    expect(applications).toContain("function collapseTimeline")
+    expect(applications).toContain("collapseTimeline()")
+    expect(normalizedApplications).toMatch(/function startEdit\(item: ApplicationRecord\): void \{ if \(isDirty\.value\) \{ showLeaveConfirmation\.value = true; return \}/)
+    expect(normalizedApplications).toMatch(/saveApplication\(input\)[\s\S]*resetForm\(\); resetFollowup\(\)/)
+  })
+
   it("observes a late-mounted progressive list sentinel with a manual fallback", () => {
     const sentinel = readFileSync(new URL("../components/ProgressiveListSentinel.vue", import.meta.url), "utf8")
 
