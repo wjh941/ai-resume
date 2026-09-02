@@ -128,7 +128,7 @@ async function remove(item: ApplicationRecord): Promise<void> {
   if (isDirty.value) { showLeaveConfirmation.value = true; return }
   if (!window.confirm("确认删除这条投递记录吗？")) return
   pendingKey.value = `delete:${item.id}`
-  try { await deleteApplication(item.id); items.value = removeApplication(items.value, item.id); expandedId.value = null; resetFollowup() } catch { error.value = "投递记录暂未删除，请稍后重试" } finally { pendingKey.value = "" }
+  try { await deleteApplication(item.id); items.value = removeApplication(items.value, item.id); expandedId.value = null; resetFollowup(); showLeaveConfirmation.value = false } catch { error.value = "投递记录暂未删除，请稍后重试" } finally { pendingKey.value = "" }
 }
 function handleShortcut(event: KeyboardEvent): void {
   const action = resolveApplicationsCloseAction(
