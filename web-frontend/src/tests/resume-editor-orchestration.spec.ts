@@ -145,6 +145,20 @@ describe("createResumeEditorOrchestration", () => {
     expect(controller.localSaveState.value).toBe("error")
   })
 
+  it("cancels a pending checkpoint before discard and unmount", async () => {
+    const { checkpoint, clearCheckpoint, controller, unmount } = setup()
+    await controller.hydrate(validDraft())
+
+    controller.draft.value!.resume.basic.city = "discarded"
+    await nextTick()
+    controller.discardLocalCheckpoint()
+    unmount()
+    vi.runAllTimers()
+
+    expect(clearCheckpoint).toHaveBeenCalledWith("d-1")
+    expect(checkpoint).not.toHaveBeenCalled()
+  })
+
   it("recovers after a failed checkpoint write", async () => {
     let attempts = 0
     const { controller } = setup({

@@ -30,6 +30,7 @@ export function createResumeEditorOrchestration(options: ResumeEditorOrchestrati
   saving: ReturnType<typeof ref<boolean>>
   isDirty: Ref<boolean>
   hydrate: (serverDraft: DraftRecord) => Promise<void>
+  discardLocalCheckpoint: (draftId?: string) => void
   save: () => Promise<ResumeEditorSaveResult>
 } {
   const draft = ref<DraftRecord | null>(null)
@@ -66,6 +67,11 @@ export function createResumeEditorOrchestration(options: ResumeEditorOrchestrati
   }, { deep: true })
 
   const flush = () => localCheckpoint.flush()
+  const discardLocalCheckpoint = (draftId?: string): void => {
+    localCheckpoint.cancel()
+    const id = draft.value?.id ?? draftId
+    if (id) options.clearCheckpoint(id)
+  }
   options.registerBeforeUnmount(() => {
     unmounted = true
     flush()
@@ -143,5 +149,5 @@ export function createResumeEditorOrchestration(options: ResumeEditorOrchestrati
     }
   }
 
-  return { draft, fieldErrors, validationActive, localSaveState, hydrated, saving, isDirty, hydrate, save }
+  return { draft, fieldErrors, validationActive, localSaveState, hydrated, saving, isDirty, hydrate, discardLocalCheckpoint, save }
 }

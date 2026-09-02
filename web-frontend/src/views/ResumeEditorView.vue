@@ -42,6 +42,7 @@ const {
   saving,
   isDirty,
   hydrate,
+  discardLocalCheckpoint,
   save: saveEditor,
 } = createResumeEditorOrchestration({
   checkpoint: (currentDraft) => writeDraftCheckpoint(window.localStorage, currentDraft),
@@ -146,7 +147,7 @@ function continueEditing(): void {
 function discardAndReturn(): void {
   if (loading.value || saving.value) return
   try {
-    clearDraftCheckpoint(window.localStorage, props.draftId)
+    discardLocalCheckpoint(props.draftId)
     showLeaveConfirmation.value = false
     emit("cancel")
   } catch {
