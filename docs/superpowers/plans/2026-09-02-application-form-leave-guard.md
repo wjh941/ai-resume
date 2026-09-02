@@ -13,7 +13,7 @@
 - No new dependency, backend endpoint, or local-storage draft.
 - Cover company, role, city, status, source, dates, notes, contacts, attachment, draft id, timeline fields, and reminder time.
 - Preserve existing `pendingKey`/`loading` request locks and `resolveApplicationsCloseAction` keyboard semantics.
-- Confirmation UI must use `role="alert"`, `aria-live="polite"`, existing button components, and responsive wrapping.
+- Confirmation UI must use `role="alert"`, `aria-live="polite"`, existing button components with at least 44px height, and responsive wrapping.
 - Register `beforeunload` only while dirty and always remove it on unmount.
 
 ---
@@ -70,7 +70,7 @@ Run `npm.cmd run test -- --run src/tests/interaction.spec.ts` from `web-frontend
 
 - [ ] **Step 3: Wire baseline and dirty state**
 
-Import the helper. Keep a `formBaseline` ref initialized from the empty main form and a `followupBaseline` ref initialized from empty timeline/reminder values. Expose `isDirty` as a computed comparison of the current three layers. Update baselines when starting an edit, opening a timeline, after successful save/add-event/save-reminder, and after explicit discard. Ensure reset operations clear the confirmation state.
+Import the helper. Keep a `formBaseline` ref initialized from the empty main form and a `followupBaseline` ref initialized from empty timeline/reminder values. Expose `isDirty` as a computed comparison of the current three layers. Update baselines when starting an edit, opening a timeline, after successful save/add-event/save-reminder, and after explicit discard. Ensure reset operations clear the confirmation state. A main-form save must preserve dirty follow-up values instead of silently resetting them.
 
 - [ ] **Step 4: Add guarded cancellation and browser protection**
 
@@ -78,7 +78,7 @@ Change `cancelEditing` to keep the current form when dirty and set `showLeaveCon
 
 - [ ] **Step 5: Render the confirmation and style it**
 
-Place the inline confirmation immediately below the application form actions. Use `role="alert"`, `aria-live="polite"`, concise Chinese copy, and `AsyncButton` actions for continue/discard. Add `.application-leave-confirmation` styles using existing tokens; at the mobile breakpoint make its action group wrap without overflow.
+Place the inline confirmation immediately below the application form actions. Use `role="alert"`, `aria-live="polite"`, concise Chinese copy, and `AsyncButton` actions for continue/discard. Add `.application-leave-confirmation` styles using existing tokens, with a minimum 44px action height; at the mobile breakpoint make its action group wrap without overflow. Block `remove(item)` while any form layer is dirty, showing the same inline confirmation; on a clean successful delete, clear follow-up refs/baseline along with `expandedId`. Snapshot serialization must use an explicit field order so equivalent objects with reordered keys compare cleanly.
 
 - [ ] **Step 6: Run focused tests and verify GREEN**
 
