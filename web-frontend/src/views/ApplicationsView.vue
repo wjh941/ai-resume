@@ -42,9 +42,14 @@ const isDirty = computed(() => {
   return isApplicationFormDirty(formSnapshot, formBaseline.value) || isFollowupDirty.value
 })
 let unregisterNavigationGuard: (() => void) | null = null
+let navigationBlocked = false
 
 function canLeaveForNavigation(): boolean {
-  if (!isDirty.value) return true
+  if (!isDirty.value) {
+    navigationBlocked = false
+    return true
+  }
+  navigationBlocked = true
   showLeaveConfirmation.value = true
   return false
 }
@@ -66,13 +71,18 @@ function resetFollowup(): void {
   reminderAt.value = ""
   followupBaseline.value = createApplicationFormSnapshot(emptyForm, timelineForm.value, reminderAt.value)
 }
-function continueEditing(): void { showLeaveConfirmation.value = false }
+function continueEditing(): void {
+  navigationBlocked = false
+  showLeaveConfirmation.value = false
+}
 function discardChanges(): void {
+  const shouldResumeNavigation = navigationBlocked
+  navigationBlocked = false
   resetForm()
   resetFollowup()
   expandedId.value = null
   showLeaveConfirmation.value = false
-  emit("navigation-ready")
+  if (shouldResumeNavigation) emit("navigation-ready")
 }
 function cancelEditing(): void {
   runPendingGuardedAction(loading.value || Boolean(pendingKey.value), () => {
@@ -168,7 +178,10 @@ onMounted(() => {
 })
 watch(isDirty, (dirty) => {
   if (dirty) window.addEventListener("beforeunload", handleBeforeUnload)
-  else window.removeEventListener("beforeunload", handleBeforeUnload)
+  else {
+    navigationBlocked = false
+    window.removeEventListener("beforeunload", handleBeforeUnload)
+  }
 })
 onBeforeUnmount(() => {
   unregisterNavigationGuard?.()
