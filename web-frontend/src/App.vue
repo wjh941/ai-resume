@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, provide, ref, watch, type Component } from "vue"
+import { computed, defineAsyncComponent, onMounted, onUnmounted, provide, ref, watch, type Component } from "vue"
 
 import WebSidebar, { type WorkspaceView } from "./components/WebSidebar.vue"
 import LoginPanel from "./components/LoginPanel.vue"
@@ -10,6 +10,7 @@ import { requestApi } from "./lib/api"
 import { CAPABILITIES_KEY, createCapabilityContext } from "./lib/capabilities"
 import { NAVIGATION_GUARD_KEY, createNavigationGuardContext } from "./lib/navigation-guard"
 import { clearSession, readSession, type Session } from "./lib/session"
+import { buildWorkspaceUrl, getWorkspacePageTitle, parseWorkspaceRoute, type WorkspaceRoute } from "./lib/workspace-route"
 
 function asyncView(loader: () => Promise<{ default: Component }>): Component {
   return defineAsyncComponent({
@@ -46,30 +47,97 @@ provide(CAPABILITIES_KEY, context)
 void context.refresh()
 const navigationContext = createNavigationGuardContext()
 provide(NAVIGATION_GUARD_KEY, navigationContext)
-const activeView = ref<WorkspaceView>("overview")
+const initialRoute: WorkspaceRoute = typeof window === "undefined"
+  ? { view: "overview", draftId: null }
+  : parseWorkspaceRoute({ search: window.location.search })
+const activeView = ref<WorkspaceView>(initialRoute.view)
 const pendingNavigation = ref<WorkspaceView | null>(null)
-const editingDraftId = ref<string | null>(null)
+const pendingDraftId = ref<string | null>(null)
+const editingDraftId = ref<string | null>(initialRoute.draftId)
 const dark = ref(false)
 const logoutLoading = ref(false)
 let themeSwitchTimer: number | undefined
 let themeInitialized = false
+let suppressRouteSync = false
 const activeComponent = computed(() => viewComponents[activeView.value])
 
+function currentRoute(): WorkspaceRoute {
+  return { view: activeView.value, draftId: editingDraftId.value }
+}
+
+function applyRoute(route: WorkspaceRoute): void {
+  suppressRouteSync = true
+  activeView.value = route.view
+  editingDraftId.value = route.draftId
+  suppressRouteSync = false
+  if (typeof document !== "undefined") document.title = getWorkspacePageTitle(route)
+}
+
+function updateRoute(route: WorkspaceRoute, replace = false): void {
+  if (typeof window === "undefined") return
+  const nextUrl = buildWorkspaceUrl(route, window.location.href)
+  if (replace) window.history.replaceState({}, "", nextUrl)
+  else window.history.pushState({}, "", nextUrl)
+  if (typeof document !== "undefined") document.title = getWorkspacePageTitle(route)
+}
+
 function navigateTo(view: WorkspaceView): void {
-  if (view === activeView.value) return
+  if (view === activeView.value && !editingDraftId.value) return
   if (!navigationContext.canNavigate()) {
     pendingNavigation.value = view
+    pendingDraftId.value = null
     return
   }
   pendingNavigation.value = null
-  activeView.value = view
+  pendingDraftId.value = null
+  const route: WorkspaceRoute = { view, draftId: null }
+  applyRoute(route)
+  updateRoute(route)
 }
 
 function resumePendingNavigation(): void {
   const target = pendingNavigation.value
+  const draftId = pendingDraftId.value
   pendingNavigation.value = null
-  if (target) navigateTo(target)
+  pendingDraftId.value = null
+  if (!target) return
+  if (draftId) {
+    const route: WorkspaceRoute = { view: "resume", draftId }
+    applyRoute(route)
+    updateRoute(route)
+    return
+  }
+  navigateTo(target)
 }
+
+function handlePopState(): void {
+  const route = parseWorkspaceRoute({ search: window.location.search })
+  if (!navigationContext.canNavigate()) {
+    pendingNavigation.value = route.view
+    pendingDraftId.value = route.draftId
+    updateRoute(currentRoute(), true)
+    return
+  }
+  pendingNavigation.value = null
+  pendingDraftId.value = null
+  applyRoute(route)
+}
+
+watch(editingDraftId, (draftId, previousDraftId) => {
+  if (suppressRouteSync || draftId === previousDraftId) return
+  if (draftId) activeView.value = "resume"
+  updateRoute({ view: draftId ? "resume" : activeView.value, draftId })
+})
+
+onMounted(() => {
+  applyRoute(currentRoute())
+  window.addEventListener("popstate", handlePopState)
+})
+
+onUnmounted(() => {
+  window.removeEventListener("popstate", handlePopState)
+  if (themeSwitchTimer !== undefined) window.clearTimeout(themeSwitchTimer)
+})
 
 watch(dark, (value) => {
   const root = document.documentElement
