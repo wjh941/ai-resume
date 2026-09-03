@@ -5,6 +5,15 @@ import { fileURLToPath } from "node:url"
 import { useAsyncAction } from "../composables/useAsyncAction"
 
 describe("useAsyncAction", () => {
+  it("keeps Jobs and Insights query inputs in session-scoped recovery snapshots", () => {
+    const jobs = readFileSync(new URL("../views/JobsView.vue", import.meta.url), "utf8")
+    const insights = readFileSync(new URL("../views/InsightsView.vue", import.meta.url), "utf8")
+    expect(jobs).toContain('"jobs-query"')
+    expect(insights).toContain('"insights-query"')
+    expect(jobs).toContain("watch([roleName, reportMode]")
+    expect(insights).toContain("watch([roleName, year, reportMode]")
+  })
+
   it("provides one shared capability context and refreshes it without blocking App rendering", () => {
     const app = readFileSync(new URL("../App.vue", import.meta.url), "utf8")
     expect(app).toContain("createCapabilityContext()")

@@ -7,6 +7,9 @@ import AsyncButton from "../components/AsyncButton.vue"
 import ExpandableText from "../components/ExpandableText.vue"
 import type { WorkspaceView } from "../components/WebSidebar.vue"
 import { CAPABILITIES_KEY, createCapabilityContext, isCapabilityEnabled } from "../lib/capabilities"
+import { readSession } from "../lib/session"
+import { readWorkspaceSnapshot, writeWorkspaceSnapshot } from "../lib/workspace-recovery"
+import { validateJobsQuerySnapshot } from "../lib/query-recovery"
 
 type JobResult = {
   role_name: string
@@ -29,6 +32,14 @@ type JobResult = {
 
 const roleName = ref("")
 const reportMode = ref<"simplified" | "professional">("simplified")
+const workspaceUserId = readSession()?.user.user_id ?? ""
+const workspaceStorage = (() => { try { return typeof sessionStorage === "undefined" ? null : sessionStorage } catch { return null } })()
+const recovered = workspaceStorage ? validateJobsQuerySnapshot(readWorkspaceSnapshot<unknown>(workspaceStorage, workspaceUserId, "jobs-query")) : {}
+if (recovered.roleName !== undefined) roleName.value = recovered.roleName
+if (recovered.reportMode !== undefined) reportMode.value = recovered.reportMode
+watch([roleName, reportMode], ([nextRoleName, nextReportMode]) => {
+  if (workspaceStorage) writeWorkspaceSnapshot(workspaceStorage, workspaceUserId, "jobs-query", { roleName: nextRoleName, reportMode: nextReportMode })
+})
 const context = inject(CAPABILITIES_KEY) ?? createCapabilityContext()
 const jobMatchingEnabled = computed(() => isCapabilityEnabled(context.capabilities.value, "jobMatching"))
 const jobMatchingState = computed<"loading" | "real" | "demo" | "disabled">(() => {

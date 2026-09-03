@@ -6,6 +6,9 @@ import { requestApi } from "../lib/api"
 import AsyncButton from "../components/AsyncButton.vue"
 import type { WorkspaceView } from "../components/WebSidebar.vue"
 import { CAPABILITIES_KEY, createCapabilityContext, isCapabilityEnabled } from "../lib/capabilities"
+import { readSession } from "../lib/session"
+import { readWorkspaceSnapshot, writeWorkspaceSnapshot } from "../lib/workspace-recovery"
+import { validateInsightsQuerySnapshot } from "../lib/query-recovery"
 
 type Report = {
   mode: "simplified" | "professional"
@@ -19,6 +22,15 @@ type Report = {
 const roleName = ref("")
 const year = ref(String(new Date().getFullYear() - 1))
 const reportMode = ref<"simplified" | "professional">("simplified")
+const workspaceUserId = readSession()?.user.user_id ?? ""
+const workspaceStorage = (() => { try { return typeof sessionStorage === "undefined" ? null : sessionStorage } catch { return null } })()
+const recovered = workspaceStorage ? validateInsightsQuerySnapshot(readWorkspaceSnapshot<unknown>(workspaceStorage, workspaceUserId, "insights-query")) : {}
+if (recovered.roleName !== undefined) roleName.value = recovered.roleName
+if (recovered.year !== undefined) year.value = recovered.year
+if (recovered.reportMode !== undefined) reportMode.value = recovered.reportMode
+watch([roleName, year, reportMode], ([nextRoleName, nextYear, nextReportMode]) => {
+  if (workspaceStorage) writeWorkspaceSnapshot(workspaceStorage, workspaceUserId, "insights-query", { roleName: nextRoleName, year: nextYear, reportMode: nextReportMode })
+})
 const context = inject(CAPABILITIES_KEY) ?? createCapabilityContext()
 const jobMatchingEnabled = computed(() => isCapabilityEnabled(context.capabilities.value, "jobMatching"))
 const jobMatchingState = computed<"loading" | "real" | "demo" | "disabled">(() => {
