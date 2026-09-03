@@ -10,6 +10,8 @@ describe("workspace navigation continuity", () => {
     expect(app).toContain("history.pushState")
     expect(app).toContain("handlePopState")
     expect(app).toContain("window.addEventListener(\"popstate\", handlePopState)")
+    expect(app).toContain("<KeepAlive")
+    expect(app).toContain(":key=\"activeView\"")
   })
 
   it("updates document titles for the active route", () => {

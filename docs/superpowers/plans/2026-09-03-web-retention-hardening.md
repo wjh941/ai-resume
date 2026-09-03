@@ -24,10 +24,10 @@
 - Test: `web-frontend/src/tests/workspace-navigation.spec.ts`
 - Test: `web-frontend/src/tests/api.spec.ts`
 
-- [ ] 先增加 KeepAlive、popstate 过期监听和 401 事件的失败断言。
-- [ ] 运行对应测试确认因实现缺失而失败。
-- [ ] 在 App 动态视图外加入 KeepAlive，在 API 401 分支派发固定事件，并由 App 切换登录态。
-- [ ] 运行路由、API 和交互测试确认通过。
+- [x] 先增加 KeepAlive、popstate 过期监听和 401 事件的失败断言。
+- [x] 运行对应测试确认因实现缺失而失败。
+- [x] 在 App 动态视图外加入 KeepAlive，在 API 401 分支派发固定事件，并由 App 切换登录态。
+- [x] 运行路由、API 和交互测试确认通过。
 
 ### Task 2: 鉴权二进制下载与账户导出
 
@@ -37,10 +37,10 @@
 - Modify: `web-frontend/src/views/AccountView.vue`
 - Test: `web-frontend/src/tests/download-file.spec.ts`
 
-- [ ] 先测试 Blob 下载链接创建、点击和 URL 清理行为。
-- [ ] 运行测试确认失败。
-- [ ] 实现 `downloadApi` 和最小下载触发器，账户页调用 POST 准备接口后下载 GET ZIP。
-- [ ] 运行下载和账户静态契约测试确认通过。
+- [x] 先测试 Blob 下载链接创建、点击和 URL 清理行为。
+- [x] 运行测试确认失败。
+- [x] 实现 `downloadApi` 和最小下载触发器，账户页调用 POST 准备接口后下载 GET ZIP。
+- [x] 运行下载和账户静态契约测试确认通过。
 
 ### Task 3: 跨端提示与最终验证
 
@@ -48,7 +48,7 @@
 - Modify: `web-frontend/src/views/ComparisonView.vue`
 - Modify: `web-frontend/src/tests/interaction.spec.ts`
 
-- [ ] 先增加 Web 端资料补全提示的失败断言。
-- [ ] 运行测试确认失败。
-- [ ] 改为导航到当前 Web 的职业规划页面，并保留可继续操作的文案。
-- [ ] 运行 Web 全量测试、生产构建和 Impeccable 检测。
+- [x] 先增加 Web 端资料补全提示的失败断言。
+- [x] 运行测试确认失败。
+- [x] 改为导航到当前 Web 的职业规划页面，并保留可继续操作的文案。
+- [x] 运行 Web 全量测试、生产构建和 Impeccable 检测。

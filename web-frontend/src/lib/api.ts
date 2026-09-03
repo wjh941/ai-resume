@@ -1,5 +1,7 @@
 import { clearSession, readSession } from "./session"
 
+export const SESSION_EXPIRED_EVENT = "resume-web-session-expired"
+
 type ApiEnvelope<T> = {
   code?: string
   data?: T
@@ -30,6 +32,10 @@ function isAbortError(reason: unknown): boolean {
   return typeof reason === "object" && reason !== null && "name" in reason && reason.name === "AbortError"
 }
 
+function notifySessionExpired(): void {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
+}
+
 export async function requestApi<T>(path: string, init: RequestInit = {}): Promise<T> {
   const session = readSession()
   const headers = {
@@ -54,10 +60,40 @@ export async function requestApi<T>(path: string, init: RequestInit = {}): Promi
     throw new ApiRequestError(readMessage(undefined), response.status)
   }
 
-  if (response.status === 401) clearSession()
+  if (response.status === 401) {
+    clearSession()
+    notifySessionExpired()
+  }
   if (!response.ok || body.code !== "ok") {
     throw new ApiRequestError(readMessage(body), response.status)
   }
 
   return body.data as T
+}
+
+export async function downloadApi(path: string, init: RequestInit = {}): Promise<Blob> {
+  const session = readSession()
+  const headers = {
+    ...(init.headers as Record<string, string> | undefined),
+    ...(session ? { Authorization: `Bearer ${session.token}` } : {}),
+  }
+  let response: Response
+  try {
+    response = await fetch(path, { ...init, headers })
+  } catch (reason) {
+    if (isAbortError(reason)) throw reason
+    throw new ApiRequestError(readMessage(undefined), 0)
+  }
+
+  if (response.status === 401) {
+    clearSession()
+    notifySessionExpired()
+  }
+  if (!response.ok) {
+    let body: ApiEnvelope<unknown> | null = null
+    try { body = (await response.json()) as ApiEnvelope<unknown> } catch { /* binary endpoint may return no JSON */ }
+    throw new ApiRequestError(readMessage(body), response.status)
+  }
+
+  return response.blob()
 }

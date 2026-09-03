@@ -55,7 +55,7 @@ onMounted(refresh)
       <div>
         <span class="section-kicker">先完成资料</span>
         <h2>还没有职业资料</h2>
-        <p>岗位推荐需要你的职业资料。请先在小程序的职业规划中保存资料，再回到这里继续比较岗位。</p>
+        <p>岗位推荐需要你的职业资料。先补充职业规划，保存后即可回到这里继续比较岗位。</p>
         <AsyncButton class="notice-action" type="button" @click="emit('navigate', 'career')">查看职业规划 <ArrowRight :size="15" aria-hidden="true" /></AsyncButton>
       </div>
     </div>

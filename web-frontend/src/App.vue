@@ -6,7 +6,7 @@ import LoginPanel from "./components/LoginPanel.vue"
 import WebTopbar from "./components/WebTopbar.vue"
 import LoadingSpinner from "./components/LoadingSpinner.vue"
 import AsyncViewError from "./components/AsyncViewError.vue"
-import { requestApi } from "./lib/api"
+import { requestApi, SESSION_EXPIRED_EVENT } from "./lib/api"
 import { CAPABILITIES_KEY, createCapabilityContext } from "./lib/capabilities"
 import { NAVIGATION_GUARD_KEY, createNavigationGuardContext } from "./lib/navigation-guard"
 import { clearSession, readSession, type Session } from "./lib/session"
@@ -123,6 +123,10 @@ function handlePopState(): void {
   applyRoute(route)
 }
 
+function handleSessionExpired(): void {
+  session.value = null
+}
+
 watch(editingDraftId, (draftId, previousDraftId) => {
   if (suppressRouteSync || draftId === previousDraftId) return
   if (draftId) activeView.value = "resume"
@@ -132,10 +136,12 @@ watch(editingDraftId, (draftId, previousDraftId) => {
 onMounted(() => {
   applyRoute(currentRoute())
   window.addEventListener("popstate", handlePopState)
+  window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
 })
 
 onUnmounted(() => {
   window.removeEventListener("popstate", handlePopState)
+  window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
   if (themeSwitchTimer !== undefined) window.clearTimeout(themeSwitchTimer)
 })
 
@@ -177,15 +183,19 @@ async function logout() {
       <WebTopbar :user="session.user" :dark="dark" :logout-loading="logoutLoading" @logout="logout" @toggle-theme="dark = !dark" />
       <section class="workspace-stage" :aria-labelledby="editingDraftId ? 'resume-editor-title' : `${activeView}-title`">
         <Transition name="view-swap" mode="out-in">
-          <div :key="editingDraftId ? `resume-editor-${editingDraftId}` : activeView" class="view-transition-shell">
+          <template v-if="editingDraftId">
             <ResumeEditorView
               v-if="editingDraftId"
+              :key="`resume-editor-${editingDraftId}`"
+              class="view-transition-shell"
               :draft-id="editingDraftId"
               @cancel="editingDraftId = null"
               @saved="editingDraftId = null"
             />
-            <component v-else :is="activeComponent" @navigate="navigateTo" @navigation-ready="resumePendingNavigation" @open-draft="editingDraftId = $event" />
-          </div>
+          </template>
+          <KeepAlive v-else>
+            <component :is="activeComponent" :key="activeView" class="view-transition-shell" @navigate="navigateTo" @navigation-ready="resumePendingNavigation" @open-draft="editingDraftId = $event" />
+          </KeepAlive>
         </Transition>
       </section>
     </main>
