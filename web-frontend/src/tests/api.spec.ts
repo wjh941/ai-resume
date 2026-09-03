@@ -90,6 +90,20 @@ describe("requestApi", () => {
     await expect(requestApi("/api/overview")).rejects.toBe(abortError)
   })
 
+  it("aborts a request that exceeds the default timeout", async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal("fetch", vi.fn((_path: string, init: RequestInit) => new Promise<Response>((_resolve, reject) => {
+      init.signal?.addEventListener("abort", () => reject(new DOMException("The operation was aborted", "AbortError")))
+    })))
+
+    const pending = requestApi("/api/overview")
+    const rejected = expect(pending).rejects.toMatchObject({ name: "AbortError" })
+    await vi.advanceTimersByTimeAsync(15_000)
+
+    await rejected
+    vi.useRealTimers()
+  })
+
   it("accepts an empty 204 response for side-effect requests", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 204 })))
 

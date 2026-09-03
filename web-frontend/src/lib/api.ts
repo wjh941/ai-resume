@@ -1,6 +1,7 @@
 import { clearSession, readSession } from "./session"
 
 export const SESSION_EXPIRED_EVENT = "resume-web-session-expired"
+export const DEFAULT_REQUEST_TIMEOUT_MS = 15_000
 
 type ApiEnvelope<T> = {
   code?: string
@@ -36,6 +37,32 @@ function notifySessionExpired(): void {
   if (typeof window !== "undefined") window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
 }
 
+function createRequestSignal(callerSignal?: AbortSignal): { signal: AbortSignal; cleanup: () => void } {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), DEFAULT_REQUEST_TIMEOUT_MS)
+  const abortFromCaller = () => controller.abort(callerSignal?.reason)
+  if (callerSignal) {
+    if (callerSignal.aborted) abortFromCaller()
+    else callerSignal.addEventListener("abort", abortFromCaller, { once: true })
+  }
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      clearTimeout(timeoutId)
+      callerSignal?.removeEventListener("abort", abortFromCaller)
+    },
+  }
+}
+
+async function fetchWithTimeout(path: string, init: RequestInit, headers: Record<string, string>): Promise<Response> {
+  const request = createRequestSignal(init.signal)
+  try {
+    return await fetch(path, { ...init, headers, signal: request.signal })
+  } finally {
+    request.cleanup()
+  }
+}
+
 export async function requestApi<T>(path: string, init: RequestInit = {}): Promise<T> {
   const session = readSession()
   const headers = {
@@ -45,7 +72,7 @@ export async function requestApi<T>(path: string, init: RequestInit = {}): Promi
   }
   let response: Response
   try {
-    response = await fetch(path, { ...init, headers })
+    response = await fetchWithTimeout(path, init, headers)
   } catch (reason) {
     if (isAbortError(reason)) throw reason
     throw new ApiRequestError(readMessage(undefined), 0)
@@ -79,7 +106,7 @@ export async function downloadApi(path: string, init: RequestInit = {}): Promise
   }
   let response: Response
   try {
-    response = await fetch(path, { ...init, headers })
+    response = await fetchWithTimeout(path, init, headers)
   } catch (reason) {
     if (isAbortError(reason)) throw reason
     throw new ApiRequestError(readMessage(undefined), 0)

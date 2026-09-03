@@ -29,4 +29,9 @@ describe("Web retention copy and actions", () => {
     expect(app).toContain("clearSession()")
     expect(app).toContain("accountDeletedNotice")
   })
+
+  it("keeps account scope loading recoverable", () => {
+    expect(account).toContain("RefreshCw")
+    expect(account).toContain('@click="refresh"')
+  })
 })
