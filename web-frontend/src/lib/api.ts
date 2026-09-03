@@ -17,6 +17,13 @@ export class ApiRequestError extends Error {
   }
 }
 
+export class ApiTimeoutError extends ApiRequestError {
+  constructor() {
+    super("请求超时，请稍后重试", 0)
+    this.name = "ApiTimeoutError"
+  }
+}
+
 export function readItems<T>(payload: T[] | { items?: T[] } | null | undefined): T[] {
   if (Array.isArray(payload)) return payload
   if (payload && typeof payload === "object" && "items" in payload && Array.isArray(payload.items)) {
@@ -37,9 +44,13 @@ function notifySessionExpired(): void {
   if (typeof window !== "undefined") window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
 }
 
-function createRequestSignal(callerSignal?: AbortSignal | null): { signal: AbortSignal; cleanup: () => void } {
+function createRequestSignal(callerSignal?: AbortSignal | null): { signal: AbortSignal; didTimeout: () => boolean; cleanup: () => void } {
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), DEFAULT_REQUEST_TIMEOUT_MS)
+  let timedOut = false
+  const timeoutId = setTimeout(() => {
+    timedOut = true
+    controller.abort()
+  }, DEFAULT_REQUEST_TIMEOUT_MS)
   const abortFromCaller = () => controller.abort(callerSignal?.reason)
   if (callerSignal) {
     if (callerSignal.aborted) abortFromCaller()
@@ -47,11 +58,18 @@ function createRequestSignal(callerSignal?: AbortSignal | null): { signal: Abort
   }
   return {
     signal: controller.signal,
+    didTimeout: () => timedOut,
     cleanup: () => {
       clearTimeout(timeoutId)
       callerSignal?.removeEventListener("abort", abortFromCaller)
     },
   }
+}
+
+function rethrowRequestFailure(reason: unknown, request: ReturnType<typeof createRequestSignal>): never {
+  if (request.didTimeout() && isAbortError(reason)) throw new ApiTimeoutError()
+  if (isAbortError(reason)) throw reason
+  throw new ApiRequestError(readMessage(undefined), 0)
 }
 
 export async function requestApi<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -67,8 +85,7 @@ export async function requestApi<T>(path: string, init: RequestInit = {}): Promi
     try {
       response = await fetch(path, { ...init, headers, signal: request.signal })
     } catch (reason) {
-      if (isAbortError(reason)) throw reason
-      throw new ApiRequestError(readMessage(undefined), 0)
+      rethrowRequestFailure(reason, request)
     }
 
     if (response.status === 204) return undefined as T
@@ -77,6 +94,7 @@ export async function requestApi<T>(path: string, init: RequestInit = {}): Promi
     try {
       body = (await response.json()) as ApiEnvelope<T>
     } catch (reason) {
+      if (request.didTimeout() && isAbortError(reason)) throw new ApiTimeoutError()
       if (isAbortError(reason)) throw reason
       throw new ApiRequestError(readMessage(undefined), response.status)
     }
@@ -107,8 +125,7 @@ export async function downloadApi(path: string, init: RequestInit = {}): Promise
     try {
       response = await fetch(path, { ...init, headers, signal: request.signal })
     } catch (reason) {
-      if (isAbortError(reason)) throw reason
-      throw new ApiRequestError(readMessage(undefined), 0)
+      rethrowRequestFailure(reason, request)
     }
 
     if (response.status === 401) {
@@ -118,6 +135,7 @@ export async function downloadApi(path: string, init: RequestInit = {}): Promise
     if (!response.ok) {
       let body: ApiEnvelope<unknown> | null = null
       try { body = (await response.json()) as ApiEnvelope<unknown> } catch (reason) {
+        if (request.didTimeout() && isAbortError(reason)) throw new ApiTimeoutError()
         if (isAbortError(reason)) throw reason
       }
       throw new ApiRequestError(readMessage(body), response.status)
@@ -126,6 +144,7 @@ export async function downloadApi(path: string, init: RequestInit = {}): Promise
     try {
       return await response.blob()
     } catch (reason) {
+      if (request.didTimeout() && isAbortError(reason)) throw new ApiTimeoutError()
       if (isAbortError(reason)) throw reason
       throw new ApiRequestError(readMessage(undefined), response.status)
     }

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { downloadApi, requestApi } from "../lib/api"
+import { ApiTimeoutError, downloadApi, requestApi } from "../lib/api"
 import { clearSession, saveSession } from "../lib/session"
 
 function installStorage() {
@@ -97,7 +97,7 @@ describe("requestApi", () => {
     })))
 
     const pending = requestApi("/api/overview")
-    const rejected = expect(pending).rejects.toMatchObject({ name: "AbortError" })
+    const rejected = expect(pending).rejects.toBeInstanceOf(ApiTimeoutError)
     await vi.advanceTimersByTimeAsync(15_000)
 
     await rejected
@@ -117,7 +117,7 @@ describe("requestApi", () => {
     } as Response)))
 
     const pending = requestApi("/api/overview")
-    const rejected = expect(pending).rejects.toMatchObject({ name: "AbortError" })
+    const rejected = expect(pending).rejects.toMatchObject({ name: "ApiTimeoutError", message: "请求超时，请稍后重试", status: 0 })
     await vi.advanceTimersByTimeAsync(15_000)
     await rejected
     rejectBody?.(new Error("body should have been aborted"))
@@ -133,7 +133,7 @@ describe("requestApi", () => {
     } as Response)))
 
     const pending = downloadApi("/api/export")
-    const rejected = expect(pending).rejects.toMatchObject({ name: "AbortError" })
+    const rejected = expect(pending).rejects.toMatchObject({ name: "ApiTimeoutError", message: "请求超时，请稍后重试", status: 0 })
     await vi.advanceTimersByTimeAsync(15_000)
     await rejected
     vi.useRealTimers()
