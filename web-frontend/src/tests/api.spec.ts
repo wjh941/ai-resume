@@ -18,6 +18,7 @@ function installStorage() {
 describe("requestApi", () => {
   afterEach(() => {
     clearSession()
+    vi.useRealTimers()
     vi.unstubAllGlobals()
   })
 
@@ -137,6 +138,42 @@ describe("requestApi", () => {
     await vi.advanceTimersByTimeAsync(15_000)
     await rejected
     vi.useRealTimers()
+  })
+
+  it("preserves caller cancellation while consuming a JSON response body", async () => {
+    const controller = new AbortController()
+    const abortError = new DOMException("The operation was aborted", "AbortError")
+    vi.stubGlobal("fetch", vi.fn((_path: string, init: RequestInit) => Promise.resolve({
+      status: 200,
+      ok: true,
+      json: () => new Promise((_resolve, reject) => {
+        init.signal?.addEventListener("abort", () => reject(abortError))
+      }),
+    } as Response)))
+
+    const pending = requestApi("/api/overview", { signal: controller.signal })
+    await Promise.resolve()
+    await Promise.resolve()
+    controller.abort(abortError)
+
+    await expect(pending).rejects.toBe(abortError)
+  })
+
+  it("localizes timeout while reading a failed download response body", async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal("fetch", vi.fn((_path: string, init: RequestInit) => Promise.resolve({
+      status: 503,
+      ok: false,
+      json: () => new Promise((_resolve, reject) => {
+        init.signal?.addEventListener("abort", () => reject(new DOMException("The operation was aborted", "AbortError")))
+      }),
+    } as Response)))
+
+    const pending = downloadApi("/api/export")
+    const rejected = expect(pending).rejects.toMatchObject({ name: "ApiTimeoutError", message: "请求超时，请稍后重试", status: 0 })
+    await vi.advanceTimersByTimeAsync(15_000)
+
+    await rejected
   })
 
   it("accepts an empty 204 response for side-effect requests", async () => {
