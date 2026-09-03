@@ -3,6 +3,7 @@ import { Activity, ArrowUpRight, CircleCheck, CircleDot, FilePenLine, KanbanSqua
 import { computed, nextTick, onMounted, ref } from "vue"
 import { ApiRequestError } from "../lib/api"
 import { loadOverview, type ContinuationItem, type OverviewState } from "../lib/dashboard"
+import { getActivationSteps } from "../lib/activation"
 import AnimatedNumber from "../components/AnimatedNumber.vue"
 import AsyncButton from "../components/AsyncButton.vue"
 import LoadingSpinner from "../components/LoadingSpinner.vue"
@@ -14,6 +15,7 @@ const error = ref("")
 const focusIndex = ref(0)
 const focusStatus = ref("")
 const activeFocus = computed(() => overview.value?.focusOptions[focusIndex.value] ?? overview.value?.focus)
+const activationSteps = computed(() => overview.value ? getActivationSteps(overview.value) : [])
 
 async function refresh() {
   loading.value = true
@@ -62,7 +64,7 @@ onMounted(refresh)
         <div class="progress-list" aria-label="求职进度"><div v-for="item in overview.progress" :key="item.kind" class="progress-row" :data-state="item.state"><CircleCheck v-if="item.state === 'completed'" :size="18" aria-hidden="true" /><CircleDot v-else :size="18" aria-hidden="true" /><span>{{ item.label }}</span><strong>{{ item.state === 'completed' ? '已完成' : item.state === 'in-progress' ? '进行中' : '未开始' }}</strong><button type="button" :disabled="loading" @click="emit('navigate', item.kind)">进入 <ArrowUpRight :size="15" aria-hidden="true" /></button></div></div>
       </section>
       <section class="overview-strip" aria-label="工作概览快照"><article class="metric-block"><span class="metric-icon"><FilePenLine :size="21" aria-hidden="true" /></span><span>简历草稿</span><strong><AnimatedNumber :value="overview.draftCount" /></strong><small>已有内容可继续完善</small></article><article class="metric-block metric-mint"><span class="metric-icon"><ListChecks :size="21" aria-hidden="true" /></span><span>待完成行动</span><strong><AnimatedNumber :value="overview.openTaskCount" /></strong><small>把计划变成下一步动作</small></article><article class="metric-block metric-sky"><span class="metric-icon"><KanbanSquare :size="21" aria-hidden="true" /></span><span>投递记录</span><strong><AnimatedNumber :value="overview.applicationCount" /></strong><small>持续记录每次进展</small></article></section>
-      <section class="continue-list" aria-label="继续推进"><div class="section-heading"><div><h2>继续推进</h2><p>从上次停下的地方接着做。</p></div></div><div v-if="overview.hasWorkspaceData && overview.continuations.length" class="continue-items"><div v-for="item in overview.continuations.slice(0, 3)" :key="`${item.kind}-${item.id ?? item.title}`" class="continue-item"><span>{{ item.title }}</span><button type="button" :disabled="loading" :aria-label="`${item.kind === 'resume' ? '继续编辑' : '继续'} ${item.title}`" @click="openContinuation(item)">{{ item.kind === "resume" ? "继续编辑" : "继续" }} <ArrowUpRight :size="15" aria-hidden="true" /></button></div></div><p v-else-if="overview.hasWorkspaceData" class="continue-empty">当前没有需要继续的事项。</p><ol v-else class="starter-list"><li v-for="item in [{ label: '完善简历基础信息', target: 'resume' }, { label: '制定下一步行动', target: 'career' }, { label: '记录第一条投递', target: 'applications' }]" :key="item.target"><span>{{ item.label }}</span><button type="button" :disabled="loading" @click="emit('navigate', item.target)">开始 <ArrowUpRight :size="15" aria-hidden="true" /></button></li></ol></section>
+      <section class="continue-list" aria-label="继续推进"><div class="section-heading"><div><h2>{{ overview.hasWorkspaceData ? "继续推进" : "开始使用" }}</h2><p>{{ overview.hasWorkspaceData ? "从上次停下的地方接着做。" : "完成三步，建立你的求职工作台。" }}</p></div></div><div v-if="overview.hasWorkspaceData && overview.continuations.length" class="continue-items"><div v-for="item in overview.continuations.slice(0, 3)" :key="`${item.kind}-${item.id ?? item.title}`" class="continue-item"><span>{{ item.title }}</span><button type="button" :disabled="loading" :aria-label="`${item.kind === 'resume' ? '继续编辑' : '继续'} ${item.title}`" @click="openContinuation(item)">{{ item.kind === "resume" ? "继续编辑" : "继续" }} <ArrowUpRight :size="15" aria-hidden="true" /></button></div></div><p v-else-if="overview.hasWorkspaceData" class="continue-empty">当前没有需要继续的事项。</p><ol v-else class="starter-list activation-guide"><li v-for="(step, index) in activationSteps" :key="step.target" class="activation-step" :class="`is-${step.state}`"><span class="activation-step-marker"><CircleCheck v-if="step.state === 'done'" :size="17" aria-hidden="true" /><span v-else>{{ index + 1 }}</span></span><div><strong>{{ step.label }}</strong><small>{{ step.state === "done" ? "已完成，可随时查看" : step.state === "current" ? "现在开始" : "准备好后继续" }}</small></div><button type="button" :disabled="loading" @click="emit('navigate', step.target)">{{ step.state === "done" ? "查看" : "开始" }} <ArrowUpRight :size="15" aria-hidden="true" /></button></li></ol></section>
     </div>
   </section>
 </template>

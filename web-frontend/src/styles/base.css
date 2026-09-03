@@ -264,6 +264,14 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .continue-item, .starter-list li { display: flex; min-width: 0; min-height: 92px; flex-direction: column; justify-content: space-between; gap: 14px; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-raised); }
 .continue-item > span, .starter-list li > span { min-width: 0; overflow-wrap: anywhere; color: var(--ink); font-size: 13px; font-weight: 700; line-height: 1.45; }
 .continue-item button, .starter-list button { align-self: flex-start; }
+.activation-guide { grid-template-columns: 1fr; gap: 8px; }
+.activation-step { display: grid !important; grid-template-columns: 32px minmax(0, 1fr) auto; min-height: 68px !important; align-items: center; gap: 12px !important; padding: 12px 14px !important; }
+.activation-step-marker { display: grid; width: 28px; height: 28px; place-items: center; color: var(--primary); border: 1px solid color-mix(in srgb, var(--primary) 38%, var(--line)); border-radius: 50%; background: var(--primary-tint); font-size: 12px; font-weight: 800; }
+.activation-step.is-done .activation-step-marker { color: var(--surface); border-color: var(--success); background: var(--success); }
+.activation-step > div { display: grid; min-width: 0; gap: 3px; }
+.activation-step strong { color: var(--ink); font-size: 13px; }
+.activation-step small { color: var(--muted); font-size: 11px; }
+.activation-step.is-current { border-color: color-mix(in srgb, var(--primary) 48%, var(--line)); box-shadow: 0 6px 18px color-mix(in srgb, var(--primary) 10%, transparent); }
 .continue-empty { min-height: 44px; padding: 14px 0; margin: 0; color: var(--muted); line-height: 1.5; }
 .overview-loading { padding: 4px 0; }
 .overview-skeleton { min-width: 0; }
