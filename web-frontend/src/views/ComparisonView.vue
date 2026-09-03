@@ -8,6 +8,7 @@ import ComparisonRolePicker from "../components/ComparisonRolePicker.vue"
 import LoadingSpinner from "../components/LoadingSpinner.vue"
 import { ApiRequestError } from "../lib/api"
 import { compareRoles, isCareerProfileMissingError, loadCareerRecommendations, type CareerComparisonResponse, type CareerRecommendation } from "../lib/career"
+import { restoreComparisonSelection } from "../lib/comparison-workflow"
 import type { WorkspaceView } from "../components/WebSidebar.vue"
 import { readSession } from "../lib/session"
 import { clearWorkspaceSnapshot, readWorkspaceSnapshot, writeWorkspaceSnapshot } from "../lib/workspace-recovery"
@@ -23,7 +24,7 @@ const needsMembership = ref(false)
 const profileMissing = ref(false)
 const comparisonSuccess = ref(false)
 const workspaceUserId = readSession()?.user.user_id ?? ""
-const workspaceStorage = typeof sessionStorage === "undefined" ? null : sessionStorage
+const workspaceStorage = (() => { try { return typeof sessionStorage === "undefined" ? null : sessionStorage } catch { return null } })()
 const roles = computed(() => recommendations.value.map((item) => item.role.roleName).filter((role, index, all) => Boolean(role) && all.indexOf(role) === index))
 
 watch(selected, (value) => {
@@ -36,7 +37,7 @@ async function refresh(): Promise<void> {
     const response = await loadCareerRecommendations()
     recommendations.value = [...response.tiers.stretch, ...response.tiers.stable, ...response.tiers.safe]
     const recovered = workspaceStorage ? readWorkspaceSnapshot<unknown>(workspaceStorage, workspaceUserId, "comparison") : null
-    selected.value = Array.isArray(recovered) && recovered.every((role): role is string => typeof role === "string") ? recovered : []
+    selected.value = restoreComparisonSelection(recovered, roles.value)
   } catch (caught) {
     if (isCareerProfileMissingError(caught)) {
       profileMissing.value = true

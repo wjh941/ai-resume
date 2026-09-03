@@ -13,6 +13,7 @@ import {
   isAssessmentComplete,
   mergeAssessmentAnswers,
   resolveAssessmentSubmitAction,
+  validateAssessmentSnapshot,
 } from "../lib/assessment-workflow"
 import type { WorkspaceView } from "../components/WebSidebar.vue"
 import { readSession } from "../lib/session"
@@ -29,7 +30,7 @@ const error = ref("")
 const validationActive = ref(false)
 const reportMode = ref<"simplified" | "professional">("simplified")
 const workspaceUserId = readSession()?.user.user_id ?? ""
-const workspaceStorage = typeof sessionStorage === "undefined" ? null : sessionStorage
+const workspaceStorage = (() => { try { return typeof sessionStorage === "undefined" ? null : sessionStorage } catch { return null } })()
 const answeredCount = computed(() => Object.keys(answers.value).length)
 const complete = computed(() => isAssessmentComplete(questions.value, answers.value))
 
@@ -48,11 +49,11 @@ async function refresh(): Promise<void> {
   const [questionResponse, savedResponse] = await Promise.allSettled([getAssessmentQuestions(), loadAssessment()])
   if (questionResponse.status === "fulfilled") { questions.value = questionResponse.value.items; notice.value = questionResponse.value.notice }
   else { error.value = "暂时无法读取测评题目，请稍后重试" }
-  const recovered = workspaceStorage ? readWorkspaceSnapshot<Record<string, number>>(workspaceStorage, workspaceUserId, "assessment") : null
+  const recovered = workspaceStorage ? validateAssessmentSnapshot(readWorkspaceSnapshot<unknown>(workspaceStorage, workspaceUserId, "assessment"), questionResponse.status === "fulfilled" ? questionResponse.value.items : []) : {}
   if (savedResponse.status === "fulfilled") {
-    answers.value = mergeAssessmentAnswers(mergeAssessmentAnswers(answers.value, savedResponse.value.answers), recovered ?? {})
+    answers.value = mergeAssessmentAnswers(mergeAssessmentAnswers(answers.value, savedResponse.value.answers), recovered)
     result.value = savedResponse.value.result
-  } else if (recovered) answers.value = mergeAssessmentAnswers(answers.value, recovered)
+  } else answers.value = mergeAssessmentAnswers(answers.value, recovered)
   loading.value = false
 }
 async function submit(): Promise<void> {

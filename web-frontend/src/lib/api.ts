@@ -37,7 +37,7 @@ function notifySessionExpired(): void {
   if (typeof window !== "undefined") window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
 }
 
-function createRequestSignal(callerSignal?: AbortSignal): { signal: AbortSignal; cleanup: () => void } {
+function createRequestSignal(callerSignal?: AbortSignal | null): { signal: AbortSignal; cleanup: () => void } {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), DEFAULT_REQUEST_TIMEOUT_MS)
   const abortFromCaller = () => controller.abort(callerSignal?.reason)
@@ -54,15 +54,6 @@ function createRequestSignal(callerSignal?: AbortSignal): { signal: AbortSignal;
   }
 }
 
-async function fetchWithTimeout(path: string, init: RequestInit, headers: Record<string, string>): Promise<Response> {
-  const request = createRequestSignal(init.signal)
-  try {
-    return await fetch(path, { ...init, headers, signal: request.signal })
-  } finally {
-    request.cleanup()
-  }
-}
-
 export async function requestApi<T>(path: string, init: RequestInit = {}): Promise<T> {
   const session = readSession()
   const headers = {
@@ -70,32 +61,38 @@ export async function requestApi<T>(path: string, init: RequestInit = {}): Promi
     ...(init.headers as Record<string, string> | undefined),
     ...(session ? { Authorization: `Bearer ${session.token}` } : {}),
   }
-  let response: Response
+  const request = createRequestSignal(init.signal)
   try {
-    response = await fetchWithTimeout(path, init, headers)
-  } catch (reason) {
-    if (isAbortError(reason)) throw reason
-    throw new ApiRequestError(readMessage(undefined), 0)
-  }
+    let response: Response
+    try {
+      response = await fetch(path, { ...init, headers, signal: request.signal })
+    } catch (reason) {
+      if (isAbortError(reason)) throw reason
+      throw new ApiRequestError(readMessage(undefined), 0)
+    }
 
-  if (response.status === 204) return undefined as T
+    if (response.status === 204) return undefined as T
 
-  let body: ApiEnvelope<T>
-  try {
-    body = (await response.json()) as ApiEnvelope<T>
-  } catch {
-    throw new ApiRequestError(readMessage(undefined), response.status)
-  }
+    let body: ApiEnvelope<T>
+    try {
+      body = (await response.json()) as ApiEnvelope<T>
+    } catch (reason) {
+      if (isAbortError(reason)) throw reason
+      throw new ApiRequestError(readMessage(undefined), response.status)
+    }
 
-  if (response.status === 401) {
-    clearSession()
-    notifySessionExpired()
-  }
-  if (!response.ok || body.code !== "ok") {
-    throw new ApiRequestError(readMessage(body), response.status)
-  }
+    if (response.status === 401) {
+      clearSession()
+      notifySessionExpired()
+    }
+    if (!response.ok || body.code !== "ok") {
+      throw new ApiRequestError(readMessage(body), response.status)
+    }
 
-  return body.data as T
+    return body.data as T
+  } finally {
+    request.cleanup()
+  }
 }
 
 export async function downloadApi(path: string, init: RequestInit = {}): Promise<Blob> {
@@ -104,23 +101,35 @@ export async function downloadApi(path: string, init: RequestInit = {}): Promise
     ...(init.headers as Record<string, string> | undefined),
     ...(session ? { Authorization: `Bearer ${session.token}` } : {}),
   }
-  let response: Response
+  const request = createRequestSignal(init.signal)
   try {
-    response = await fetchWithTimeout(path, init, headers)
-  } catch (reason) {
-    if (isAbortError(reason)) throw reason
-    throw new ApiRequestError(readMessage(undefined), 0)
-  }
+    let response: Response
+    try {
+      response = await fetch(path, { ...init, headers, signal: request.signal })
+    } catch (reason) {
+      if (isAbortError(reason)) throw reason
+      throw new ApiRequestError(readMessage(undefined), 0)
+    }
 
-  if (response.status === 401) {
-    clearSession()
-    notifySessionExpired()
-  }
-  if (!response.ok) {
-    let body: ApiEnvelope<unknown> | null = null
-    try { body = (await response.json()) as ApiEnvelope<unknown> } catch { /* binary endpoint may return no JSON */ }
-    throw new ApiRequestError(readMessage(body), response.status)
-  }
+    if (response.status === 401) {
+      clearSession()
+      notifySessionExpired()
+    }
+    if (!response.ok) {
+      let body: ApiEnvelope<unknown> | null = null
+      try { body = (await response.json()) as ApiEnvelope<unknown> } catch (reason) {
+        if (isAbortError(reason)) throw reason
+      }
+      throw new ApiRequestError(readMessage(body), response.status)
+    }
 
-  return response.blob()
+    try {
+      return await response.blob()
+    } catch (reason) {
+      if (isAbortError(reason)) throw reason
+      throw new ApiRequestError(readMessage(undefined), response.status)
+    }
+  } finally {
+    request.cleanup()
+  }
 }

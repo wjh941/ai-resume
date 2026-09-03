@@ -104,6 +104,41 @@ describe("requestApi", () => {
     vi.useRealTimers()
   })
 
+  it("keeps the timeout active while consuming a JSON response body", async () => {
+    vi.useFakeTimers()
+    let rejectBody!: (reason: unknown) => void
+    vi.stubGlobal("fetch", vi.fn((_path: string, init: RequestInit) => Promise.resolve({
+      status: 200,
+      ok: true,
+      json: () => new Promise((_resolve, reject) => {
+        rejectBody = reject
+        init.signal?.addEventListener("abort", () => reject(new DOMException("The operation was aborted", "AbortError")))
+      }),
+    } as Response)))
+
+    const pending = requestApi("/api/overview")
+    const rejected = expect(pending).rejects.toMatchObject({ name: "AbortError" })
+    await vi.advanceTimersByTimeAsync(15_000)
+    await rejected
+    rejectBody?.(new Error("body should have been aborted"))
+    vi.useRealTimers()
+  })
+
+  it("keeps the timeout active while consuming a binary response body", async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal("fetch", vi.fn((_path: string, init: RequestInit) => Promise.resolve({
+      status: 200,
+      ok: true,
+      blob: () => new Promise((_resolve, reject) => init.signal?.addEventListener("abort", () => reject(new DOMException("The operation was aborted", "AbortError")))),
+    } as Response)))
+
+    const pending = downloadApi("/api/export")
+    const rejected = expect(pending).rejects.toMatchObject({ name: "AbortError" })
+    await vi.advanceTimersByTimeAsync(15_000)
+    await rejected
+    vi.useRealTimers()
+  })
+
   it("accepts an empty 204 response for side-effect requests", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 204 })))
 

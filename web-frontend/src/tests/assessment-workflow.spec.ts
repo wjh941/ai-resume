@@ -6,6 +6,7 @@ import {
   flattenActionPlan,
   isAssessmentComplete,
   mergeAssessmentAnswers,
+  validateAssessmentSnapshot,
   resolveAssessmentSubmitAction,
 } from "../lib/assessment-workflow"
 import type { AssessmentQuestion, AssessmentReport } from "../lib/assessment"
@@ -14,6 +15,10 @@ const questions: AssessmentQuestion[] = [{ key: "q1", group: "interest", dimensi
 const report: AssessmentReport = { topInterests: [], workStyleSummary: "", strengthEvidence: [], confidenceNote: "", answeredCount: 2, actionPlan: { sevenDay: ["七天"], thirtyDay: ["三十天"], ninetyDay: ["九十天"] } }
 
 describe("assessment workflow helpers", () => {
+  it("keeps only known questions with integer values in the assessment range", () => {
+    expect(validateAssessmentSnapshot({ q1: 1, q2: 5, stale: 3, fractional: 2.5, low: 0, high: 6 }, questions)).toEqual({ q1: 1, q2: 5 })
+  })
+
   it("requires every question before submission", () => {
     expect(isAssessmentComplete(questions, { q1: 4 })).toBe(false)
     expect(isAssessmentComplete(questions, { q1: 4, q2: 2 })).toBe(true)
