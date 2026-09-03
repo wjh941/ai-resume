@@ -15,6 +15,8 @@ import {
   resolveAssessmentSubmitAction,
 } from "../lib/assessment-workflow"
 import type { WorkspaceView } from "../components/WebSidebar.vue"
+import { readSession } from "../lib/session"
+import { clearWorkspaceSnapshot, readWorkspaceSnapshot, writeWorkspaceSnapshot } from "../lib/workspace-recovery"
 
 const emit = defineEmits<{ navigate: [view: WorkspaceView] }>()
 const questions = ref<AssessmentQuestion[]>([])
@@ -26,6 +28,8 @@ const saving = ref(false)
 const error = ref("")
 const validationActive = ref(false)
 const reportMode = ref<"simplified" | "professional">("simplified")
+const workspaceUserId = readSession()?.user.user_id ?? ""
+const workspaceStorage = typeof sessionStorage === "undefined" ? null : sessionStorage
 const answeredCount = computed(() => Object.keys(answers.value).length)
 const complete = computed(() => isAssessmentComplete(questions.value, answers.value))
 
@@ -35,12 +39,20 @@ watch(complete, (value) => {
   error.value = clearAssessmentValidationError(value, error.value)
 })
 
+watch(answers, (value) => {
+  if (workspaceStorage) writeWorkspaceSnapshot(workspaceStorage, workspaceUserId, "assessment", value)
+}, { deep: true })
+
 async function refresh(): Promise<void> {
   loading.value = true; error.value = ""; notice.value = ""
   const [questionResponse, savedResponse] = await Promise.allSettled([getAssessmentQuestions(), loadAssessment()])
   if (questionResponse.status === "fulfilled") { questions.value = questionResponse.value.items; notice.value = questionResponse.value.notice }
   else { error.value = "暂时无法读取测评题目，请稍后重试" }
-  if (savedResponse.status === "fulfilled") { answers.value = mergeAssessmentAnswers(answers.value, savedResponse.value.answers); result.value = savedResponse.value.result }
+  const recovered = workspaceStorage ? readWorkspaceSnapshot<Record<string, number>>(workspaceStorage, workspaceUserId, "assessment") : null
+  if (savedResponse.status === "fulfilled") {
+    answers.value = mergeAssessmentAnswers(mergeAssessmentAnswers(answers.value, savedResponse.value.answers), recovered ?? {})
+    result.value = savedResponse.value.result
+  } else if (recovered) answers.value = mergeAssessmentAnswers(answers.value, recovered)
   loading.value = false
 }
 async function submit(): Promise<void> {
@@ -52,7 +64,11 @@ async function submit(): Promise<void> {
   }
   if (action === "ignore") return
   saving.value = true; error.value = ""
-  try { const saved = await submitAssessment(answers.value, reportMode.value); result.value = saved.result } catch (caught) { error.value = caught instanceof Error ? caught.message : "测评暂未提交，请稍后重试" } finally { saving.value = false }
+  try {
+    const saved = await submitAssessment(answers.value, reportMode.value)
+    result.value = saved.result
+    if (workspaceStorage) clearWorkspaceSnapshot(workspaceStorage, workspaceUserId, "assessment")
+  } catch (caught) { error.value = caught instanceof Error ? caught.message : "测评暂未提交，请稍后重试" } finally { saving.value = false }
 }
 onMounted(refresh)
 </script>

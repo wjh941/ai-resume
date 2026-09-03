@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ArrowRight, GitCompareArrows, Map, RefreshCw } from "lucide-vue-next"
-import { computed, onMounted, ref } from "vue"
+import { computed, onMounted, ref, watch } from "vue"
 
 import AsyncButton from "../components/AsyncButton.vue"
 import CapsuleMultiSelect from "../components/CapsuleMultiSelect.vue"
@@ -9,6 +9,8 @@ import LoadingSpinner from "../components/LoadingSpinner.vue"
 import { ApiRequestError } from "../lib/api"
 import { compareRoles, isCareerProfileMissingError, loadCareerRecommendations, type CareerComparisonResponse, type CareerRecommendation } from "../lib/career"
 import type { WorkspaceView } from "../components/WebSidebar.vue"
+import { readSession } from "../lib/session"
+import { clearWorkspaceSnapshot, readWorkspaceSnapshot, writeWorkspaceSnapshot } from "../lib/workspace-recovery"
 
 const emit = defineEmits<{ navigate: [view: WorkspaceView] }>()
 const recommendations = ref<CareerRecommendation[]>([])
@@ -20,13 +22,21 @@ const error = ref("")
 const needsMembership = ref(false)
 const profileMissing = ref(false)
 const comparisonSuccess = ref(false)
+const workspaceUserId = readSession()?.user.user_id ?? ""
+const workspaceStorage = typeof sessionStorage === "undefined" ? null : sessionStorage
 const roles = computed(() => recommendations.value.map((item) => item.role.roleName).filter((role, index, all) => Boolean(role) && all.indexOf(role) === index))
+
+watch(selected, (value) => {
+  if (workspaceStorage) writeWorkspaceSnapshot(workspaceStorage, workspaceUserId, "comparison", value)
+}, { deep: true })
 
 async function refresh(): Promise<void> {
   loading.value = true; error.value = ""; needsMembership.value = false; profileMissing.value = false
   try {
     const response = await loadCareerRecommendations()
     recommendations.value = [...response.tiers.stretch, ...response.tiers.stable, ...response.tiers.safe]
+    const recovered = workspaceStorage ? readWorkspaceSnapshot<unknown>(workspaceStorage, workspaceUserId, "comparison") : null
+    selected.value = Array.isArray(recovered) && recovered.every((role): role is string => typeof role === "string") ? recovered : []
   } catch (caught) {
     if (isCareerProfileMissingError(caught)) {
       profileMissing.value = true
@@ -39,7 +49,10 @@ async function refresh(): Promise<void> {
 async function compare(): Promise<void> {
   if (selected.value.length < 2 || selected.value.length > 4 || comparing.value) return
   comparing.value = true; comparisonSuccess.value = false; error.value = ""; needsMembership.value = false
-  try { result.value = await compareRoles(selected.value) } catch (caught) { if (caught instanceof ApiRequestError && caught.status === 403) needsMembership.value = true; error.value = caught instanceof Error ? caught.message : "岗位对比暂未完成，请稍后重试" } finally { comparing.value = false }
+  try {
+    result.value = await compareRoles(selected.value)
+    if (workspaceStorage) clearWorkspaceSnapshot(workspaceStorage, workspaceUserId, "comparison")
+  } catch (caught) { if (caught instanceof ApiRequestError && caught.status === 403) needsMembership.value = true; error.value = caught instanceof Error ? caught.message : "岗位对比暂未完成，请稍后重试" } finally { comparing.value = false }
   if (result.value) comparisonSuccess.value = true
 }
 onMounted(refresh)
