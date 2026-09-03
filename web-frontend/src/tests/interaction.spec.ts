@@ -239,6 +239,8 @@ describe("useAsyncAction", () => {
     expect(login).toContain("aria-describedby")
     expect(login).toContain("aria-invalid")
     expect(topbar).toContain(':aria-pressed="dark"')
+    expect(topbar).not.toContain("璧勬枡宸茶繛鎺ワ紝鍙户缁畬鍠勬眰鑱岃鍒?")
+    expect(topbar).toContain("宸ヤ綔鍖哄凡灏辩华")
     expect(applications).toContain(":aria-label=")
     expect(resume).toContain(":aria-label=")
   })

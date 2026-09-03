@@ -18,7 +18,7 @@ const emit = defineEmits<{
 
 <template>
   <header class="web-topbar">
-    <div class="topbar-status"><span class="status-dot" aria-hidden="true" />资料已连接，可继续完善求职计划</div>
+    <div class="topbar-status"><span class="status-dot" aria-hidden="true" />宸ヤ綔鍖哄凡灏辩华</div>
     <div class="topbar-actions">
       <button
         class="icon-button"
