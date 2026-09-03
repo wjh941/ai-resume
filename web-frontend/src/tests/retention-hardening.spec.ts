@@ -22,4 +22,11 @@ describe("Web retention copy and actions", () => {
     expect(app).toContain(":session-notice=\"sessionExpired ?")
     expect(login).toContain("sessionNotice")
   })
+
+  it("closes the local session immediately after account deletion", () => {
+    expect(account).toContain('emit("deleted")')
+    expect(app).toContain('@deleted="handleAccountDeleted"')
+    expect(app).toContain("clearSession()")
+    expect(app).toContain("accountDeletedNotice")
+  })
 })

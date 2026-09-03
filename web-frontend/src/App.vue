@@ -57,6 +57,7 @@ const editingDraftId = ref<string | null>(initialRoute.draftId)
 const dark = ref(false)
 const logoutLoading = ref(false)
 const sessionExpired = ref(false)
+const accountDeletedNotice = ref("")
 let themeSwitchTimer: number | undefined
 let themeInitialized = false
 let suppressRouteSync = false
@@ -129,8 +130,17 @@ function handleSessionExpired(): void {
   session.value = null
 }
 
+function handleAccountDeleted(): void {
+  clearSession()
+  accountDeletedNotice.value = "账户已删除，感谢你使用本工作区。"
+  session.value = null
+}
+
 watch(session, (value) => {
-  if (value) sessionExpired.value = false
+  if (value) {
+    sessionExpired.value = false
+    accountDeletedNotice.value = ""
+  }
 })
 
 watch(editingDraftId, (draftId, previousDraftId) => {
@@ -182,7 +192,7 @@ async function logout() {
 </script>
 
 <template>
-  <LoginPanel v-if="!session" :session-notice="sessionExpired ? '登录已过期，请重新登录后继续。' : undefined" @authenticated="session = $event" />
+  <LoginPanel v-if="!session" :session-notice="sessionExpired ? '登录已过期，请重新登录后继续。' : accountDeletedNotice || undefined" @authenticated="session = $event" />
   <div v-else class="web-shell">
     <WebSidebar :active-view="activeView" @navigate="navigateTo" />
     <main class="web-workspace">
@@ -200,7 +210,7 @@ async function logout() {
             />
           </template>
           <KeepAlive v-else>
-            <component :is="activeComponent" :key="activeView" class="view-transition-shell" @navigate="navigateTo" @navigation-ready="resumePendingNavigation" @open-draft="editingDraftId = $event" />
+            <component :is="activeComponent" :key="activeView" class="view-transition-shell" @navigate="navigateTo" @deleted="handleAccountDeleted" @navigation-ready="resumePendingNavigation" @open-draft="editingDraftId = $event" />
           </KeepAlive>
         </Transition>
       </section>

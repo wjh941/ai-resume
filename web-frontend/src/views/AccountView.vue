@@ -19,7 +19,10 @@ const loading = ref(true)
 const error = ref("")
 const notice = ref("")
 const pendingAction = ref<"consent" | "export" | "deletion" | "">("")
-const emit = defineEmits<{ navigate: [view: WorkspaceView] }>()
+const emit = defineEmits<{
+  navigate: [view: WorkspaceView]
+  deleted: []
+}>()
 
 async function refresh() {
   loading.value = true
@@ -69,7 +72,7 @@ async function requestDeletion() {
   pendingAction.value = "deletion"
   try {
     await requestApi("/api/account/deletion-request", { method: "POST" })
-    notice.value = "账户删除申请已完成。"
+    emit("deleted")
   } catch {
     error.value = "删除申请未完成，请稍后重试"
   } finally {
