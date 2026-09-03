@@ -398,6 +398,33 @@ describe("useAsyncAction", () => {
     expect(styles).toMatch(/@media \(max-width: 480px\)[\s\S]*\.application-leave-confirmation[^}]*flex-wrap:\s*wrap/s)
   })
 
+  it("coordinates guarded workspace navigation around dirty applications", () => {
+    const app = readFileSync(new URL("../App.vue", import.meta.url), "utf8")
+    const applications = readFileSync(new URL("../views/ApplicationsView.vue", import.meta.url), "utf8")
+    const normalizedApp = app.replace(/\s+/g, " ")
+    const normalizedApplications = applications.replace(/\s+/g, " ")
+
+    expect(app).toContain('import { NAVIGATION_GUARD_KEY, createNavigationGuardContext } from "./lib/navigation-guard"')
+    expect(app).toContain("const navigationContext = createNavigationGuardContext()")
+    expect(app).toContain("provide(NAVIGATION_GUARD_KEY, navigationContext)")
+    expect(app).toContain("const pendingNavigation = ref<WorkspaceView | null>(null)")
+    expect(app).toContain("function navigateTo(view: WorkspaceView)")
+    expect(app).toContain("function resumePendingNavigation()")
+    expect(normalizedApp).toMatch(/<WebSidebar[^>]*@navigate="navigateTo"/)
+    expect(normalizedApp).toMatch(/<component[^>]*@navigate="navigateTo"[^>]*@navigation-ready="resumePendingNavigation"/)
+    expect(normalizedApp).toMatch(/pendingNavigation\.value = view/)
+    expect(normalizedApp).toMatch(/pendingNavigation\.value = null/)
+
+    expect(applications).toContain('import { NAVIGATION_GUARD_KEY } from "../lib/navigation-guard"')
+    expect(applications).toContain('defineEmits<{ "navigation-ready": [] }>()')
+    expect(applications).toContain("inject(NAVIGATION_GUARD_KEY, null)")
+    expect(applications).toContain("function canLeaveForNavigation(): boolean")
+    expect(normalizedApplications).toMatch(/navigation\.register\(canLeaveForNavigation\)/)
+    expect(normalizedApplications).toMatch(/onBeforeUnmount\(\(\) => \{[\s\S]*unregisterNavigationGuard/)
+    expect(normalizedApplications).toMatch(/function discardChanges\(\): void \{[\s\S]*emit\("navigation-ready"\)/)
+    expect(applications).toContain('class="application-leave-confirmation"')
+  })
+
   it("guards application transitions and settles all form layers after save", () => {
     const applications = readFileSync(new URL("../views/ApplicationsView.vue", import.meta.url), "utf8")
     const normalizedApplications = applications.replace(/\s+/g, " ")
@@ -467,7 +494,7 @@ describe("useAsyncAction", () => {
       expect(app).toContain(`import(\"./views/${view}.vue\")`)
     }
     expect(app).toContain('mode="out-in"')
-    expect(app).toContain('@navigate="activeView = $event"')
+    expect(app).toContain('@navigate="navigateTo"')
   })
 
   it("forwards overview draft openings to the existing editor state", () => {

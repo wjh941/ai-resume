@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Building2, CalendarClock, ChevronDown, ChevronUp, Clock3, Pencil, Plus, RefreshCw, Save, Trash2, X } from "lucide-vue-next"
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue"
+import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from "vue"
 
 import AsyncButton from "../components/AsyncButton.vue"
 import ExpandableText from "../components/ExpandableText.vue"
@@ -11,6 +11,10 @@ import { addTimelineEvent, deleteApplication, listApplications, listTimeline, sa
 import { createApplicationFormSnapshot, isApplicationFormDirty, type ApplicationFormValues, type ApplicationTimelineValues } from "../lib/application-form-state"
 import { appendTimelineEvent, removeApplication, replaceApplication } from "../lib/application-workflow"
 import { runPendingGuardedAction, resolveApplicationsCloseAction, resolveWorkspaceShortcut } from "../lib/keyboard-shortcuts"
+import { NAVIGATION_GUARD_KEY } from "../lib/navigation-guard"
+
+const emit = defineEmits<{ "navigation-ready": [] }>()
+const navigation = inject(NAVIGATION_GUARD_KEY, null)
 
 const statusLabels: Record<ApplicationStatus, string> = { saved: "待投递", applied: "已投递", screening: "筛选中", interview: "面试中", offer: "已获录用", rejected: "未通过", closed: "已结束" }
 const items = ref<ApplicationRecord[]>([])
@@ -37,6 +41,13 @@ const isDirty = computed(() => {
   const formSnapshot = createApplicationFormSnapshot(form.value, emptyTimeline, "")
   return isApplicationFormDirty(formSnapshot, formBaseline.value) || isFollowupDirty.value
 })
+let unregisterNavigationGuard: (() => void) | null = null
+
+function canLeaveForNavigation(): boolean {
+  if (!isDirty.value) return true
+  showLeaveConfirmation.value = true
+  return false
+}
 const {
   visibleItems: renderedApplications,
   hasMore: hasMoreApplications,
@@ -61,6 +72,7 @@ function discardChanges(): void {
   resetFollowup()
   expandedId.value = null
   showLeaveConfirmation.value = false
+  emit("navigation-ready")
 }
 function cancelEditing(): void {
   runPendingGuardedAction(loading.value || Boolean(pendingKey.value), () => {
@@ -150,6 +162,7 @@ function handleBeforeUnload(event: BeforeUnloadEvent): void {
 }
 
 onMounted(() => {
+  if (navigation) unregisterNavigationGuard = navigation.register(canLeaveForNavigation)
   window.addEventListener("keydown", handleShortcut)
   void refresh()
 })
@@ -158,6 +171,8 @@ watch(isDirty, (dirty) => {
   else window.removeEventListener("beforeunload", handleBeforeUnload)
 })
 onBeforeUnmount(() => {
+  unregisterNavigationGuard?.()
+  unregisterNavigationGuard = null
   window.removeEventListener("keydown", handleShortcut)
   window.removeEventListener("beforeunload", handleBeforeUnload)
 })

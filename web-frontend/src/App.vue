@@ -8,6 +8,7 @@ import LoadingSpinner from "./components/LoadingSpinner.vue"
 import AsyncViewError from "./components/AsyncViewError.vue"
 import { requestApi } from "./lib/api"
 import { CAPABILITIES_KEY, createCapabilityContext } from "./lib/capabilities"
+import { NAVIGATION_GUARD_KEY, createNavigationGuardContext } from "./lib/navigation-guard"
 import { clearSession, readSession, type Session } from "./lib/session"
 
 function asyncView(loader: () => Promise<{ default: Component }>): Component {
@@ -43,13 +44,32 @@ const session = ref<Session | null>(readSession())
 const context = createCapabilityContext()
 provide(CAPABILITIES_KEY, context)
 void context.refresh()
+const navigationContext = createNavigationGuardContext()
+provide(NAVIGATION_GUARD_KEY, navigationContext)
 const activeView = ref<WorkspaceView>("overview")
+const pendingNavigation = ref<WorkspaceView | null>(null)
 const editingDraftId = ref<string | null>(null)
 const dark = ref(false)
 const logoutLoading = ref(false)
 let themeSwitchTimer: number | undefined
 let themeInitialized = false
 const activeComponent = computed(() => viewComponents[activeView.value])
+
+function navigateTo(view: WorkspaceView): void {
+  if (view === activeView.value) return
+  if (!navigationContext.canNavigate()) {
+    pendingNavigation.value = view
+    return
+  }
+  pendingNavigation.value = null
+  activeView.value = view
+}
+
+function resumePendingNavigation(): void {
+  const target = pendingNavigation.value
+  pendingNavigation.value = null
+  if (target) navigateTo(target)
+}
 
 watch(dark, (value) => {
   const root = document.documentElement
@@ -84,7 +104,7 @@ async function logout() {
 <template>
   <LoginPanel v-if="!session" @authenticated="session = $event" />
   <div v-else class="web-shell">
-    <WebSidebar :active-view="activeView" @navigate="activeView = $event" />
+    <WebSidebar :active-view="activeView" @navigate="navigateTo" />
     <main class="web-workspace">
       <WebTopbar :user="session.user" :dark="dark" :logout-loading="logoutLoading" @logout="logout" @toggle-theme="dark = !dark" />
       <section class="workspace-stage" :aria-labelledby="editingDraftId ? 'resume-editor-title' : `${activeView}-title`">
@@ -96,7 +116,7 @@ async function logout() {
               @cancel="editingDraftId = null"
               @saved="editingDraftId = null"
             />
-            <component v-else :is="activeComponent" @navigate="activeView = $event" @open-draft="editingDraftId = $event" />
+            <component v-else :is="activeComponent" @navigate="navigateTo" @navigation-ready="resumePendingNavigation" @open-draft="editingDraftId = $event" />
           </div>
         </Transition>
       </section>
