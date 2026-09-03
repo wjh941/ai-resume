@@ -56,6 +56,7 @@ const pendingDraftId = ref<string | null>(null)
 const editingDraftId = ref<string | null>(initialRoute.draftId)
 const dark = ref(false)
 const logoutLoading = ref(false)
+const sessionExpired = ref(false)
 let themeSwitchTimer: number | undefined
 let themeInitialized = false
 let suppressRouteSync = false
@@ -124,8 +125,13 @@ function handlePopState(): void {
 }
 
 function handleSessionExpired(): void {
+  sessionExpired.value = true
   session.value = null
 }
+
+watch(session, (value) => {
+  if (value) sessionExpired.value = false
+})
 
 watch(editingDraftId, (draftId, previousDraftId) => {
   if (suppressRouteSync || draftId === previousDraftId) return
@@ -176,7 +182,7 @@ async function logout() {
 </script>
 
 <template>
-  <LoginPanel v-if="!session" @authenticated="session = $event" />
+  <LoginPanel v-if="!session" :session-notice="sessionExpired ? '登录已过期，请重新登录后继续。' : undefined" @authenticated="session = $event" />
   <div v-else class="web-shell">
     <WebSidebar :active-view="activeView" @navigate="navigateTo" />
     <main class="web-workspace">

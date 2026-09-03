@@ -12,6 +12,12 @@ const emit = defineEmits<{
   authenticated: [session: Session]
 }>()
 
+withDefaults(defineProps<{
+  sessionNotice?: string
+}>(), {
+  sessionNotice: "",
+})
+
 const mode = ref<"password" | "phone">("password")
 const accountMode = ref<"login" | "register">("login")
 const account = ref("")
@@ -105,6 +111,7 @@ async function submit() {
           <h2>进入工作台</h2>
           <p>使用手机号或个人账户继续。</p>
         </div>
+        <p v-if="sessionNotice" class="form-hint" role="status">{{ sessionNotice }}</p>
         <div class="login-tabs" role="tablist" aria-label="登录方式">
           <button type="button" :class="{ 'is-selected': mode === 'password' }" :disabled="loading || sending" role="tab" :aria-selected="mode === 'password'" @click="mode = 'password'">账号密码</button>
           <button type="button" :class="{ 'is-selected': mode === 'phone' }" :disabled="!smsLoginEnabled || loading || sending" role="tab" :aria-selected="mode === 'phone'" @click="mode = 'phone'">手机号验证</button>
