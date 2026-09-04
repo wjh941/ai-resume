@@ -9,6 +9,7 @@ import OrderRow from "../components/OrderRow.vue"
 import ProgressiveListSentinel from "../components/ProgressiveListSentinel.vue"
 import { useIncrementalList } from "../composables/useIncrementalList"
 import { CAPABILITIES_KEY, createCapabilityContext } from "../lib/capabilities"
+import { getApiErrorMessage } from "../lib/api-error"
 import { completeDemoPayment, createMembershipOrder, getVipStatus, listMembershipPackages, listOrders, type MembershipOrder, type MembershipPackage, type VipStatus } from "../lib/membership"
 import { prependOrder, replaceOrder } from "../lib/membership-workflow"
 
@@ -21,6 +22,7 @@ const packages = ref<MembershipPackage[]>([])
 const orders = ref<MembershipOrder[]>([])
 const loading = ref(true)
 const error = ref("")
+const retryAction = ref<(() => Promise<void>) | null>(null)
 const notice = ref("")
 const capabilityNotice = ref("")
 const pendingPackage = ref("")
@@ -36,7 +38,14 @@ const {
 
 async function refresh(): Promise<void> {
   loading.value = true; error.value = ""; capabilityNotice.value = ""
-  try { const [currentVip, available, orderList] = await Promise.all([getVipStatus(), listMembershipPackages(), listOrders()]); vip.value = currentVip; packages.value = available; orders.value = orderList; resetVisibleOrders(); phase.value = "idle" } catch { error.value = "暂时无法读取会员信息，请稍后重试" } finally { loading.value = false }
+  retryAction.value = null
+  try { const [currentVip, available, orderList] = await Promise.all([getVipStatus(), listMembershipPackages(), listOrders()]); vip.value = currentVip; packages.value = available; orders.value = orderList; resetVisibleOrders(); phase.value = "idle" } catch (reason) { error.value = getApiErrorMessage(reason, "暂时无法读取会员信息，请稍后重试"); retryAction.value = refresh } finally { loading.value = false }
+}
+async function retryFailedRequest(): Promise<void> {
+  const action = retryAction.value
+  if (!action) return
+  retryAction.value = null
+  await action()
 }
 async function purchase(packageType: MembershipPackage["packageType"], autoRenew: boolean): Promise<void> {
   if (!paymentEnabled.value) {
@@ -44,8 +53,9 @@ async function purchase(packageType: MembershipPackage["packageType"], autoRenew
     return
   }
   if (pendingPackage.value) return
+  retryAction.value = null
   pendingPackage.value = packageType; phase.value = "creating"; error.value = ""; notice.value = ""; capabilityNotice.value = ""
-  try { pendingOrder.value = await createMembershipOrder(packageType, autoRenew); orders.value = prependOrder(orders.value, pendingOrder.value); phase.value = "awaiting-payment"; notice.value = "订单已创建，确认后再完成支付" } catch (caught) { phase.value = "error"; error.value = caught instanceof Error ? caught.message : "订单暂未创建，请稍后重试" } finally { pendingPackage.value = "" }
+  try { pendingOrder.value = await createMembershipOrder(packageType, autoRenew); orders.value = prependOrder(orders.value, pendingOrder.value); phase.value = "awaiting-payment"; notice.value = "订单已创建，确认后再完成支付" } catch (caught) { phase.value = "error"; error.value = getApiErrorMessage(caught, "订单暂未创建，请稍后重试") } finally { pendingPackage.value = "" }
 }
 async function payDemo(): Promise<void> {
   if (!pendingOrder.value || payingOrderId.value) return
@@ -54,8 +64,9 @@ async function payDemo(): Promise<void> {
     return
   }
   if (paymentMode.value !== "demo") return
+  retryAction.value = null
   payingOrderId.value = pendingOrder.value.orderId; phase.value = "paying"; error.value = ""
-  try { const result = await completeDemoPayment(pendingOrder.value.orderId); vip.value = result.vip; orders.value = replaceOrder(orders.value, result.order); pendingOrder.value = null; phase.value = "paid"; notice.value = "演示支付已确认，会员权益已刷新" } catch (caught) { phase.value = "error"; error.value = caught instanceof Error ? caught.message : "支付暂未完成，请稍后重试" } finally { payingOrderId.value = "" }
+  try { const result = await completeDemoPayment(pendingOrder.value.orderId); vip.value = result.vip; orders.value = replaceOrder(orders.value, result.order); pendingOrder.value = null; phase.value = "paid"; notice.value = "演示支付已确认，会员权益已刷新" } catch (caught) { phase.value = "error"; error.value = getApiErrorMessage(caught, "支付暂未完成，请稍后重试") } finally { payingOrderId.value = "" }
 }
 onMounted(refresh)
 </script>
@@ -63,7 +74,7 @@ onMounted(refresh)
 <template>
   <section class="view-layout membership-view">
     <div class="view-heading"><div><h1 id="membership-title">会员与订单</h1><p>查看当前权益、选择服务套餐，并保留完整的订单状态。</p></div><AsyncButton class="text-action" type="button" :loading="loading" @click="refresh"><RefreshCw :size="16" aria-hidden="true" />刷新</AsyncButton></div>
-    <ErrorNotice v-if="error" :message="error" /><p v-if="notice" class="notice-success" aria-live="polite"><CheckCircle2 :size="16" aria-hidden="true" />{{ notice }}</p><p v-if="capabilityNotice" class="source-notice" role="status">{{ capabilityNotice }}</p>
+    <ErrorNotice v-if="error" :message="error"><AsyncButton v-if="retryAction" class="notice-action" type="button" :loading="loading" @click="retryFailedRequest">重试读取</AsyncButton></ErrorNotice><p v-if="notice" class="notice-success" aria-live="polite"><CheckCircle2 :size="16" aria-hidden="true" />{{ notice }}</p><p v-if="capabilityNotice" class="source-notice" role="status">{{ capabilityNotice }}</p>
     <div v-if="loading" class="content-skeleton membership-loading" aria-busy="true"><LoadingSpinner class="content-loading-spinner" label="正在读取会员信息" /><span /><span /><span /></div>
     <template v-else>
       <section class="membership-entitlement decision-surface"><div class="record-symbol record-coral"><Crown :size="24" aria-hidden="true" /></div><div><span class="section-kicker">当前权益</span><h2>{{ vip?.vipLevel || "普通用户" }}</h2><p>到期时间：{{ vip?.expireTime || "暂无到期时间" }} · {{ vip?.autoRenew ? "已开启自动续费" : "未开启自动续费" }}</p></div></section>

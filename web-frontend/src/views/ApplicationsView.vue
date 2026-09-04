@@ -8,6 +8,7 @@ import LoadingSpinner from "../components/LoadingSpinner.vue"
 import ProgressiveListSentinel from "../components/ProgressiveListSentinel.vue"
 import { useIncrementalList } from "../composables/useIncrementalList"
 import { addTimelineEvent, deleteApplication, listApplications, listTimeline, saveApplication, saveReminder, type ApplicationInput, type ApplicationRecord, type ApplicationStatus } from "../lib/applications"
+import { getApiErrorMessage } from "../lib/api-error"
 import { createApplicationFormSnapshot, isApplicationFormDirty, type ApplicationFormValues, type ApplicationTimelineValues } from "../lib/application-form-state"
 import { appendTimelineEvent, removeApplication, replaceApplication } from "../lib/application-workflow"
 import { runPendingGuardedAction, resolveApplicationsCloseAction, resolveWorkspaceShortcut } from "../lib/keyboard-shortcuts"
@@ -20,6 +21,7 @@ const statusLabels: Record<ApplicationStatus, string> = { saved: "待投递", ap
 const items = ref<ApplicationRecord[]>([])
 const loading = ref(true)
 const error = ref("")
+const retryAction = ref<(() => Promise<void>) | null>(null)
 const editingId = ref<string | null>(null)
 const expandedId = ref<string | null>(null)
 const pendingKey = ref("")
@@ -108,17 +110,20 @@ function startEdit(item: ApplicationRecord): void {
   showLeaveConfirmation.value = false
   window.scrollTo({ top: 0, behavior: "smooth" })
 }
-async function refresh(): Promise<void> { loading.value = true; error.value = ""; try { items.value = await listApplications(filterStatus.value ? { status: filterStatus.value } : {}); resetVisibleApplications() } catch { error.value = "暂时无法读取投递记录，请稍后重试" } finally { loading.value = false } }
+async function refresh(): Promise<void> { loading.value = true; error.value = ""; retryAction.value = null; try { items.value = await listApplications(filterStatus.value ? { status: filterStatus.value } : {}); resetVisibleApplications() } catch (reason) { error.value = getApiErrorMessage(reason, "暂时无法读取投递记录，请稍后重试"); retryAction.value = refresh } finally { loading.value = false } }
+async function retryFailedRequest(): Promise<void> { const action = retryAction.value; if (!action) return; retryAction.value = null; await action() }
 async function submit(): Promise<void> {
   if (!form.value.roleName.trim() || pendingKey.value) return
+  retryAction.value = null
   pendingKey.value = editingId.value ? `save:${editingId.value}` : "create"; error.value = ""
   const input: ApplicationInput = { id: editingId.value || "", company: form.value.company.trim() || "[待确认]", roleName: form.value.roleName.trim(), city: form.value.city.trim(), source: form.value.source.trim(), status: form.value.status, appliedAt: form.value.appliedAt || null, nextActionAt: form.value.nextActionAt || null, interviewNotes: form.value.interviewNotes.trim(), draftId: form.value.draftId.trim() || null, notes: form.value.notes.trim(), contactInfo: form.value.contactInfo.trim(), attachmentRef: form.value.attachmentRef.trim(), nextInterviewAt: toIso(form.value.nextInterviewAt) }
-  try { const saved = await saveApplication(input); items.value = editingId.value ? replaceApplication(items.value, saved) : [saved, ...items.value]; resetForm(); if (!isFollowupDirty.value) resetFollowup() } catch { error.value = "投递记录暂未保存，请检查填写内容后重试" } finally { pendingKey.value = "" }
+  try { const saved = await saveApplication(input); items.value = editingId.value ? replaceApplication(items.value, saved) : [saved, ...items.value]; resetForm(); if (!isFollowupDirty.value) resetFollowup() } catch (reason) { error.value = getApiErrorMessage(reason, "投递记录暂未保存，请检查填写内容后重试") } finally { pendingKey.value = "" }
 }
 async function changeStatus(item: ApplicationRecord, status: ApplicationStatus): Promise<void> {
   if (status === item.status || pendingKey.value) return
   pendingKey.value = `status:${item.id}`; error.value = ""
-  try { const saved = await saveApplication({ ...item, status }); items.value = replaceApplication(items.value, saved) } catch { error.value = "状态暂未更新，请稍后重试" } finally { pendingKey.value = "" }
+  retryAction.value = null
+  try { const saved = await saveApplication({ ...item, status }); items.value = replaceApplication(items.value, saved) } catch (reason) { error.value = getApiErrorMessage(reason, "状态暂未更新，请稍后重试") } finally { pendingKey.value = "" }
 }
 
 function handleStatusChange(item: ApplicationRecord, event: Event): void {
@@ -134,24 +139,28 @@ async function toggleTimeline(item: ApplicationRecord): Promise<void> {
   followupBaseline.value = createApplicationFormSnapshot(emptyForm, timelineForm.value, reminderAt.value)
   if (item.timeline.length || pendingKey.value) return
   pendingKey.value = `timeline-load:${item.id}`
-  try { item.timeline = await listTimeline(item.id) } catch { error.value = "暂时无法读取跟进时间线" } finally { pendingKey.value = "" }
+  retryAction.value = null
+  try { item.timeline = await listTimeline(item.id) } catch (reason) { error.value = getApiErrorMessage(reason, "暂时无法读取跟进时间线") } finally { pendingKey.value = "" }
 }
 async function addEvent(item: ApplicationRecord): Promise<void> {
   if (!timelineForm.value.title.trim() || pendingKey.value) return
   pendingKey.value = `timeline-add:${item.id}`
-  try { const event = await addTimelineEvent(item.id, { title: timelineForm.value.title.trim(), description: timelineForm.value.description.trim(), occurredAt: toIso(timelineForm.value.occurredAt) || new Date().toISOString() }); Object.assign(item, appendTimelineEvent(item, event)); timelineForm.value = { ...emptyTimeline }; followupBaseline.value = createApplicationFormSnapshot(emptyForm, timelineForm.value, followupBaseline.value.reminderAt); showLeaveConfirmation.value = false } catch { error.value = "跟进事件暂未保存，请稍后重试" } finally { pendingKey.value = "" }
+  retryAction.value = null
+  try { const event = await addTimelineEvent(item.id, { title: timelineForm.value.title.trim(), description: timelineForm.value.description.trim(), occurredAt: toIso(timelineForm.value.occurredAt) || new Date().toISOString() }); Object.assign(item, appendTimelineEvent(item, event)); timelineForm.value = { ...emptyTimeline }; followupBaseline.value = createApplicationFormSnapshot(emptyForm, timelineForm.value, followupBaseline.value.reminderAt); showLeaveConfirmation.value = false } catch (reason) { error.value = getApiErrorMessage(reason, "跟进事件暂未保存，请稍后重试") } finally { pendingKey.value = "" }
 }
 async function setReminder(item: ApplicationRecord): Promise<void> {
   if (!reminderAt.value || pendingKey.value) return
   pendingKey.value = `reminder:${item.id}`
-  try { await saveReminder(item.id, toIso(reminderAt.value) || reminderAt.value); item.nextActionAt = reminderAt.value.slice(0, 10); reminderAt.value = ""; followupBaseline.value = createApplicationFormSnapshot(emptyForm, followupBaseline.value.timeline, reminderAt.value); showLeaveConfirmation.value = false } catch { error.value = "提醒暂未保存，请稍后重试" } finally { pendingKey.value = "" }
+  retryAction.value = null
+  try { await saveReminder(item.id, toIso(reminderAt.value) || reminderAt.value); item.nextActionAt = reminderAt.value.slice(0, 10); reminderAt.value = ""; followupBaseline.value = createApplicationFormSnapshot(emptyForm, followupBaseline.value.timeline, reminderAt.value); showLeaveConfirmation.value = false } catch (reason) { error.value = getApiErrorMessage(reason, "提醒暂未保存，请稍后重试") } finally { pendingKey.value = "" }
 }
 async function remove(item: ApplicationRecord): Promise<void> {
   if (pendingKey.value) return
   if (isDirty.value) { showLeaveConfirmation.value = true; return }
   if (!window.confirm("确认删除这条投递记录吗？")) return
   pendingKey.value = `delete:${item.id}`
-  try { await deleteApplication(item.id); items.value = removeApplication(items.value, item.id); if (expandedId.value === item.id) { expandedId.value = null; resetFollowup(); showLeaveConfirmation.value = false } } catch { error.value = "投递记录暂未删除，请稍后重试" } finally { pendingKey.value = "" }
+  retryAction.value = null
+  try { await deleteApplication(item.id); items.value = removeApplication(items.value, item.id); if (expandedId.value === item.id) { expandedId.value = null; resetFollowup(); showLeaveConfirmation.value = false } } catch (reason) { error.value = getApiErrorMessage(reason, "投递记录暂未删除，请稍后重试") } finally { pendingKey.value = "" }
 }
 function handleShortcut(event: KeyboardEvent): void {
   const action = resolveApplicationsCloseAction(
@@ -210,7 +219,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
     <div class="application-toolbar"><label><span>筛选状态</span><select v-model="filterStatus" :disabled="loading" @change="refresh"><option value="">全部状态</option><option v-for="(label, value) in statusLabels" :key="value" :value="value">{{ label }}</option></select></label><span class="toolbar-hint">共 {{ items.length }} 条记录</span></div>
-    <ErrorNotice v-if="error" id="applications-error" :message="error"><AsyncButton class="notice-action" type="button" :loading="loading" @click="refresh">重试</AsyncButton></ErrorNotice>
+    <ErrorNotice v-if="error" id="applications-error" :message="error"><AsyncButton v-if="retryAction" class="notice-action" type="button" :loading="loading" @click="retryFailedRequest">重试读取</AsyncButton></ErrorNotice>
     <div v-else-if="loading" class="content-skeleton application-loading" aria-busy="true"><LoadingSpinner class="content-loading-spinner" label="正在读取投递记录" /><span /><span /></div>
     <div v-else-if="items.length" class="application-table record-surface">
       <article v-for="item in renderedApplications" :key="item.id" class="application-record">

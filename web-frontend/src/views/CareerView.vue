@@ -3,6 +3,7 @@ import { CalendarDays, Check, Plus, RefreshCw } from "lucide-vue-next"
 import { onMounted, ref } from "vue"
 
 import { requestApi } from "../lib/api"
+import { getApiErrorMessage } from "../lib/api-error"
 import { listCareerTasks, type CareerTaskRecord } from "../lib/career"
 import AsyncButton from "../components/AsyncButton.vue"
 import LoadingSpinner from "../components/LoadingSpinner.vue"
@@ -42,22 +43,33 @@ const loading = ref(true)
 const saving = ref(false)
 const pendingTaskId = ref<string | null>(null)
 const error = ref("")
+const retryAction = ref<(() => Promise<void>) | null>(null)
 const emit = defineEmits<{ navigate: [view: WorkspaceView] }>()
 
 async function refresh() {
   loading.value = true
   error.value = ""
+  retryAction.value = null
   try {
     tasks.value = await listCareerTasks(planId)
-  } catch {
-    error.value = "暂时无法读取行动清单，请稍后重试"
+  } catch (reason) {
+    error.value = getApiErrorMessage(reason, "暂时无法读取行动清单，请稍后重试")
+    retryAction.value = refresh
   } finally {
     loading.value = false
   }
 }
 
+async function retryFailedRequest(): Promise<void> {
+  const action = retryAction.value
+  if (!action) return
+  retryAction.value = null
+  await action()
+}
+
 async function addTask() {
   if (saving.value) return
+  retryAction.value = null
   if (!title.value.trim()) {
     error.value = "请先填写一项可执行的行动"
     return
@@ -73,8 +85,8 @@ async function addTask() {
     tasks.value = [task, ...tasks.value]
     title.value = ""
     dueDate.value = ""
-  } catch {
-    error.value = "行动暂未保存，请检查登录状态后重试"
+  } catch (reason) {
+    error.value = getApiErrorMessage(reason, "行动暂未保存，请检查登录状态后重试")
   } finally {
     saving.value = false
   }
@@ -82,6 +94,7 @@ async function addTask() {
 
 async function toggleTask(task: CareerTask) {
   if (pendingTaskId.value) return
+  retryAction.value = null
   const status = task.status === "completed" ? "pending" : "completed"
   pendingTaskId.value = task.id
   try {
@@ -90,8 +103,8 @@ async function toggleTask(task: CareerTask) {
       body: JSON.stringify({ status }),
     }))
     tasks.value = tasks.value.map((item) => item.id === task.id ? updated : item)
-  } catch {
-    error.value = "状态未更新，请稍后重试"
+  } catch (reason) {
+    error.value = getApiErrorMessage(reason, "状态未更新，请稍后重试")
   } finally {
     pendingTaskId.value = null
   }
@@ -113,7 +126,7 @@ onMounted(refresh)
       <AsyncButton class="primary-button compact" type="submit" :loading="saving"><Plus :size="17" aria-hidden="true" />{{ saving ? "保存中" : "加入清单" }}</AsyncButton>
     </form>
 
-    <ErrorNotice v-if="error" :message="error" />
+    <ErrorNotice v-if="error" :message="error"><AsyncButton v-if="retryAction" class="notice-action" type="button" :loading="loading" @click="retryFailedRequest">重试读取</AsyncButton></ErrorNotice>
     <div v-else-if="loading" class="content-skeleton" aria-busy="true"><LoadingSpinner class="content-loading-spinner" label="正在读取行动清单" /><span /><span /></div>
     <div v-else-if="tasks.length" class="task-list decision-emphasis">
       <article v-for="task in tasks" :key="task.id" class="task-row" :class="{ 'is-complete': task.status === 'completed' }">
