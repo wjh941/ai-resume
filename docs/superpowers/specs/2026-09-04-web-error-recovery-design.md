@@ -7,7 +7,7 @@ Make recoverable Web read and query failures actionable without risking duplicat
 ## Scope
 
 - Add one shared API error-to-copy mapper for timeout, network, session expiry, permission, and generic failures.
-- Add retry actions to page reads and idempotent queries in Overview, Career, Evidence, Membership, Account, Jobs, and Insights.
+- Add retry actions to page reads and idempotent queries in Overview, Resume, Career, Evidence, Applications, Membership, Account, Jobs, and Insights.
 - Keep each page's existing input state when a query fails.
 - Keep save, delete, payment, and other side-effect failures manual; never replay them automatically.
 - Add focused tests for error mapping and source-level retry contracts.

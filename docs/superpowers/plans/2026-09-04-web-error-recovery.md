@@ -62,11 +62,12 @@ git commit -m "feat(web): centralize api error copy"
 ### Task 2: Add safe read retries
 
 **Files:**
+- Modify: `web-frontend/src/views/ResumeView.vue`
 - Modify: `web-frontend/src/views/CareerView.vue`
 - Modify: `web-frontend/src/views/EvidenceView.vue`
+- Modify: `web-frontend/src/views/ApplicationsView.vue`
 - Modify: `web-frontend/src/views/MembershipView.vue`
 - Modify: `web-frontend/src/views/AccountView.vue`
-- Modify: `web-frontend/src/tests/interaction.spec.ts`
 - Create: `web-frontend/src/tests/read-recovery.spec.ts`
 
 **Interfaces:**
@@ -98,7 +99,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add web-frontend/src/views/CareerView.vue web-frontend/src/views/EvidenceView.vue web-frontend/src/views/MembershipView.vue web-frontend/src/views/AccountView.vue web-frontend/src/tests/read-recovery.spec.ts web-frontend/src/tests/interaction.spec.ts
+git add web-frontend/src/views/ResumeView.vue web-frontend/src/views/CareerView.vue web-frontend/src/views/EvidenceView.vue web-frontend/src/views/ApplicationsView.vue web-frontend/src/views/MembershipView.vue web-frontend/src/views/AccountView.vue web-frontend/src/tests/read-recovery.spec.ts
 git commit -m "feat(web): add safe read retries"
 ```
 
