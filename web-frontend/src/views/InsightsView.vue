@@ -79,6 +79,7 @@ watch(jobMatchingEnabled, (enabled, wasEnabled) => {
 
 async function queryInsights() {
   if (loading.value) return
+  retryAction.value = null
   if (!roleName.value.trim()) {
     error.value = "请输入要查询的岗位名称"
     return
@@ -96,7 +97,6 @@ async function queryInsights() {
     : null
   loading.value = true
   error.value = ""
-  retryAction.value = null
   capabilityNotice.value = ""
   try {
     const response = await requestApi<{ report: Report }>("/api/career/annual-insights/query", {

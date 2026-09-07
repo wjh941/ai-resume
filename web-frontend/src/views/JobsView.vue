@@ -114,6 +114,7 @@ watch(roleName, (value) => {
 
 async function queryRole() {
   if (loading.value) return
+  retryAction.value = null
   if (!roleName.value.trim()) {
     roleFieldError.value = "请输入要查询的目标岗位"
     error.value = ""
@@ -135,7 +136,6 @@ async function queryRole() {
   loading.value = true
   roleFieldError.value = ""
   error.value = ""
-  retryAction.value = null
   capabilityNotice.value = ""
   try {
     const nextResult = await requestApi<JobResult>("/api/job/query", {
@@ -161,8 +161,8 @@ async function favorite() {
       method: "POST",
       body: JSON.stringify({ role_name: result.value.role_name }),
     })
-  } catch {
-    error.value = "岗位收藏未保存，请稍后重试"
+  } catch (reason) {
+    error.value = getApiErrorMessage(reason, "岗位收藏未保存，请稍后重试")
   } finally {
     saving.value = false
   }
