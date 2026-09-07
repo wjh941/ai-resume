@@ -32,27 +32,27 @@
 - Network-like errors map to `网络连接失败，请检查网络后重试`.
 - All other reasons return the caller-provided fallback.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Add cases for timeout, 401, 403, `TypeError`, and generic fallback using the real exported helper and API error classes.
 
-- [ ] **Step 2: Run focused tests to verify they fail**
+- [x] **Step 2: Run focused tests to verify they fail**
 
 Run: `npm.cmd run test -- src/tests/api-error.spec.ts`
 
 Expected: FAIL because `api-error.ts` does not exist.
 
-- [ ] **Step 3: Implement the minimal mapper**
+- [x] **Step 3: Implement the minimal mapper**
 
 Use `instanceof ApiTimeoutError` / `instanceof ApiRequestError`, status checks, and a narrow network-error predicate. Do not add retries or logging.
 
-- [ ] **Step 4: Run focused tests to verify they pass**
+- [x] **Step 4: Run focused tests to verify they pass**
 
 Run: `npm.cmd run test -- src/tests/api-error.spec.ts`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add web-frontend/src/lib/api-error.ts web-frontend/src/tests/api-error.spec.ts
@@ -62,6 +62,7 @@ git commit -m "feat(web): centralize api error copy"
 ### Task 2: Add safe read retries
 
 **Files:**
+- Modify: `web-frontend/src/views/OverviewView.vue`
 - Modify: `web-frontend/src/views/ResumeView.vue`
 - Modify: `web-frontend/src/views/CareerView.vue`
 - Modify: `web-frontend/src/views/EvidenceView.vue`
@@ -76,27 +77,27 @@ git commit -m "feat(web): centralize api error copy"
 - Their `ErrorNotice` renders an `AsyncButton` that calls the same `refresh` function.
 - Mutation catches remain message-only and do not render a retry slot.
 
-- [ ] **Step 1: Write failing source-contract tests**
+- [x] **Step 1: Write failing source-contract tests**
 
 Assert each view imports `getApiErrorMessage`, maps its refresh catch, and places a retry action inside the page-level `ErrorNotice`. Assert mutation handlers do not use the page retry callback.
 
-- [ ] **Step 2: Run focused tests to verify they fail**
+- [x] **Step 2: Run focused tests to verify they fail**
 
 Run: `npm.cmd run test -- src/tests/read-recovery.spec.ts src/tests/interaction.spec.ts`
 
 Expected: FAIL because the views still use generic catches and lack retry slots.
 
-- [ ] **Step 3: Implement read recovery**
+- [x] **Step 3: Implement read recovery**
 
 Update only refresh catches and page-level error notices. Keep all existing form inputs, list state, and mutation handlers intact.
 
-- [ ] **Step 4: Run focused tests to verify they pass**
+- [x] **Step 4: Run focused tests to verify they pass**
 
 Run: `npm.cmd run test -- src/tests/read-recovery.spec.ts src/tests/interaction.spec.ts`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add web-frontend/src/views/ResumeView.vue web-frontend/src/views/CareerView.vue web-frontend/src/views/EvidenceView.vue web-frontend/src/views/ApplicationsView.vue web-frontend/src/views/MembershipView.vue web-frontend/src/views/AccountView.vue web-frontend/src/tests/read-recovery.spec.ts
@@ -115,27 +116,27 @@ git commit -m "feat(web): add safe read retries"
 - Their error notices retry `queryRole` / `queryInsights` with the existing refs.
 - Query input snapshots remain input-only and user-scoped.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Extend query continuity assertions to require the shared mapper, caught reason parameter, and retry action wired to each query function.
 
-- [ ] **Step 2: Run focused tests to verify they fail**
+- [x] **Step 2: Run focused tests to verify they fail**
 
 Run: `npm.cmd run test -- src/tests/query-continuity.spec.ts`
 
 Expected: FAIL because the views currently use generic catches and no query retry action.
 
-- [ ] **Step 3: Implement query recovery**
+- [x] **Step 3: Implement query recovery**
 
 Map query errors and add one `AsyncButton` retry action to each query error notice. Preserve the existing input snapshots and result handling.
 
-- [ ] **Step 4: Run focused tests to verify they pass**
+- [x] **Step 4: Run focused tests to verify they pass**
 
 Run: `npm.cmd run test -- src/tests/query-continuity.spec.ts`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add web-frontend/src/views/JobsView.vue web-frontend/src/views/InsightsView.vue web-frontend/src/tests/query-continuity.spec.ts
@@ -146,18 +147,18 @@ git commit -m "feat(web): retry failed queries"
 
 **Files:** None beyond Tasks 1-3.
 
-- [ ] **Step 1: Run the full Web test suite**
+- [x] **Step 1: Run the full Web test suite**
 
 Run: `npm.cmd run test` from `web-frontend`.
 
-- [ ] **Step 2: Run strict TypeScript and production build**
+- [x] **Step 2: Run strict TypeScript and production build**
 
 Run strict `tsc` for changed library files and `npm.cmd run build`.
 
-- [ ] **Step 3: Run detector and diff checks**
+- [x] **Step 3: Run detector and diff checks**
 
 Run the Impeccable detector on changed Web sources and `git diff --check`.
 
-- [ ] **Step 4: Review the final diff**
+- [x] **Step 4: Review the final diff**
 
 Confirm no backend, mini-program, dependency, API-result persistence, or mutation auto-retry changes entered the diff.
