@@ -31,15 +31,15 @@
 **Interfaces:**
 - Produces the canonical list of Web workspace views, mini-program pages, commands, and local ports used by Task 2.
 
-- [ ] **Step 1: Record canonical labels and ports**
+- [x] **Step 1: Record canonical labels and ports**
 
 Confirm the Web groups/views, mini-program page paths, backend port `8000`, H5 port `5186`, and standalone Web port `5174` from the files above.
 
-- [ ] **Step 2: Check existing README sections**
+- [x] **Step 2: Check existing README sections**
 
 Identify which setup, privacy, AI, deployment, and testing sections must remain unchanged while locating the insertion point for the new user guide.
 
-- [ ] **Step 3: Commit no code**
+- [x] **Step 3: Commit no code**
 
 Keep this audit read-only; the only deliverable is the verified source context for the README edit.
 
@@ -52,27 +52,27 @@ Keep this audit read-only; the only deliverable is the verified source context f
 - Consumes: canonical labels and ports from Task 1.
 - Produces: Chinese sections for frontend selection, feature map, numbered workflow, Mermaid diagram, and quick-start orientation.
 
-- [ ] **Step 1: Add the frontend selection section**
+- [x] **Step 1: Add the frontend selection section**
 
 Explain the roles of `web-frontend`, `resume-miniprogram` H5, and WeChat mini-program in a compact comparison table. Keep the backend as a shared service.
 
-- [ ] **Step 2: Add the grouped feature map**
+- [x] **Step 2: Add the grouped feature map**
 
 Group the delivered capabilities under `准备资料`, `职业决策`, `求职执行`, and `复盘与账户`, including the corresponding Web view or mini-program page names where helpful.
 
-- [ ] **Step 3: Add the numbered main workflow**
+- [x] **Step 3: Add the numbered main workflow**
 
 Document the expected input, output, and next action for sign-in, evidence capture, assessment/planning, resume generation/editing, application tracking, and review. Include confirmation and privacy boundaries.
 
-- [ ] **Step 4: Add the Mermaid flowchart**
+- [x] **Step 4: Add the Mermaid flowchart**
 
 Use a fenced `mermaid` block with explicit decision branches for missing evidence and unavailable AI/capabilities. Keep the terminal path at manual confirmation and application follow-up, never automatic submission.
 
-- [ ] **Step 5: Add a user-oriented quick-start note**
+- [x] **Step 5: Add a user-oriented quick-start note**
 
 Point readers to the existing backend/H5/Web/mini-program commands and local URLs without duplicating or contradicting the detailed setup sections below.
 
-- [ ] **Step 6: Commit the README update**
+- [x] **Step 6: Commit the README update**
 
 ```powershell
 git add README.md
@@ -88,7 +88,7 @@ git commit -m "docs: add readme usage guide"
 - Consumes: completed README from Task 2.
 - Produces: evidence that the document is internally consistent, renderable Markdown, and limited to the requested documentation scope.
 
-- [ ] **Step 1: Check required sections and diagram**
+- [x] **Step 1: Check required sections and diagram**
 
 ```powershell
 rg -n "功能与使用指南|主要使用流程|mermaid|web-frontend|resume-miniprogram|8000|5186|5174" README.md
@@ -96,7 +96,7 @@ rg -n "功能与使用指南|主要使用流程|mermaid|web-frontend|resume-mini
 
 Expected: all required anchors are present and the Mermaid fence is closed.
 
-- [ ] **Step 2: Check links and whitespace**
+- [x] **Step 2: Check links and whitespace**
 
 ```powershell
 git diff --check HEAD~1..HEAD
@@ -104,7 +104,7 @@ git diff --check HEAD~1..HEAD
 
 Expected: no whitespace errors; existing relative documentation links remain intact.
 
-- [ ] **Step 3: Review scope and status**
+- [x] **Step 3: Review scope and status**
 
 ```powershell
 git status --short -- README.md
