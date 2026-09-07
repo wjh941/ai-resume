@@ -1,6 +1,6 @@
 # AI 岗位查询与智能简历生成
 
-一个本地可运行的求职辅助 Demo，包含 Uni-App 微信小程序前端与 FastAPI 后端。
+一个本地可运行的求职辅助 Demo，包含 Uni-App 微信小程序/H5 前端、独立 Web 工作台与 FastAPI 后端。
 
 仓库地址：`https://github.com/wjh941/ai-resume`
 
@@ -24,22 +24,22 @@
 
 #### 准备资料
 
-- **工作概览**：查看当前简历、职业方向、待办行动和工作台进度。
-- **简历中心**：创建、打开、复制、删除和管理多份简历草稿；可按目标岗位保留不同版本。
-- **经历证据**：记录真实课程、项目、实习和工作经历，补充行动、结果、时间和可验证材料。
+- **工作概览**（canonical Web view key: `overview`）：查看当前简历、职业方向、待办行动和工作台进度。
+- **简历中心**（canonical Web view key: `resume`；小程序 page path: `resume-form`、`resume-editor`、`drafts`）：创建、打开、复制、删除和管理多份简历草稿；可按目标岗位保留不同版本。
+- **经历证据**（canonical Web view key: `evidence`；小程序 page path: `evidence`）：记录真实课程、项目、实习和工作经历，补充行动、结果、时间和可验证材料。
 - **简历导入与检查**：上传 PDF/Word 后先生成结构化预览草稿；缺少姓名、手机号、邮箱或目标岗位时，系统会提示补充。
 
 #### 职业决策
 
-- **职业测评**：从兴趣偏好、工作方式、证据优势和现实约束出发，形成职业信号。
-- **职业规划**：输入专业、技能、城市和行业偏好，生成冲刺、稳妥、保底三档岗位方向。
-- **岗位机会/岗位情报**：输入目标岗位，查看岗位职责、硬性门槛、优先技能、加分技能、职业路径和面试核验问题。
-- **岗位对比**：选择 2-4 个本地岗位，比较匹配依据、技能缺口、风险提示和 7/30/90 天行动计划。
-- **年度洞察**：按岗位和资料年份查看已归档的公开资料摘要、行动建议和来源说明；它不是实时招聘数据。
+- **职业测评**（canonical Web view key: `assessment`；小程序 page path: `career-assessment`）：从兴趣偏好、工作方式、证据优势和现实约束出发，形成职业信号。
+- **职业规划**（canonical Web view key: `career`；小程序 page path: `career-planner`）：输入专业、技能、城市和行业偏好，生成冲刺、稳妥、保底三档岗位方向。
+- **岗位机会/岗位情报**（canonical Web view key: `jobs`；小程序 page path: `job-search`、`job-collection`）：输入目标岗位，查看岗位职责、硬性门槛、优先技能、加分技能、职业路径和面试核验问题。
+- **岗位对比**（canonical Web view key: `comparison`；小程序 page path: `role-comparison`）：选择 2-4 个本地岗位，比较匹配依据、技能缺口、风险提示和 7/30/90 天行动计划。
+- **年度洞察**（canonical Web view key: `insights`）：按岗位和资料年份查看已归档的公开资料摘要、行动建议和来源说明；它不是实时招聘数据。
 
 #### 求职执行
 
-- **投递管理**：手动记录公司、岗位、城市、来源、状态、下一步日期和关联简历。
+- **投递管理**（canonical Web view key: `applications`；小程序 page path: `applications`）：手动记录公司、岗位、城市、来源、状态、下一步日期和关联简历。
 - **跟进时间线**：记录沟通、面试和复盘事件，避免把关键进展只放在聊天记录里。
 - **面试提醒**：为下一步行动设置日期，并在投递记录中持续更新状态。
 - **岗位收藏**：保存感兴趣的岗位，后续加入岗位对比或投递计划。
@@ -47,8 +47,8 @@
 #### 复盘与账户
 
 - **简历版本与导出**：保存版本快照，人工确认内容后导出 Word/PDF。
-- **会员与订单**：查看当前权益、套餐、订单和演示支付状态；真实支付能力取决于后端配置。
-- **账户设置**：查看数据范围，记录隐私确认，下载账户数据 ZIP，或提交账户删除申请。
+- **会员与订单**（canonical Web view key: `membership`；小程序 page path: `membership`、`orders`）：查看当前权益、套餐、订单和演示支付状态；真实支付能力取决于后端配置。
+- **账户设置**（canonical Web view key: `account`；小程序 page path: `account`）：查看数据范围，记录隐私确认，下载账户数据 ZIP，或提交账户删除申请。
 - **本地隐私**：清理当前设备上的草稿检查点、职业规划、测评、咨询和待同步队列；服务端数据仍需在对应页面单独处理。
 
 ### 主要使用流程
@@ -95,7 +95,7 @@ flowchart TD
 1. 启动后端：进入 `resume-backend`，配置 `.env`，执行 `uvicorn main:app --reload --host 127.0.0.1 --port 8000`。
 2. 选择 Web：进入 `web-frontend`，执行 `npm install` 和 `npm run dev`，打开 `http://127.0.0.1:5174`。
 3. 选择 H5：进入 `resume-miniprogram`，执行 `npm install` 和 `npm run dev:h5`，打开 `http://127.0.0.1:5186`。
-4. 选择微信小程序：执行 `npm run build:mp-weixin`，再用微信开发者工具导入 `resume-miniprogram/dist/build/mp-weixin`。
+4. 选择微信小程序：进入 `resume-miniprogram` 后执行 `npm run build:mp-weixin`，再用微信开发者工具导入 `resume-miniprogram/dist/build/mp-weixin`。
 
 详细的环境变量、AI 配置、HTTPS、生产部署和测试命令见下方对应章节。
 
