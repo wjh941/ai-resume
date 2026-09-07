@@ -44,4 +44,14 @@ describe("query continuity", () => {
     expect(validateJobsQuerySnapshot({ roleName: 42, reportMode: "unknown" })).toEqual({})
     expect(validateInsightsQuerySnapshot({ roleName: "analyst", year: "1999", reportMode: "unknown" })).toEqual({ roleName: "analyst" })
   })
+
+  it("maps query failures and exposes a safe retry action", () => {
+    for (const source of [jobs, insights]) {
+      expect(source).toContain('from "../lib/api-error"')
+      expect(source).toContain("retryAction")
+      expect(source).toContain("retryFailedRequest")
+      expect(source).toContain('@click="retryFailedRequest"')
+      expect(source).toMatch(/catch \(reason\)[\s\S]{0,260}getApiErrorMessage\(reason,/)
+    }
+  })
 })

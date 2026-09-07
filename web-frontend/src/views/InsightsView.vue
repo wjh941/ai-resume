@@ -3,6 +3,7 @@ import { BookOpenCheck, Search } from "lucide-vue-next"
 import { computed, inject, ref, watch } from "vue"
 
 import { requestApi } from "../lib/api"
+import { getApiErrorMessage } from "../lib/api-error"
 import AsyncButton from "../components/AsyncButton.vue"
 import type { WorkspaceView } from "../components/WebSidebar.vue"
 import { CAPABILITIES_KEY, createCapabilityContext, isCapabilityEnabled } from "../lib/capabilities"
@@ -51,6 +52,7 @@ const capabilityRefreshing = computed(() => context.refreshing.value)
 const report = ref<Report | null>(null)
 const loading = ref(false)
 const error = ref("")
+const retryAction = ref<(() => Promise<void>) | null>(null)
 const emit = defineEmits<{ navigate: [view: WorkspaceView] }>()
 
 async function retryCapabilities() {
@@ -61,6 +63,13 @@ async function retryCapabilities() {
   } catch {
     // Keep the current notice and state when refresh fails.
   }
+}
+
+async function retryFailedRequest() {
+  const action = retryAction.value
+  if (!action) return
+  retryAction.value = null
+  await action()
 }
 
 watch(jobMatchingEnabled, (enabled, wasEnabled) => {
@@ -87,6 +96,7 @@ async function queryInsights() {
     : null
   loading.value = true
   error.value = ""
+  retryAction.value = null
   capabilityNotice.value = ""
   try {
     const response = await requestApi<{ report: Report }>("/api/career/annual-insights/query", {
@@ -95,8 +105,9 @@ async function queryInsights() {
     })
     report.value = response.report
     resultCapabilityMode.value = response.report.mode === "professional" ? requestedCapabilityMode : null
-  } catch {
-    error.value = "年度洞察暂时无法查询。请检查权限或稍后重试。"
+  } catch (reason) {
+    error.value = getApiErrorMessage(reason, "年度洞察暂时无法查询。请检查权限或稍后重试。")
+    retryAction.value = queryInsights
   } finally {
     loading.value = false
   }
@@ -112,7 +123,9 @@ async function queryInsights() {
       <div class="mode-switch" role="group" aria-label="洞察表达方式"><button type="button" :disabled="loading" :class="{ 'is-selected': reportMode === 'simplified' }" @click="reportMode = 'simplified'">精简版</button><button type="button" :disabled="loading || !jobMatchingEnabled || capabilityRefreshing" :aria-disabled="!jobMatchingEnabled || capabilityRefreshing" :aria-describedby="showProfessionalReason ? 'insights-professional-mode-reason' : undefined" :class="{ 'is-selected': reportMode === 'professional', 'is-unavailable': !jobMatchingEnabled }" :title="!jobMatchingEnabled ? capabilityHint : undefined" @click="reportMode = 'professional'">{{ professionalModeLabel }}</button><small v-if="showProfessionalReason" id="insights-professional-mode-reason" class="mode-notice">{{ professionalModeReason }}</small><div v-if="!jobMatchingEnabled" class="mode-recovery-actions"><AsyncButton class="notice-action" type="button" :loading="capabilityRefreshing" @click="retryCapabilities">重试服务状态</AsyncButton><AsyncButton class="notice-action" type="button" @click="emit('navigate', 'membership')">查看会员权益</AsyncButton></div></div>
       <AsyncButton class="primary-button compact" type="submit" :loading="loading"><Search :size="17" aria-hidden="true" />{{ loading ? "查询中" : "查询洞察" }}</AsyncButton>
     </form>
-    <ErrorNotice v-if="error" id="insights-error" :message="error" />
+    <ErrorNotice v-if="error" id="insights-error" :message="error">
+      <AsyncButton v-if="retryAction" class="notice-action" type="button" @click="retryFailedRequest">重试查询</AsyncButton>
+    </ErrorNotice>
     <ErrorNotice v-if="capabilityNotice" id="insights-capability-error" :message="capabilityNotice">
       <AsyncButton class="notice-action" type="button" :loading="capabilityRefreshing" @click="retryCapabilities">重试能力状态</AsyncButton>
       <AsyncButton class="notice-action" type="button" @click="emit('navigate', 'membership')">查看会员权益</AsyncButton>

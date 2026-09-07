@@ -3,6 +3,7 @@ import { BookmarkPlus, BriefcaseBusiness, Search } from "lucide-vue-next"
 import { computed, inject, ref, watch } from "vue"
 
 import { requestApi } from "../lib/api"
+import { getApiErrorMessage } from "../lib/api-error"
 import AsyncButton from "../components/AsyncButton.vue"
 import ExpandableText from "../components/ExpandableText.vue"
 import type { WorkspaceView } from "../components/WebSidebar.vue"
@@ -61,6 +62,7 @@ const result = ref<JobResult | null>(null)
 const loading = ref(false)
 const saving = ref(false)
 const error = ref("")
+const retryAction = ref<(() => Promise<void>) | null>(null)
 const roleFieldError = ref("")
 const unique = (items: Array<string | undefined>): string[] => [...new Set(items.filter((item): item is string => Boolean(item?.trim())).map((item) => item.trim()))]
 const requiredSkills = computed(() => unique(result.value?.required_skills || []))
@@ -92,6 +94,13 @@ async function retryCapabilities() {
   } catch {
     // Keep the current notice and state when refresh fails.
   }
+}
+
+async function retryFailedRequest() {
+  const action = retryAction.value
+  if (!action) return
+  retryAction.value = null
+  await action()
 }
 
 watch(jobMatchingEnabled, (enabled, wasEnabled) => {
@@ -126,6 +135,7 @@ async function queryRole() {
   loading.value = true
   roleFieldError.value = ""
   error.value = ""
+  retryAction.value = null
   capabilityNotice.value = ""
   try {
     const nextResult = await requestApi<JobResult>("/api/job/query", {
@@ -134,8 +144,9 @@ async function queryRole() {
     })
     result.value = nextResult
     resultCapabilityMode.value = nextResult.report?.mode === "professional" ? requestedCapabilityMode : null
-  } catch {
-    error.value = "岗位分析暂时不可用。请确认 AI 服务已配置，或稍后重试。"
+  } catch (reason) {
+    error.value = getApiErrorMessage(reason, "岗位分析暂时不可用。请确认 AI 服务已配置，或稍后重试。")
+    retryAction.value = queryRole
   } finally {
     loading.value = false
   }
@@ -144,6 +155,7 @@ async function queryRole() {
 async function favorite() {
   if (!result.value || saving.value) return
   saving.value = true
+  retryAction.value = null
   try {
     await requestApi("/api/job-collection/favorites", {
       method: "POST",
@@ -173,7 +185,9 @@ async function favorite() {
       </div>
       <AsyncButton class="primary-button compact" type="submit" :loading="loading"><Search :size="17" aria-hidden="true" />{{ loading ? "分析中" : "查询岗位" }}</AsyncButton>
     </form>
-    <ErrorNotice v-if="error" id="jobs-error" :message="error" />
+    <ErrorNotice v-if="error" id="jobs-error" :message="error">
+      <AsyncButton v-if="retryAction" class="notice-action" type="button" @click="retryFailedRequest">重试查询</AsyncButton>
+    </ErrorNotice>
     <ErrorNotice v-if="capabilityNotice" id="jobs-capability-error" :message="capabilityNotice">
       <AsyncButton class="notice-action" type="button" :loading="capabilityRefreshing" @click="retryCapabilities">重试能力状态</AsyncButton>
       <AsyncButton class="notice-action" type="button" @click="emit('navigate', 'membership')">查看会员权益</AsyncButton>
