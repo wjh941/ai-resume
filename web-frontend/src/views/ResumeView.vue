@@ -74,6 +74,7 @@ function closeCreate(): void {
 
 async function create(): Promise<void> {
   if (creating.value) return
+  retryAction.value = null
   if (!newJobTitle.value.trim()) {
     createError.value = "请填写目标岗位或简历名称"
     createLimitReached.value = false

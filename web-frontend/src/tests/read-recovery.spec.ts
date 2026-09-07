@@ -32,4 +32,10 @@ describe("read recovery", () => {
       expect(source).toContain("retryAction.value = null")
     }
   })
+
+  it("clears the page retry action before creating a resume", () => {
+    const createStart = viewSources.resume.indexOf("async function create()")
+    const createBody = viewSources.resume.slice(createStart, viewSources.resume.indexOf("async function copy", createStart))
+    expect(createBody).toContain("retryAction.value = null")
+  })
 })
