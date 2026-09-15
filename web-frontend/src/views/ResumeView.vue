@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { Copy, FilePenLine, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-vue-next"
-import { onMounted, ref } from "vue"
+import { ref } from "vue"
 
 import { ApiRequestError } from "../lib/api"
 import { getApiErrorMessage } from "../lib/api-error"
 import { copyDraft, deleteDraft, listDrafts, saveDraft, type DraftRecord, type TemplateId } from "../lib/drafts"
 import { prependDraft, removeDraftById } from "../lib/draft-workflow"
 import { createEmptyDraftInput } from "../lib/resume-draft"
+import { useApiResource } from "../composables/useApiResource"
 import AsyncButton from "../components/AsyncButton.vue"
 import ExpandableText from "../components/ExpandableText.vue"
 import LoadingSpinner from "../components/LoadingSpinner.vue"
@@ -20,9 +21,6 @@ const emit = defineEmits<{
 }>()
 
 const drafts = ref<DraftRecord[]>([])
-const loading = ref(true)
-const error = ref("")
-const retryAction = ref<(() => Promise<void>) | null>(null)
 const pendingAction = ref<"copy" | "delete" | "">("")
 const pendingDraftId = ref("")
 const createOpen = ref(false)
@@ -38,27 +36,18 @@ const {
   reset: resetVisibleDrafts,
 } = useIncrementalList(drafts)
 
-async function refresh() {
-  loading.value = true
-  error.value = ""
-  retryAction.value = null
-  try {
-    drafts.value = await listDrafts()
-    resetVisibleDrafts()
-  } catch (reason) {
-    error.value = getApiErrorMessage(reason, "暂时无法读取简历草稿，请稍后重试")
-    retryAction.value = refresh
-  } finally {
-    loading.value = false
-  }
-}
-
-async function retryFailedRequest(): Promise<void> {
-  const action = retryAction.value
-  if (!action) return
-  retryAction.value = null
-  await action()
-}
+const {
+  loading,
+  error,
+  run: refresh,
+  retry: retryFailedRequest,
+  retryable,
+  clearRetry,
+} = useApiResource(async () => {
+  drafts.value = await listDrafts()
+  resetVisibleDrafts()
+  return true
+}, { fallbackMessage: "暂时无法读取简历草稿，请稍后重试", immediate: true })
 
 function openCreate(): void {
   createOpen.value = true
@@ -74,7 +63,7 @@ function closeCreate(): void {
 
 async function create(): Promise<void> {
   if (creating.value) return
-  retryAction.value = null
+  clearRetry()
   if (!newJobTitle.value.trim()) {
     createError.value = "请填写目标岗位或简历名称"
     createLimitReached.value = false
@@ -100,7 +89,7 @@ async function copy(item: DraftRecord): Promise<void> {
   if (pendingAction.value) return
   pendingAction.value = "copy"
   pendingDraftId.value = item.id
-  retryAction.value = null
+  clearRetry()
   error.value = ""
   try {
     drafts.value = prependDraft(drafts.value, await copyDraft(item.id))
@@ -116,7 +105,7 @@ async function remove(item: DraftRecord): Promise<void> {
   if (pendingAction.value || !window.confirm("确认删除这份简历草稿吗？")) return
   pendingAction.value = "delete"
   pendingDraftId.value = item.id
-  retryAction.value = null
+  clearRetry()
   error.value = ""
   try {
     await deleteDraft(item.id)
@@ -128,8 +117,6 @@ async function remove(item: DraftRecord): Promise<void> {
     pendingDraftId.value = ""
   }
 }
-
-onMounted(refresh)
 </script>
 
 <template>
@@ -152,7 +139,7 @@ onMounted(refresh)
       <ErrorNotice v-if="createError" :message="createError"><AsyncButton v-if="createLimitReached" class="notice-action" type="button" @click="emit('navigate', 'membership')">查看会员权益</AsyncButton><AsyncButton v-else class="notice-action" type="button" @click="create">重试</AsyncButton></ErrorNotice>
     </form>
 
-    <ErrorNotice v-if="error" :message="error"><AsyncButton v-if="retryAction" class="notice-action" type="button" :loading="loading" @click="retryFailedRequest">重试读取</AsyncButton></ErrorNotice>
+    <ErrorNotice v-if="error" :message="error"><AsyncButton v-if="retryable" class="notice-action" type="button" :loading="loading" @click="retryFailedRequest">重试读取</AsyncButton></ErrorNotice>
     <div v-else-if="loading" class="content-skeleton" aria-busy="true"><LoadingSpinner class="content-loading-spinner" label="正在读取简历草稿" /><span /><span /><span /></div>
     <div v-else-if="drafts.length" class="record-list record-surface">
       <article v-for="draft in renderedDrafts" :key="draft.id" class="record-row">

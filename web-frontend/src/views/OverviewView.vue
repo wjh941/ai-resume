@@ -1,37 +1,32 @@
 <script setup lang="ts">
 import { Activity, ArrowUpRight, CircleCheck, CircleDot, FilePenLine, KanbanSquare, ListChecks } from "lucide-vue-next"
-import { computed, nextTick, onMounted, ref } from "vue"
-import { getApiErrorMessage } from "../lib/api-error"
-import { loadOverview, type ContinuationItem, type OverviewState } from "../lib/dashboard"
+import { computed, nextTick, ref, watch } from "vue"
+import { loadOverview, type ContinuationItem } from "../lib/dashboard"
 import { getActivationSteps } from "../lib/activation"
+import { useApiResource } from "../composables/useApiResource"
 import AnimatedNumber from "../components/AnimatedNumber.vue"
 import AsyncButton from "../components/AsyncButton.vue"
 import LoadingSpinner from "../components/LoadingSpinner.vue"
 
 const emit = defineEmits<{ navigate: [view: "resume" | "career" | "applications"]; "open-draft": [draftId: string] }>()
-const overview = ref<OverviewState | null>(null)
-const loading = ref(true)
-const error = ref("")
-const retryAction = ref<(() => Promise<void>) | null>(null)
 const focusIndex = ref(0)
 const focusStatus = ref("")
 const activeFocus = computed(() => overview.value?.focusOptions[focusIndex.value] ?? overview.value?.focus)
 const activationSteps = computed(() => overview.value ? getActivationSteps(overview.value) : [])
 
-async function refresh() {
-  loading.value = true
-  error.value = ""
-  retryAction.value = null
-  try { overview.value = await loadOverview(); focusIndex.value = 0 }
-  catch (reason) { error.value = getApiErrorMessage(reason, "暂时无法读取工作概览，请稍后重试"); retryAction.value = refresh }
-  finally { loading.value = false }
-}
-async function retryFailedRequest(): Promise<void> {
-  const action = retryAction.value
-  if (!action) return
-  retryAction.value = null
-  await action()
-}
+const {
+  data: overview,
+  loading,
+  error,
+  run: refresh,
+  retry: retryFailedRequest,
+  retryable,
+} = useApiResource(loadOverview, { fallbackMessage: "暂时无法读取工作概览，请稍后重试", immediate: true })
+// 与旧实现一致：每次成功读取概览后重置焦点选择（失败时保留）。
+watch(overview, () => {
+  focusIndex.value = 0
+})
+
 function rotateFocus() {
   if (loading.value || !overview.value?.focusOptions.length) return
   focusIndex.value = (focusIndex.value + 1) % overview.value.focusOptions.length
@@ -55,7 +50,6 @@ function openContinuation(item: ContinuationItem): void {
     emit("navigate", item.target)
   })
 }
-onMounted(refresh)
 </script>
 
 <template>
@@ -65,7 +59,7 @@ onMounted(refresh)
       <div class="heading-actions"><span v-if="!loading && !error" class="sync-status"><CircleCheck :size="15" aria-hidden="true" />数据已同步</span><AsyncButton class="text-action" type="button" :loading="loading" @click="refresh">刷新概览</AsyncButton></div>
     </div>
     <div v-if="loading" class="overview-loading" aria-busy="true" aria-label="正在读取工作概览"><LoadingSpinner class="overview-loading-spinner" label="正在读取工作概览" /><span v-for="index in 3" :key="index" class="overview-skeleton" /></div>
-    <ErrorNotice v-else-if="error" :message="error"><AsyncButton v-if="retryAction" class="notice-action" type="button" :loading="loading" @click="retryFailedRequest">重新读取</AsyncButton></ErrorNotice>
+    <ErrorNotice v-else-if="error" :message="error"><AsyncButton v-if="retryable" class="notice-action" type="button" :loading="loading" @click="retryFailedRequest">重新读取</AsyncButton></ErrorNotice>
     <div v-else-if="overview" class="overview-workspace">
       <section class="overview-focus" aria-labelledby="focus-title">
         <article class="focus-panel"><p v-if="activeFocus?.dueLabel" class="focus-due">{{ activeFocus.dueLabel }}</p><div class="section-kicker">今日重点</div><!-- 鎹竴浠? --><h2 id="focus-title">今天先完成这一件事</h2><p v-if="activeFocus" class="focus-title">{{ activeFocus.title }}</p><p v-if="activeFocus?.description" class="focus-detail">{{ activeFocus.description }}</p><p v-if="focusStatus" class="focus-status" aria-live="polite">{{ focusStatus }}</p><div class="focus-controls"><button class="focus-action" type="button" :disabled="loading || !activeFocus" @click="runFocus">开始这项行动 <ArrowUpRight :size="17" aria-hidden="true" /></button><button v-if="overview.focusOptions.length > 1" class="text-action" type="button" :disabled="loading" @click="rotateFocus">换一件</button></div></article>

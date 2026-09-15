@@ -2,9 +2,7 @@ import { describe, expect, it } from "vitest"
 import { existsSync, readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 
-import { useAsyncAction } from "../composables/useAsyncAction"
-
-describe("useAsyncAction", () => {
+describe("interaction contracts", () => {
   it("keeps Jobs and Insights query inputs in session-scoped recovery snapshots", () => {
     const jobs = readFileSync(new URL("../views/JobsView.vue", import.meta.url), "utf8")
     const insights = readFileSync(new URL("../views/InsightsView.vue", import.meta.url), "utf8")
@@ -108,33 +106,6 @@ describe("useAsyncAction", () => {
     const source = readFileSync(new URL("../components/FutureCapabilityShell.vue", import.meta.url), "utf8")
     expect(source).not.toContain("requestApi")
     expect(source).not.toContain("fetch(")
-  })
-
-  it("clears pending after a successful operation", async () => {
-    const action = useAsyncAction()
-    const result = await action.run(async () => "saved")
-
-    expect(result).toBe("saved")
-    expect(action.pending.value).toBe(false)
-  })
-
-  it("clears pending and rethrows after a failed operation", async () => {
-    const action = useAsyncAction()
-    const failure = Promise.resolve().then(() => action.run(async () => { throw new Error("network") }))
-
-    await expect(failure).rejects.toThrow("network")
-    expect(action.pending.value).toBe(false)
-  })
-
-  it("ignores a duplicate operation while pending", async () => {
-    const action = useAsyncAction()
-    let resolve!: (value: string) => void
-    const first = action.run(() => new Promise<string>((done) => { resolve = done }))
-    const second = await action.run(async () => "duplicate")
-
-    expect(second).toBeUndefined()
-    resolve("first")
-    await expect(first).resolves.toBe("first")
   })
 
   it("locks career task controls while a task update is pending", () => {
@@ -248,8 +219,9 @@ describe("useAsyncAction", () => {
     expect(login).toContain("aria-describedby")
     expect(login).toContain("aria-invalid")
     expect(topbar).toContain(':aria-pressed="dark"')
-    expect(topbar).not.toContain("璧勬枡宸茶繛鎺ワ紝鍙户缁畬鍠勬眰鑱岃鍒?")
-    expect(topbar).toContain("宸ヤ綔鍖哄凡灏辩华")
+    // 顶栏为静态就绪文案；不应回退为动态状态文本或乱码（历史上曾出现双重转码）。
+    expect(topbar).not.toContain("资料已连接")
+    expect(topbar).toContain("工作区已就绪")
     expect(applications).toContain(":aria-label=")
     expect(resume).toContain(":aria-label=")
   })

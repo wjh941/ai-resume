@@ -4,12 +4,14 @@ import { computed, inject, ref, watch } from "vue"
 
 import { requestApi } from "../lib/api"
 import { getApiErrorMessage } from "../lib/api-error"
+import { useApiResource } from "../composables/useApiResource"
 import AsyncButton from "../components/AsyncButton.vue"
 import ExpandableText from "../components/ExpandableText.vue"
 import type { WorkspaceView } from "../components/WebSidebar.vue"
 import { CAPABILITIES_KEY, createCapabilityContext, isCapabilityEnabled } from "../lib/capabilities"
 import { readSession } from "../lib/session"
-import { readWorkspaceSnapshot, writeWorkspaceSnapshot } from "../lib/workspace-recovery"
+import { readSessionSnapshot, writeSessionSnapshot } from "../lib/session-snapshot"
+import { workspaceSnapshotKey } from "../lib/workspace-recovery"
 import { validateJobsQuerySnapshot } from "../lib/query-recovery"
 
 type JobResult = {
@@ -34,12 +36,12 @@ type JobResult = {
 const roleName = ref("")
 const reportMode = ref<"simplified" | "professional">("simplified")
 const workspaceUserId = readSession()?.user.user_id ?? ""
-const workspaceStorage = (() => { try { return typeof sessionStorage === "undefined" ? null : sessionStorage } catch { return null } })()
-const recovered = workspaceStorage ? validateJobsQuerySnapshot(readWorkspaceSnapshot<unknown>(workspaceStorage, workspaceUserId, "jobs-query")) : {}
+const jobsQueryKey = workspaceSnapshotKey(workspaceUserId, "jobs-query")
+const recovered = validateJobsQuerySnapshot(readSessionSnapshot<unknown>(jobsQueryKey))
 if (recovered.roleName !== undefined) roleName.value = recovered.roleName
 if (recovered.reportMode !== undefined) reportMode.value = recovered.reportMode
 watch([roleName, reportMode], ([nextRoleName, nextReportMode]) => {
-  if (workspaceStorage) writeWorkspaceSnapshot(workspaceStorage, workspaceUserId, "jobs-query", { roleName: nextRoleName, reportMode: nextReportMode })
+  writeSessionSnapshot(jobsQueryKey, { roleName: nextRoleName, reportMode: nextReportMode })
 })
 const context = inject(CAPABILITIES_KEY) ?? createCapabilityContext()
 const jobMatchingEnabled = computed(() => isCapabilityEnabled(context.capabilities.value, "jobMatching"))
@@ -58,13 +60,28 @@ const showProfessionalReason = computed(() => jobMatchingState.value === "loadin
 const demoSourceNotice = "本地/演示数据不代表实时职位或真实市场洞察。"
 const capabilityNotice = ref("")
 const capabilityRefreshing = computed(() => context.refreshing.value)
-const result = ref<JobResult | null>(null)
-const loading = ref(false)
 const saving = ref(false)
-const error = ref("")
-const retryAction = ref<(() => Promise<void>) | null>(null)
 const roleFieldError = ref("")
+let requestedCapabilityMode: "real" | "demo" | null = null
 const unique = (items: Array<string | undefined>): string[] => [...new Set(items.filter((item): item is string => Boolean(item?.trim())).map((item) => item.trim()))]
+const emit = defineEmits<{ navigate: [view: WorkspaceView] }>()
+
+const {
+  data: result,
+  loading,
+  error,
+  run: runQuery,
+  retry: retryFailedRequest,
+  retryable,
+  clearRetry,
+} = useApiResource<JobResult>(async () => {
+  const nextResult = await requestApi<JobResult>("/api/job/query", {
+    method: "POST",
+    body: JSON.stringify({ role_name: roleName.value.trim(), report_mode: reportMode.value }),
+  })
+  resultCapabilityMode.value = nextResult.report?.mode === "professional" ? requestedCapabilityMode : null
+  return nextResult
+}, { fallbackMessage: "岗位分析暂时不可用。请确认 AI 服务已配置，或稍后重试。" })
 const requiredSkills = computed(() => unique(result.value?.required_skills || []))
 const bonusSkills = computed(() => unique(result.value?.bonus_skills || []))
 const hardRequirements = computed(() => unique(result.value?.hard_requirements || []))
@@ -84,7 +101,6 @@ const interviewChecks = computed(() => {
 const reportEvidence = computed(() => result.value?.report?.evidence || [])
 const reportActions = computed(() => result.value?.report?.actions || [])
 const hasProfessionalReport = computed(() => result.value?.report?.mode === "professional")
-const emit = defineEmits<{ navigate: [view: WorkspaceView] }>()
 
 async function retryCapabilities() {
   if (context.refreshing.value) return
@@ -94,13 +110,6 @@ async function retryCapabilities() {
   } catch {
     // Keep the current notice and state when refresh fails.
   }
-}
-
-async function retryFailedRequest() {
-  const action = retryAction.value
-  if (!action) return
-  retryAction.value = null
-  await action()
 }
 
 watch(jobMatchingEnabled, (enabled, wasEnabled) => {
@@ -114,7 +123,7 @@ watch(roleName, (value) => {
 
 async function queryRole() {
   if (loading.value) return
-  retryAction.value = null
+  clearRetry()
   if (!roleName.value.trim()) {
     roleFieldError.value = "请输入要查询的目标岗位"
     error.value = ""
@@ -129,33 +138,19 @@ async function queryRole() {
     return
   }
 
-  const requestedCapabilityMode = reportMode.value === "professional" && (jobMatchingState.value === "real" || jobMatchingState.value === "demo")
+  requestedCapabilityMode = reportMode.value === "professional" && (jobMatchingState.value === "real" || jobMatchingState.value === "demo")
     ? jobMatchingState.value
     : null
 
-  loading.value = true
   roleFieldError.value = ""
-  error.value = ""
   capabilityNotice.value = ""
-  try {
-    const nextResult = await requestApi<JobResult>("/api/job/query", {
-      method: "POST",
-      body: JSON.stringify({ role_name: roleName.value.trim(), report_mode: reportMode.value }),
-    })
-    result.value = nextResult
-    resultCapabilityMode.value = nextResult.report?.mode === "professional" ? requestedCapabilityMode : null
-  } catch (reason) {
-    error.value = getApiErrorMessage(reason, "岗位分析暂时不可用。请确认 AI 服务已配置，或稍后重试。")
-    retryAction.value = queryRole
-  } finally {
-    loading.value = false
-  }
+  await runQuery()
 }
 
 async function favorite() {
   if (!result.value || saving.value) return
   saving.value = true
-  retryAction.value = null
+  clearRetry()
   try {
     await requestApi("/api/job-collection/favorites", {
       method: "POST",
@@ -186,7 +181,7 @@ async function favorite() {
       <AsyncButton class="primary-button compact" type="submit" :loading="loading"><Search :size="17" aria-hidden="true" />{{ loading ? "分析中" : "查询岗位" }}</AsyncButton>
     </form>
     <ErrorNotice v-if="error" id="jobs-error" :message="error">
-      <AsyncButton v-if="retryAction" class="notice-action" type="button" @click="retryFailedRequest">重试查询</AsyncButton>
+      <AsyncButton v-if="retryable" class="notice-action" type="button" @click="retryFailedRequest">重试查询</AsyncButton>
     </ErrorNotice>
     <ErrorNotice v-if="capabilityNotice" id="jobs-capability-error" :message="capabilityNotice">
       <AsyncButton class="notice-action" type="button" :loading="capabilityRefreshing" @click="retryCapabilities">重试能力状态</AsyncButton>

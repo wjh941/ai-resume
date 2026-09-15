@@ -11,7 +11,8 @@ import { compareRoles, isCareerProfileMissingError, loadCareerRecommendations, t
 import { restoreComparisonSelection } from "../lib/comparison-workflow"
 import type { WorkspaceView } from "../components/WebSidebar.vue"
 import { readSession } from "../lib/session"
-import { clearWorkspaceSnapshot, readWorkspaceSnapshot, writeWorkspaceSnapshot } from "../lib/workspace-recovery"
+import { clearSessionSnapshot, readSessionSnapshot, writeSessionSnapshot } from "../lib/session-snapshot"
+import { workspaceSnapshotKey } from "../lib/workspace-recovery"
 
 const emit = defineEmits<{ navigate: [view: WorkspaceView] }>()
 const recommendations = ref<CareerRecommendation[]>([])
@@ -24,11 +25,11 @@ const needsMembership = ref(false)
 const profileMissing = ref(false)
 const comparisonSuccess = ref(false)
 const workspaceUserId = readSession()?.user.user_id ?? ""
-const workspaceStorage = (() => { try { return typeof sessionStorage === "undefined" ? null : sessionStorage } catch { return null } })()
+const comparisonKey = workspaceSnapshotKey(workspaceUserId, "comparison")
 const roles = computed(() => recommendations.value.map((item) => item.role.roleName).filter((role, index, all) => Boolean(role) && all.indexOf(role) === index))
 
 watch(selected, (value) => {
-  if (workspaceStorage) writeWorkspaceSnapshot(workspaceStorage, workspaceUserId, "comparison", value)
+  writeSessionSnapshot(comparisonKey, value)
 }, { deep: true })
 
 async function refresh(): Promise<void> {
@@ -36,7 +37,7 @@ async function refresh(): Promise<void> {
   try {
     const response = await loadCareerRecommendations()
     recommendations.value = [...response.tiers.stretch, ...response.tiers.stable, ...response.tiers.safe]
-    const recovered = workspaceStorage ? readWorkspaceSnapshot<unknown>(workspaceStorage, workspaceUserId, "comparison") : null
+    const recovered = readSessionSnapshot<unknown>(comparisonKey)
     selected.value = restoreComparisonSelection(recovered, roles.value)
   } catch (caught) {
     if (isCareerProfileMissingError(caught)) {
@@ -52,7 +53,7 @@ async function compare(): Promise<void> {
   comparing.value = true; comparisonSuccess.value = false; error.value = ""; needsMembership.value = false
   try {
     result.value = await compareRoles(selected.value)
-    if (workspaceStorage) clearWorkspaceSnapshot(workspaceStorage, workspaceUserId, "comparison")
+    clearSessionSnapshot(comparisonKey)
   } catch (caught) { if (caught instanceof ApiRequestError && caught.status === 403) needsMembership.value = true; error.value = caught instanceof Error ? caught.message : "岗位对比暂未完成，请稍后重试" } finally { comparing.value = false }
   if (result.value) comparisonSuccess.value = true
 }

@@ -3,12 +3,13 @@ import { BookOpenCheck, Search } from "lucide-vue-next"
 import { computed, inject, ref, watch } from "vue"
 
 import { requestApi } from "../lib/api"
-import { getApiErrorMessage } from "../lib/api-error"
+import { useApiResource } from "../composables/useApiResource"
 import AsyncButton from "../components/AsyncButton.vue"
 import type { WorkspaceView } from "../components/WebSidebar.vue"
 import { CAPABILITIES_KEY, createCapabilityContext, isCapabilityEnabled } from "../lib/capabilities"
 import { readSession } from "../lib/session"
-import { readWorkspaceSnapshot, writeWorkspaceSnapshot } from "../lib/workspace-recovery"
+import { readSessionSnapshot, writeSessionSnapshot } from "../lib/session-snapshot"
+import { workspaceSnapshotKey } from "../lib/workspace-recovery"
 import { validateInsightsQuerySnapshot } from "../lib/query-recovery"
 
 type Report = {
@@ -24,13 +25,13 @@ const roleName = ref("")
 const year = ref(String(new Date().getFullYear() - 1))
 const reportMode = ref<"simplified" | "professional">("simplified")
 const workspaceUserId = readSession()?.user.user_id ?? ""
-const workspaceStorage = (() => { try { return typeof sessionStorage === "undefined" ? null : sessionStorage } catch { return null } })()
-const recovered = workspaceStorage ? validateInsightsQuerySnapshot(readWorkspaceSnapshot<unknown>(workspaceStorage, workspaceUserId, "insights-query")) : {}
+const insightsQueryKey = workspaceSnapshotKey(workspaceUserId, "insights-query")
+const recovered = validateInsightsQuerySnapshot(readSessionSnapshot<unknown>(insightsQueryKey))
 if (recovered.roleName !== undefined) roleName.value = recovered.roleName
 if (recovered.year !== undefined) year.value = recovered.year
 if (recovered.reportMode !== undefined) reportMode.value = recovered.reportMode
 watch([roleName, year, reportMode], ([nextRoleName, nextYear, nextReportMode]) => {
-  if (workspaceStorage) writeWorkspaceSnapshot(workspaceStorage, workspaceUserId, "insights-query", { roleName: nextRoleName, year: nextYear, reportMode: nextReportMode })
+  writeSessionSnapshot(insightsQueryKey, { roleName: nextRoleName, year: nextYear, reportMode: nextReportMode })
 })
 const context = inject(CAPABILITIES_KEY) ?? createCapabilityContext()
 const jobMatchingEnabled = computed(() => isCapabilityEnabled(context.capabilities.value, "jobMatching"))
@@ -49,11 +50,25 @@ const showProfessionalReason = computed(() => jobMatchingState.value === "loadin
 const demoSourceNotice = "本地/演示数据不代表实时职位或真实市场洞察。"
 const capabilityNotice = ref("")
 const capabilityRefreshing = computed(() => context.refreshing.value)
-const report = ref<Report | null>(null)
-const loading = ref(false)
-const error = ref("")
-const retryAction = ref<(() => Promise<void>) | null>(null)
+let requestedCapabilityMode: "real" | "demo" | null = null
 const emit = defineEmits<{ navigate: [view: WorkspaceView] }>()
+
+const {
+  data: report,
+  loading,
+  error,
+  run: runQuery,
+  retry: retryFailedRequest,
+  retryable,
+  clearRetry,
+} = useApiResource<Report>(async () => {
+  const response = await requestApi<{ report: Report }>("/api/career/annual-insights/query", {
+    method: "POST",
+    body: JSON.stringify({ role_name: roleName.value.trim(), year: Number(year.value), report_mode: reportMode.value }),
+  })
+  resultCapabilityMode.value = response.report.mode === "professional" ? requestedCapabilityMode : null
+  return response.report
+}, { fallbackMessage: "年度洞察暂时无法查询。请检查权限或稍后重试。" })
 
 async function retryCapabilities() {
   if (context.refreshing.value) return
@@ -65,13 +80,6 @@ async function retryCapabilities() {
   }
 }
 
-async function retryFailedRequest() {
-  const action = retryAction.value
-  if (!action) return
-  retryAction.value = null
-  await action()
-}
-
 watch(jobMatchingEnabled, (enabled, wasEnabled) => {
   if (wasEnabled && !enabled && reportMode.value === "professional") reportMode.value = "simplified"
   if (!wasEnabled && enabled) capabilityNotice.value = ""
@@ -79,7 +87,7 @@ watch(jobMatchingEnabled, (enabled, wasEnabled) => {
 
 async function queryInsights() {
   if (loading.value) return
-  retryAction.value = null
+  clearRetry()
   if (!roleName.value.trim()) {
     error.value = "请输入要查询的岗位名称"
     return
@@ -92,25 +100,11 @@ async function queryInsights() {
     capabilityNotice.value = capabilityHint.value
     return
   }
-  const requestedCapabilityMode = reportMode.value === "professional" && (jobMatchingState.value === "real" || jobMatchingState.value === "demo")
+  requestedCapabilityMode = reportMode.value === "professional" && (jobMatchingState.value === "real" || jobMatchingState.value === "demo")
     ? jobMatchingState.value
     : null
-  loading.value = true
-  error.value = ""
   capabilityNotice.value = ""
-  try {
-    const response = await requestApi<{ report: Report }>("/api/career/annual-insights/query", {
-      method: "POST",
-      body: JSON.stringify({ role_name: roleName.value.trim(), year: Number(year.value), report_mode: reportMode.value }),
-    })
-    report.value = response.report
-    resultCapabilityMode.value = response.report.mode === "professional" ? requestedCapabilityMode : null
-  } catch (reason) {
-    error.value = getApiErrorMessage(reason, "年度洞察暂时无法查询。请检查权限或稍后重试。")
-    retryAction.value = queryInsights
-  } finally {
-    loading.value = false
-  }
+  await runQuery()
 }
 </script>
 
@@ -124,7 +118,7 @@ async function queryInsights() {
       <AsyncButton class="primary-button compact" type="submit" :loading="loading"><Search :size="17" aria-hidden="true" />{{ loading ? "查询中" : "查询洞察" }}</AsyncButton>
     </form>
     <ErrorNotice v-if="error" id="insights-error" :message="error">
-      <AsyncButton v-if="retryAction" class="notice-action" type="button" @click="retryFailedRequest">重试查询</AsyncButton>
+      <AsyncButton v-if="retryable" class="notice-action" type="button" @click="retryFailedRequest">重试查询</AsyncButton>
     </ErrorNotice>
     <ErrorNotice v-if="capabilityNotice" id="insights-capability-error" :message="capabilityNotice">
       <AsyncButton class="notice-action" type="button" :loading="capabilityRefreshing" @click="retryCapabilities">重试能力状态</AsyncButton>

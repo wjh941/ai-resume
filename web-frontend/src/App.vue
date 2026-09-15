@@ -10,6 +10,7 @@ import { requestApi, SESSION_EXPIRED_EVENT } from "./lib/api"
 import { CAPABILITIES_KEY, createCapabilityContext } from "./lib/capabilities"
 import { NAVIGATION_GUARD_KEY, createNavigationGuardContext } from "./lib/navigation-guard"
 import { clearSession, readSession, type Session } from "./lib/session"
+import { readStoredTheme, resolveInitialDarkTheme, storeTheme, watchSystemTheme } from "./lib/theme"
 import { buildWorkspaceUrl, getWorkspacePageTitle, parseWorkspaceRoute, type WorkspaceRoute } from "./lib/workspace-route"
 
 function asyncView(loader: () => Promise<{ default: Component }>): Component {
@@ -54,12 +55,13 @@ const activeView = ref<WorkspaceView>(initialRoute.view)
 const pendingNavigation = ref<WorkspaceView | null>(null)
 const pendingDraftId = ref<string | null>(null)
 const editingDraftId = ref<string | null>(initialRoute.draftId)
-const dark = ref(false)
+const dark = ref(resolveInitialDarkTheme())
 const logoutLoading = ref(false)
 const sessionExpired = ref(false)
 const accountDeletedNotice = ref("")
 let themeSwitchTimer: number | undefined
 let themeInitialized = false
+let stopSystemThemeWatch: (() => void) | undefined
 let suppressRouteSync = false
 const activeComponent = computed(() => viewComponents[activeView.value])
 
@@ -153,12 +155,18 @@ onMounted(() => {
   applyRoute(currentRoute())
   window.addEventListener("popstate", handlePopState)
   window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
+  // 用户未显式选择主题时跟随系统切换；一旦手动切换即写入存储，不再跟随。
+  stopSystemThemeWatch = watchSystemTheme((prefersDark) => {
+    if (readStoredTheme()) return
+    dark.value = prefersDark
+  })
 })
 
 onUnmounted(() => {
   window.removeEventListener("popstate", handlePopState)
   window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
   if (themeSwitchTimer !== undefined) window.clearTimeout(themeSwitchTimer)
+  stopSystemThemeWatch?.()
 })
 
 watch(dark, (value) => {
@@ -168,6 +176,7 @@ watch(dark, (value) => {
     themeInitialized = true
     return
   }
+  storeTheme(value ? "dark" : "light")
   root.classList.add("theme-switching")
   if (themeSwitchTimer !== undefined) window.clearTimeout(themeSwitchTimer)
   themeSwitchTimer = window.setTimeout(() => {

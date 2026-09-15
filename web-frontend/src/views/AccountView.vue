@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { Download, RefreshCw, ShieldCheck, Trash2 } from "lucide-vue-next"
-import { onMounted, ref } from "vue"
+import { ref } from "vue"
 
 import { downloadApi, requestApi } from "../lib/api"
 import { getApiErrorMessage } from "../lib/api-error"
 import { triggerBlobDownload } from "../lib/download-file"
+import { useApiResource } from "../composables/useApiResource"
 import type { WorkspaceView } from "../components/WebSidebar.vue"
 import AsyncButton from "../components/AsyncButton.vue"
 import LoadingSpinner from "../components/LoadingSpinner.vue"
@@ -15,42 +16,31 @@ type DataScope = {
   privacy_policy_hint: string
 }
 
-const scope = ref<DataScope | null>(null)
-const loading = ref(true)
-const error = ref("")
-const retryAction = ref<(() => Promise<void>) | null>(null)
-const notice = ref("")
-const pendingAction = ref<"consent" | "export" | "deletion" | "">("")
 const emit = defineEmits<{
   navigate: [view: WorkspaceView]
   deleted: []
 }>()
 
-async function refresh() {
-  loading.value = true
-  error.value = ""
-  retryAction.value = null
-  try {
-    scope.value = await requestApi<DataScope>("/api/account/data-scope")
-  } catch (reason) {
-    error.value = getApiErrorMessage(reason, "暂时无法读取账户数据范围，请稍后重试")
-    retryAction.value = refresh
-  } finally {
-    loading.value = false
-  }
-}
+const {
+  data: scope,
+  loading,
+  error,
+  run: refresh,
+  retry: retryFailedRequest,
+  retryable,
+  clearRetry,
+} = useApiResource<DataScope>(() => requestApi<DataScope>("/api/account/data-scope"), {
+  fallbackMessage: "暂时无法读取账户数据范围，请稍后重试",
+  immediate: true,
+})
 
-async function retryFailedRequest(): Promise<void> {
-  const action = retryAction.value
-  if (!action) return
-  retryAction.value = null
-  await action()
-}
+const notice = ref("")
+const pendingAction = ref<"consent" | "export" | "deletion" | "">("")
 
 async function recordConsent() {
   if (pendingAction.value) return
   pendingAction.value = "consent"
-  retryAction.value = null
+  clearRetry()
   error.value = ""
   try {
     await requestApi("/api/account/privacy-consent", { method: "POST" })
@@ -65,7 +55,7 @@ async function recordConsent() {
 async function prepareExport() {
   if (pendingAction.value) return
   pendingAction.value = "export"
-  retryAction.value = null
+  clearRetry()
   error.value = ""
   try {
     const prepared = await requestApi<{ download_url?: string }>("/api/account/data-export", { method: "POST" })
@@ -83,7 +73,7 @@ async function requestDeletion() {
   if (pendingAction.value) return
   if (!window.confirm("删除申请会匿名化个人简历和职业资料，并且账户无法再次登录。确定继续吗？")) return
   pendingAction.value = "deletion"
-  retryAction.value = null
+  clearRetry()
   try {
     await requestApi("/api/account/deletion-request", { method: "POST" })
     emit("deleted")
@@ -93,14 +83,12 @@ async function requestDeletion() {
     pendingAction.value = ""
   }
 }
-
-onMounted(refresh)
 </script>
 
 <template>
   <section class="view-layout">
     <div class="view-heading"><div><h1 id="account-title">账户设置</h1><p>了解当前账户的数据范围，并在需要时完成隐私确认、导出或删除申请。</p></div><AsyncButton class="text-action" type="button" :loading="loading" @click="refresh"><RefreshCw :size="16" aria-hidden="true" />重试读取</AsyncButton></div>
-    <ErrorNotice v-if="error" :message="error"><AsyncButton v-if="retryAction" class="notice-action" type="button" :loading="loading" @click="retryFailedRequest">重试读取</AsyncButton></ErrorNotice><p v-if="notice" class="notice-success" aria-live="polite">{{ notice }}</p>
+    <ErrorNotice v-if="error" :message="error"><AsyncButton v-if="retryable" class="notice-action" type="button" :loading="loading" @click="retryFailedRequest">重试读取</AsyncButton></ErrorNotice><p v-if="notice" class="notice-success" aria-live="polite">{{ notice }}</p>
     <div v-if="loading" class="content-skeleton" aria-busy="true"><LoadingSpinner class="content-loading-spinner" label="正在读取账户数据范围" /><span /><span /></div>
     <article v-else-if="scope" class="account-scope workbench-form"><section><ShieldCheck :size="25" aria-hidden="true" /><div><h2>当前数据范围</h2><p>{{ scope.privacy_policy_hint }}</p></div></section><ul class="tag-list"><li v-for="category in scope.categories" :key="category">{{ category }}</li></ul><p class="source-notice">{{ scope.retention_note }}</p><div class="account-actions"><AsyncButton class="text-action" type="button" :disabled="Boolean(pendingAction)" @click="emit('navigate', 'membership')"><ShieldCheck :size="16" aria-hidden="true" />查看会员与订单</AsyncButton><AsyncButton class="text-action" type="button" :loading="pendingAction === 'consent'" :disabled="Boolean(pendingAction)" @click="recordConsent"><ShieldCheck :size="16" aria-hidden="true" />确认隐私说明</AsyncButton><AsyncButton class="text-action" type="button" :loading="pendingAction === 'export'" :disabled="Boolean(pendingAction)" @click="prepareExport"><Download :size="16" aria-hidden="true" />下载数据 ZIP</AsyncButton><AsyncButton class="danger-action" type="button" :loading="pendingAction === 'deletion'" :disabled="Boolean(pendingAction)" @click="requestDeletion"><Trash2 :size="16" aria-hidden="true" />申请删除账户</AsyncButton></div></article>
   </section>

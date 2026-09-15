@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { CheckCircle2, ClipboardCheck, FileSearch, Lightbulb, Plus, RefreshCw, Trash2 } from "lucide-vue-next"
-import { onMounted, ref } from "vue"
+import { ref } from "vue"
 
 import AsyncButton from "../components/AsyncButton.vue"
 import EvidenceForm from "../components/EvidenceForm.vue"
@@ -8,6 +8,7 @@ import ExpandableText from "../components/ExpandableText.vue"
 import LoadingSpinner from "../components/LoadingSpinner.vue"
 import ProgressiveListSentinel from "../components/ProgressiveListSentinel.vue"
 import { useIncrementalList } from "../composables/useIncrementalList"
+import { useApiResource } from "../composables/useApiResource"
 import { listDrafts, type DraftRecord } from "../lib/drafts"
 import { getApiErrorMessage } from "../lib/api-error"
 import { checkResumeReadiness, deleteEvidence, getEvidenceSuggestions, listEvidence, saveEvidence, type EvidenceDraft, type EvidenceRecord, type EvidenceSuggestion, type ResumeReadinessReport } from "../lib/evidence"
@@ -19,11 +20,8 @@ const items = ref<EvidenceRecord[]>([])
 const drafts = ref<DraftRecord[]>([])
 const model = ref<EvidenceDraft>(emptyDraft())
 const editingId = ref<string | null>(null)
-const loading = ref(true)
 const saving = ref(false)
 const pendingDelete = ref("")
-const error = ref("")
-const retryAction = ref<(() => Promise<void>) | null>(null)
 const notice = ref("")
 const roleName = ref("")
 const suggestions = ref<EvidenceSuggestion[]>([])
@@ -38,36 +36,40 @@ const {
   reset: resetVisibleEvidence,
 } = useIncrementalList(items)
 
+const {
+  loading,
+  error,
+  run: refresh,
+  retry: retryFailedRequest,
+  retryable,
+  clearRetry,
+} = useApiResource(async () => {
+  const [evidence, draftList] = await Promise.all([listEvidence(), listDrafts()])
+  items.value = evidence
+  resetVisibleEvidence()
+  drafts.value = draftList
+  return true
+}, { fallbackMessage: "暂时无法读取经历证据，请稍后重试", immediate: true })
+
 function resetForm(): void { editingId.value = null; model.value = emptyDraft() }
 function clone<T>(value: T): T { return JSON.parse(JSON.stringify(value)) as T }
-async function refresh(): Promise<void> {
-  loading.value = true; error.value = ""
-  retryAction.value = null
-  try { const [evidence, draftList] = await Promise.all([listEvidence(), listDrafts()]); items.value = evidence; resetVisibleEvidence(); drafts.value = draftList } catch (reason) { error.value = getApiErrorMessage(reason, "暂时无法读取经历证据，请稍后重试"); retryAction.value = refresh } finally { loading.value = false }
-}
-async function retryFailedRequest(): Promise<void> {
-  const action = retryAction.value
-  if (!action) return
-  retryAction.value = null
-  await action()
-}
 function startEdit(item: EvidenceRecord): void { editingId.value = item.id; model.value = clone({ id: item.id, kind: item.kind, title: item.title, context: item.context, actions: item.actions, outcome: item.outcome, proofNote: item.proofNote, verified: item.verified }) }
 async function submit(): Promise<void> {
   if (!model.value.title.trim() || !model.value.actions.trim() || saving.value) return
   saving.value = true; error.value = ""; notice.value = ""
-  retryAction.value = null
+  clearRetry()
   try { const saved = await saveEvidence({ ...model.value, id: editingId.value || undefined }); items.value = editingId.value ? replaceEvidence(items.value, saved) : [saved, ...items.value]; notice.value = editingId.value ? "经历证据已更新" : "经历证据已保存"; resetForm() } catch (reason) { error.value = getApiErrorMessage(reason, "证据暂未保存，请检查填写内容后重试") } finally { saving.value = false }
 }
 async function remove(item: EvidenceRecord): Promise<void> {
   if (pendingDelete.value || !window.confirm("确认删除这条经历证据吗？")) return
   pendingDelete.value = item.id; error.value = ""
-  retryAction.value = null
+  clearRetry()
   try { await deleteEvidence(item.id); items.value = removeEvidence(items.value, item.id); if (editingId.value === item.id) resetForm() } catch (reason) { error.value = getApiErrorMessage(reason, "证据暂未删除，请稍后重试") } finally { pendingDelete.value = "" }
 }
 async function loadSuggestions(): Promise<void> {
   if (!roleName.value.trim() || suggestionsLoading.value) return
   suggestionsLoading.value = true; error.value = ""
-  retryAction.value = null
+  clearRetry()
   try { suggestions.value = await getEvidenceSuggestions(roleName.value.trim()) } catch (reason) { error.value = getApiErrorMessage(reason, "暂时无法生成证据建议，请稍后重试") } finally { suggestionsLoading.value = false }
 }
 async function checkReadiness(): Promise<void> {
@@ -75,16 +77,15 @@ async function checkReadiness(): Promise<void> {
   const draft = drafts.value.find((item) => item.id === selectedDraftId.value)
   if (!draft) { readiness.value = null; error.value = "请先选择一份简历草稿，再检查准备度"; return }
   readinessLoading.value = true; error.value = ""
-  retryAction.value = null
+  clearRetry()
   try { readiness.value = await checkResumeReadiness(draft.resume) } catch (reason) { error.value = getApiErrorMessage(reason, "暂时无法检查简历准备度，请稍后重试") } finally { readinessLoading.value = false }
 }
-onMounted(refresh)
 </script>
 
 <template>
   <section class="view-layout evidence-view">
     <div class="view-heading"><div><h1 id="evidence-title">经历证据</h1><p>把项目、学习和工作经历沉淀为可复用的事实材料，帮助简历和面试表达更可信。</p></div><AsyncButton class="text-action" type="button" :loading="loading" @click="refresh"><RefreshCw :size="16" aria-hidden="true" />刷新</AsyncButton></div>
-    <ErrorNotice v-if="error" :message="error"><AsyncButton v-if="retryAction" class="notice-action" type="button" :loading="loading" @click="retryFailedRequest">重试读取</AsyncButton></ErrorNotice><p v-if="notice" class="notice-success" aria-live="polite"><CheckCircle2 :size="16" aria-hidden="true" />{{ notice }}</p>
+    <ErrorNotice v-if="error" :message="error"><AsyncButton v-if="retryable" class="notice-action" type="button" :loading="loading" @click="retryFailedRequest">重试读取</AsyncButton></ErrorNotice><p v-if="notice" class="notice-success" aria-live="polite"><CheckCircle2 :size="16" aria-hidden="true" />{{ notice }}</p>
     <div v-if="loading" class="content-skeleton evidence-loading" aria-busy="true"><LoadingSpinner class="content-loading-spinner" label="正在读取经历证据" /><span /><span /><span /></div>
     <template v-else>
       <EvidenceForm v-model="model" :pending="saving" :editing="Boolean(editingId)" @submit="submit" @cancel="resetForm" />

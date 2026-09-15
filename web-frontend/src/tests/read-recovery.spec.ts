@@ -12,30 +12,40 @@ const viewSources = {
 }
 
 describe("read recovery", () => {
-  it("maps page read failures through the shared API error copy", () => {
+  it("loads every page through the shared useApiResource with a per-view fallback copy", () => {
     for (const source of Object.values(viewSources)) {
+      expect(source).toContain("useApiResource")
+      expect(source).toMatch(/fallbackMessage: "/)
+    }
+  })
+
+  it("maps in-page action failures through the shared API error copy", () => {
+    for (const [view, source] of Object.entries(viewSources)) {
+      // 概览页只有页面级读取，其失败映射由 useApiResource + 兜底文案承担。
+      if (view === "overview") continue
       expect(source).toContain('from "../lib/api-error"')
-      expect(source).toMatch(/catch \(reason\)[\s\S]{0,260}getApiErrorMessage\(reason,/)
+      expect(source).toMatch(/catch \((?:reason|caught)\)[\s\S]{0,260}getApiErrorMessage\((?:reason|caught),/)
     }
   })
 
   it("exposes a retry action for each page refresh failure", () => {
     for (const source of Object.values(viewSources)) {
-      expect(source).toContain("retryAction")
-      expect(source).toContain("retryFailedRequest")
+      expect(source).toContain('v-if="retryable"')
       expect(source).toContain('@click="retryFailedRequest"')
     }
   })
 
-  it("clears the page retry action before mutation failures", () => {
-    for (const source of Object.values(viewSources)) {
-      expect(source).toContain("retryAction.value = null")
+  it("clears the page retry state before mutation actions", () => {
+    for (const [view, source] of Object.entries(viewSources)) {
+      // 概览页没有会覆盖页面错误的次级操作。
+      if (view === "overview") continue
+      expect(source).toContain("clearRetry()")
     }
   })
 
-  it("clears the page retry action before creating a resume", () => {
+  it("clears the page retry state before creating a resume", () => {
     const createStart = viewSources.resume.indexOf("async function create()")
     const createBody = viewSources.resume.slice(createStart, viewSources.resume.indexOf("async function copy", createStart))
-    expect(createBody).toContain("retryAction.value = null")
+    expect(createBody).toContain("clearRetry()")
   })
 })
