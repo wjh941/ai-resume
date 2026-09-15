@@ -39,6 +39,13 @@ not legal advice.
 
 - Keep `DATABASE_URL` empty for local SQLite development. Production PostgreSQL
   uses `postgresql+psycopg://...`; run `alembic upgrade head` before FastAPI.
+- SQLite connections run in WAL mode with `synchronous=NORMAL`, which trades
+  power-loss durability of the latest commits for much lower write latency;
+  application crashes never lose committed data. Deployments that need strict
+  durability must use PostgreSQL.
+- List endpoints (drafts, applications, favourites, evidence) currently return
+  a user's records without pagination. This is intended for personal and small
+  team scale; add pagination before opening the service to heavy multi-user use.
 - Back up before every migration and periodically afterward. Use
   `scripts/backup-database.ps1` on Windows or `scripts/backup-database.sh` on
   Linux, set `BACKUP_DIR` and `BACKUP_RETENTION_DAYS`, then prove a restore.
@@ -91,7 +98,8 @@ not legal advice.
   name/template, payment callback verification, and push provider account are
   ready before enabling their respective production integrations.
 - Set a writable, private `TEMP_FILE_PATH`, a suitable
-  `RESUME_IMPORT_MAX_FILE_BYTES`, and retention rules. Resume upload accepts
+  `RESUME_IMPORT_MAX_FILE_BYTES` and `RESUME_IMPORT_EXPIRE_MINUTES`, and verify
+  the worker is enabled to enforce retention. Resume upload accepts
   only PDF/Word by extension and MIME type. Malware scanning and real document
   parsing are still integration points, not enabled protection.
 - Verify `/health` after release for the database kind, worker status, and

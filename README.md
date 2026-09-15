@@ -147,6 +147,17 @@ Copy-Item .env.example .env
 uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
 
+`requirements.txt` 只包含运行 API、SQLite 与 Word 导出所需的基础依赖（个人部署推荐）。可选能力按需追加安装，均为惰性导入：
+
+```powershell
+pip install weasyprint          # PDF 导出（服务器渲染，需系统级 Pango/Cairo）
+pip install playwright          # 或浏览器渲染 PDF（另需 `playwright install chromium`）
+pip install "psycopg[binary]" alembic sqlalchemy   # PostgreSQL 与迁移工具链
+pip install APScheduler         # 独立 worker 进程
+```
+
+未安装任何 PDF 渲染器时，PDF 导出返回明确的 `pdf_renderer_unavailable` 错误，Word 导出不受影响。
+
 健康检查地址：`http://127.0.0.1:8000/health`
 
 如需启动单文件工作台对应的本地后端，建议从仓库根目录使用以下脚本：
@@ -201,6 +212,8 @@ resume-miniprogram/dist/build/mp-weixin
 
 真机、模拟器与正式小程序必须使用可访问的 HTTPS 后端地址：在 `resume-miniprogram/.env.local` 配置 `VITE_RESUME_API_URL` 后重新构建，并在微信小程序后台配置对应的合法域名。无需修改前端源码；前端环境变量不得存放 API Key 等敏感信息。
 
+构建脚本会自动从小程序产物中剔除 H5 专用的静态工作台页（`premium-dashboard.html` 等仍保留在 H5 产物与开发服务器中），并启用 `lazyCodeLoading`，主包体积约 446KB。
+
 ## AI 与联网配置
 
 后端使用 `resume-backend/.env` 读取配置。生产 AI 不再使用写死的业务 Mock，必须配置一个 OpenAI 兼容或 Ark 模型；未配置时接口会返回明确错误，前端仅在断网时提供内存 Mock 预览。
@@ -217,6 +230,7 @@ TAVILY_API_KEY=
 ```
 
 - 使用豆包或 OpenAI 兼容接口时，填写 API Key、Base URL 与模型名。
+- 真实消耗模型的接口（岗位查询/匹配、AI 润色、求职咨询）内置每用户滑动窗口限流，默认 30 次/60 秒，超出返回 429 `rate_limited` 并携带 `Retry-After`；可用 `AI_RATE_LIMIT_MAX_REQUESTS`、`AI_RATE_LIMIT_WINDOW_SECONDS` 调整。客户端错误上报接口同样按用户限流（默认 10 次/60 秒）。
 - 本地开发登录后，也可从工作台右上角用户菜单的“接入 AI 模型”填写以上三项。该入口仅允许本机回环地址和非生产环境使用，API Key 不会写入浏览器存储或返回给前端；生产环境请仅通过服务器 `.env` 配置。
 - `WEB_SEARCH_PROVIDER` 仅在具备合法 API 授权时开启。
 - 项目不包含招聘网站爬虫、登录绕过或批量抓取。
@@ -278,6 +292,8 @@ npm run build:mp-weixin
 ## 部署概览
 
 - 本地开发默认使用 SQLite；生产环境通过 `DATABASE_URL` 使用 PostgreSQL，迁移与备份步骤见 [PostgreSQL 迁移说明](docs/POSTGRESQL_MIGRATION.md)。
+- Docker 镜像自带 weasyprint PDF 渲染（默认 `PDF_RENDERER=weasyprint`）、PostgreSQL 驱动、alembic 迁移与 APScheduler worker，无需额外安装浏览器。
+- 知识库官方数据源的写入端点（创建目录角色、触发官方数据集同步）仅限运营账号（`require_operator`）；普通账号只读。小程序岗位知识库页会按角色隐藏初始化按钮。
 - Docker Compose 只提供服务编排，HTTPS 必须由外部 Nginx 或 Caddy 终止；完整上线检查见 [部署前检查](docs/DEPLOYMENT_PRECHECK.md)。
 - 公共 VPS 的 Compose 配置为 API 与 worker 提供健康检查和 `unless-stopped` 自动重启，并强制关闭 SMS 演示、真实支付和岗位搜索，将推送保持为 `mock`。上线前必须设置 `PRODUCTION=true`，避免向公网暴露调试信息或 OpenAPI 文档。
 - `WORKER_ENABLED=true` 时应单独运行 APScheduler worker。默认推送模式为 `mock`，仅记录日志，当前不会真实调用 SMS 或 WeChat。

@@ -3,11 +3,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 
-const dashboardPath = path.resolve(import.meta.dirname, '..', 'premium-dashboard.html');
+const dashboardPath = path.resolve(import.meta.dirname, '..', 'resume-miniprogram', 'public', 'premium-dashboard.html');
 const html = fs.readFileSync(dashboardPath, 'utf8');
 const viteConfig = fs.readFileSync(path.resolve(import.meta.dirname, '..', 'resume-miniprogram', 'vite.config.ts'), 'utf8');
-const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map(match => match[1]);
-assert.equal(scripts.length, 1, 'dashboard must keep one inline script');
+const scriptTags = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)];
+const scripts = scriptTags.map(match => match[1]);
+assert.equal(scripts.filter(script => script.trim()).length, 1, 'dashboard must keep one inline script');
+assert.match(html, /<script type="module" src="\.\/dashboard-report-tier\.js"><\/script>/, 'dashboard report helpers must stay code-split');
 assert.match(viteConfig, /["']\/health["']\s*:\s*localApiTarget/, 'Vite must proxy the dashboard health check to FastAPI');
 
 const storage = new Map();

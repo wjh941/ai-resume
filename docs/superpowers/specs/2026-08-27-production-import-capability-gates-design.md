@@ -9,9 +9,9 @@ Make resume import usable with the dependencies already present, and make all ex
 This iteration covers:
 
 - PDF text extraction through `pypdf`.
-- DOC/DOCX text extraction through `python-docx` and a zip/XML fallback for legacy `.docx` files.
+- DOCX text extraction through `python-docx`; legacy binary `.doc` files remain explicitly unsupported.
 - Deterministic, conservative mapping of common resume labels into the existing `ResumePayload` shape.
-- Explicit import statuses (`parsed`, `parse_failed`) and safe preview behavior.
+- Explicit successful import status (`parsed`) and safe preview behavior.
 - Public capability metadata for SMS, WeChat OAuth, payment, push delivery, job-source matching, and resume import.
 - Frontend capability loading that hides or disables unavailable actions with Chinese explanations.
 - Regression tests for parser output, malformed files, capability responses, and UI service mapping.

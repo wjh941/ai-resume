@@ -29,10 +29,10 @@
 - Produces `parse_resume_file(path: Path, suffix: str) -> ParsedResume` with `text` and `resume` fields.
 - `ParsedResume.resume` is the existing normalized resume dictionary.
 
-- [ ] Add tests for labeled plain text extraction, PDF extraction, DOCX extraction, and malformed/empty files.
-- [ ] Run the focused pytest file and confirm the parser import or assertions fail.
-- [ ] Implement suffix dispatch using `pypdf` and `python-docx`, conservative label parsing, and a meaningful-content check.
-- [ ] Run the focused tests and the existing resume import tests.
+- [x] Add tests for labeled plain text extraction, PDF extraction, DOCX extraction, and malformed/empty files.
+- [x] Run the focused pytest file and confirm the parser import or assertions fail.
+- [x] Implement suffix dispatch using `pypdf` and `python-docx`, conservative label parsing, and a meaningful-content check.
+- [x] Run the focused tests and the existing resume import tests.
 
 ### Task 2: Make import statuses and editor behavior explicit
 
@@ -41,7 +41,7 @@
 - Modify: `resume-miniprogram/src/services/resume-import-api.ts`, `src/pages/resume-editor/index.vue`
 - Test: `resume-backend/tests/test_phase10_resume_imports.py`, `resume-miniprogram/src/tests/phase10-services.spec.ts`
 
-Return `parsed` only when meaningful content exists; return a safe `parse_failed` response for malformed/empty files, preserve TTL cleanup, and ensure the editor leaves the existing draft untouched. Keep file validation and cleanup behavior unchanged.
+Return `parsed` only when meaningful content exists; reject malformed/empty files with a safe validation response, preserve TTL cleanup, and ensure the editor leaves the existing draft untouched. Keep file validation and cleanup behavior unchanged.
 
 ### Task 3: Add public capability metadata
 
@@ -55,7 +55,7 @@ Add non-sensitive `features` to the public `/health` response. Each feature retu
 ### Task 4: Gate external-service UI actions
 
 **Files:**
-- Modify: `resume-miniprogram/src/pages/login/index.vue`, `src/pages/membership/index.vue`, `src/pages/job-collection/index.vue`
+- Modify: `resume-miniprogram/src/pages/login/index.vue`, `src/pages/membership/index.vue`, `src/pages/job-collection/index.vue`, `src/pages/resume-editor/index.vue`
 - Test: focused frontend service/page source contracts where existing suites support them.
 
 Load capabilities without blocking the page. Hide or disable phone login, WeChat login, demo payment, and job-alert switches when the corresponding feature is unavailable, while showing a concise Chinese notice. Resume editing and career assessment remain usable.
