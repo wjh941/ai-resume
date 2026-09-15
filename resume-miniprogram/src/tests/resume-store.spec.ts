@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest"
 import { createPinia, setActivePinia } from "pinia"
 
-import { getClientId } from "../stores/session"
+import { getClientId, setAuthSession } from "../stores/session"
 import { useResumeStore } from "../stores/resume"
 import type { JobIntelligence } from "../types/resume"
 
@@ -40,6 +40,21 @@ describe("local client and resume checkpoint", () => {
     store.restoreCheckpoint()
 
     expect(store.draft.resume.basic.name).toBe("张三")
+  })
+
+  it("isolates checkpoints by authenticated user", () => {
+    const store = useResumeStore()
+    setAuthSession("token-a", { userId: "user-a", phone: "13800138000" })
+    store.draft.resume.basic.name = "用户 A"
+    store.checkpoint()
+
+    setAuthSession("token-b", { userId: "user-b", phone: "13900139000" })
+    store.resetDraft(false)
+    store.restoreCheckpoint()
+
+    expect(store.draft.resume.basic.name).not.toBe("用户 A")
+    expect(storage.get("resume_demo_checkpoint:user-a")).toBeTruthy()
+    expect(storage.get("resume_demo_checkpoint:user-b")).toBeUndefined()
   })
 
   it("keeps user-entered job fields when a new role intelligence result is selected", () => {

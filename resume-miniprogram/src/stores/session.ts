@@ -1,27 +1,20 @@
+import { getUniStorage } from "../utils/persistence"
+
 const CLIENT_ID_KEY = "resume_demo_client_id"
 const AUTH_TOKEN_KEY = "resume_demo_auth_token"
 const AUTH_USER_KEY = "resume_demo_auth_user"
+
+const storage = getUniStorage
+
+export function userStorageKey(baseKey: string, userId = getAuthUser()?.userId): string {
+  return userId ? `${baseKey}:${userId}` : baseKey
+}
 
 export type AuthSessionUser = {
   userId: string
   phone: string
   role: "user" | "operator"
   account?: string
-}
-
-type UniStorage = {
-  getStorageSync(key: string): unknown
-  setStorageSync(key: string, value: unknown): void
-  removeStorageSync?(key: string): void
-}
-
-function storage(): UniStorage | null {
-  const candidate = (globalThis as typeof globalThis & { uni?: UniStorage }).uni
-  return candidate
-    && typeof candidate.getStorageSync === "function"
-    && typeof candidate.setStorageSync === "function"
-    ? candidate
-    : null
 }
 
 function generateId(): string {

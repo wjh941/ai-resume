@@ -9,6 +9,7 @@ import { apiUrl, toUserMessage } from "../../services/http"
 import { clearAuthSession, getAuthToken, getAuthUser } from "../../stores/session"
 import type { AuthUser } from "../../types/auth"
 import { completeOnboarding } from "../../utils/onboarding"
+import { clearLocalCareerWorkspace } from "../../utils/local-privacy"
 import { runWithLoading } from "../../utils/async-state"
 
 const user = ref<AuthUser | null>(getAuthUser())
@@ -51,6 +52,7 @@ function signOut(): void {
         await logout()
       } finally {
         accountAction.value = ""
+        clearLocalCareerWorkspace()
         clearAuthSession()
         uni.reLaunch({ url: "/pages/login/index" })
       }
@@ -125,6 +127,9 @@ function requestDeletion(): void {
       accountAction.value = "delete"
       try {
         lifecycleMessage.value = (await requestAccountDeletion()).message
+        clearLocalCareerWorkspace()
+        clearAuthSession()
+        uni.reLaunch({ url: "/pages/login/index" })
       } catch (reason) {
         error.value = toUserMessage(reason, "无法提交注销申请，请稍后重试。")
       } finally {

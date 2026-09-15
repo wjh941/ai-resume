@@ -130,9 +130,7 @@ function toBackendResume(resume: ResumePayload) {
 
 
 export async function listEvidence(clientId: string): Promise<ResumeEvidence[]> {
-  const response = await request<{ items: BackendEvidence[] }>(
-    `/api/evidence?client_id=${encodeURIComponent(clientId)}`,
-  )
+  const response = await request<{ items: BackendEvidence[] }>("/api/evidence", "GET", undefined, { query: { client_id: clientId } })
   return response.items.map(fromBackendEvidence)
 }
 
@@ -149,8 +147,10 @@ export async function saveEvidence(evidence: ResumeEvidenceInput): Promise<Resum
 
 export async function deleteEvidence(clientId: string, evidenceId: string): Promise<void> {
   await request<{ id: string }>(
-    `/api/evidence/${encodeURIComponent(evidenceId)}?client_id=${encodeURIComponent(clientId)}`,
+    `/api/evidence/${encodeURIComponent(evidenceId)}`,
     "DELETE",
+    undefined,
+    { query: { client_id: clientId } },
   )
 }
 

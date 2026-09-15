@@ -3,7 +3,7 @@ import { getAuthToken } from "../stores/session"
 
 type ErrorHandlerApp = {
   config: {
-    errorHandler?: (reason: unknown, instance: unknown, info: string) => void
+    errorHandler?: (...args: any[]) => void
   }
 }
 
@@ -27,9 +27,35 @@ export async function reportClientError(payload: { message: string; component: s
   }
 }
 
+// 会话级去重与阈值（随每次 install 重置）：同签名错误 60 秒内只上报一次，
+// 整个会话最多上报 5 条，避免一次渲染抖动造成上报风暴；错误页跳转同样去重，
+// 防止反复 reLaunch 把用户踢出当前页。
+const DUPLICATE_WINDOW_MS = 60_000
+const MAX_REPORTS_PER_SESSION = 5
+
 export function installGlobalErrorHandler(app: ErrorHandlerApp): void {
+  let lastErrorSignature = ""
+  let lastReportedAt = 0
+  let sessionReportCount = 0
+  let navigatingToErrorPage = false
+
   app.config.errorHandler = (reason, _instance, info) => {
-    void reportClientError({ message: safeMessage(reason), component: info })
-    ;(globalThis as typeof globalThis & { uni?: { reLaunch?: (options: { url: string }) => void } }).uni?.reLaunch?.({ url: "/pages/error/index" })
+    const message = safeMessage(reason)
+    const now = Date.now()
+    const signature = `${info}:${message}`
+    const duplicated = signature === lastErrorSignature && now - lastReportedAt < DUPLICATE_WINDOW_MS
+    lastErrorSignature = signature
+    lastReportedAt = now
+    if (!duplicated && sessionReportCount < MAX_REPORTS_PER_SESSION) {
+      sessionReportCount += 1
+      void reportClientError({ message, component: info })
+    }
+    if (navigatingToErrorPage) return
+    navigatingToErrorPage = true
+    const uni = (globalThis as typeof globalThis & { uni?: { reLaunch?: (options: { url: string; complete?: () => void }) => void } }).uni
+    uni?.reLaunch?.({
+      url: "/pages/error/index",
+      complete: () => { navigatingToErrorPage = false },
+    })
   }
 }

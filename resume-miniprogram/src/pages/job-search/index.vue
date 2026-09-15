@@ -466,13 +466,15 @@ onMounted(() => {
             @confirm="beginConsultation"
           />
           <text class="search-icon" aria-hidden="true">⌕</text>
-          <view v-if="roleName.trim() && (suggestionLoading || visibleSuggestions.length)" class="suggestion-popover">
+          <view v-if="roleName.trim() && (suggestionLoading || visibleSuggestions.length)" class="suggestion-popover" role="listbox" aria-label="岗位建议">
             <text class="popover-title">{{ suggestionLoading ? "正在匹配岗位…" : "匹配岗位" }}</text>
             <transition-group name="suggestion-list" tag="view" class="suggestion-list">
             <button
               v-for="suggestion in visibleSuggestions"
               :key="suggestion.roleName"
               class="suggestion-button"
+              role="option"
+              :aria-selected="false"
               :aria-label="`添加岗位 ${suggestion.roleName}`"
               @click="selectSuggestion(suggestion)"
             >
@@ -492,7 +494,7 @@ onMounted(() => {
           <text class="job-empty-icon" aria-hidden="true">⌕</text>
           <text>暂未找到匹配岗位，可换一个更具体的岗位名称。</text>
         </view>
-        <text v-if="roleFieldError" id="job-role-error" class="ui-error-tip">{{ roleFieldError }}</text>
+        <text v-if="roleFieldError" id="job-role-error" class="ui-error-tip" role="alert">{{ roleFieldError }}</text>
 
         <view v-if="selectedRoles.length" class="selected-role-area">
           <text class="selected-role-title">已选岗位</text>
@@ -547,10 +549,12 @@ onMounted(() => {
       </view>
 
       <view v-if="jobConsultation" class="result">
-        <view v-if="jobConsultations.length > 1" class="role-tab-list">
+        <view v-if="jobConsultations.length > 1" class="role-tab-list" role="tablist" aria-label="已分析岗位">
           <button
             v-for="(item, index) in jobConsultations"
             :key="item.jobIntelligence.roleName"
+            role="tab"
+            :aria-selected="index === activeJobIndex"
             :class="['role-tab', { 'role-tab-active': index === activeJobIndex }]"
             @click="selectJobConsultation(index)"
           >{{ item.jobIntelligence.roleName }}</button>
@@ -805,21 +809,21 @@ onMounted(() => {
 .suggestion-button:last-child { margin-bottom: 0; }
 .suggestion-name,.suggestion-category,.suggestion-add { display: block; }
 .suggestion-name { font-size: 27rpx; font-weight: 600; }.suggestion-category { margin-top: 5rpx; color: #8292a6; font-size: 21rpx; }
-.suggestion-add { color: #2d77d1; font-size: 22rpx; }
+.suggestion-add { color: #1677ff; font-size: 22rpx; }
 .suggestion-list-enter-active,.suggestion-list-leave-active { transition: opacity var(--ui-motion-fast) var(--ui-motion-ease), transform var(--ui-motion-fast) var(--ui-motion-ease); }.suggestion-list-enter-from,.suggestion-list-leave-to { opacity: 0; transform: translateY(-6rpx); }
 
 .selected-role-area { margin-top: 20rpx; }
 .selected-role-title { display: block; color: #718096; font-size: 23rpx; }
 .role-chip-list,.role-tab-list { display: flex; flex-wrap: wrap; gap: 10rpx; margin-top: 12rpx; }
 .role-chip,.role-tab {
-  margin: 0; padding: 8rpx 16rpx; color: #2d77d1; background: #edf5ff; border: 1rpx solid #cde0f7;
+  margin: 0; padding: 8rpx 16rpx; color: #1677ff; background: #edf5ff; border: 1rpx solid #cde0f7;
   border-radius: 999rpx; font-size: 23rpx; line-height: 1.45;
 }
 
 .role-tab { max-width: 320rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .custom-requirement-input { min-height: 96rpx; margin-top: 20rpx; padding: 18rpx 20rpx; line-height: 1.6; }
 .primary,.secondary { border-radius: 12rpx; font-size: 25rpx; }
-.primary { color: #fff; background: #2d77d1; }.secondary { color: #53667b; background: #edf2f7; }
+.primary { color: #fff; background: #1677ff; }.secondary { color: #53667b; background: #edf2f7; }
 .primary-action { margin-top: 18rpx; }.error { display: block; margin-top: 12rpx; color: #cf4b5d; font-size: 23rpx; line-height: 1.5; }
 
 .identity-prompt { display: block; margin-top: 12rpx; color: #34465b; font-size: 25rpx; font-weight: 600; line-height: 1.55; }
@@ -829,7 +833,7 @@ onMounted(() => {
 .identity-arrow { margin-left: auto; color: #8ca5c2; font-size: 38rpx; line-height: .7; }
 
 .role-tab-list { margin: 0 0 22rpx; padding-bottom: 18rpx; border-bottom: 1rpx solid #e7edf4; }
-.role-tab-active { color: #fff; background: #2d77d1; border-color: #2d77d1; }
+.role-tab-active { color: #fff; background: #1677ff; border-color: #1677ff; }
 .role { display: block; margin-top: 8rpx; color: #1d2a3a; font-size: 40rpx; font-weight: 700; line-height: 1.25; }
 .identity-name { display: block; margin-top: 8rpx; color: #5d89c7; font-size: 24rpx; font-weight: 600; }
 .compact { flex-shrink: 0; min-width: 136rpx; margin: 0; padding: 12rpx 14rpx; font-size: 22rpx; }
@@ -852,7 +856,7 @@ onMounted(() => {
 .market-disabled { color: #9b7a45; }
 .market-source { display: flex; align-items: flex-start; justify-content: space-between; gap: 14rpx; margin-top: 14rpx; padding-top: 14rpx; border-top: 1rpx solid #e3ebf4; }
 .market-source-title,.market-source-text,.market-source-date { display: block; }.market-source-title { color: #2f5e93; font-size: 24rpx; font-weight: 700; }.market-source-text { margin-top: 5rpx; color: #65798d; font-size: 22rpx; line-height: 1.55; }.market-source-date { margin-top: 5rpx; color: #93a1b2; font-size: 20rpx; }
-.source-copy { flex-shrink: 0; color: #2d77d1; font-size: 20rpx; }
+.source-copy { flex-shrink: 0; color: #1677ff; font-size: 20rpx; }
 
 .result-title { display: block; margin-top: 34rpx; color: #1d2a3a; font-size: 31rpx; font-weight: 700; }
 .job-empty-state { display: flex; align-items: center; gap: 12rpx; margin-top: 14rpx; color: #64748b; font-size: 23rpx; line-height: 1.55; }

@@ -83,10 +83,10 @@ describe("runWithLoading", () => {
     expect(applications).toContain(':loading="reminderSaving" :disabled="reminderSaving"')
     expect(planner).toContain(':loading="taskSaving" :disabled="taskSaving"')
     expect(planner).toContain(':loading="loading" :disabled="loading"')
-    expect(membership).toContain(':loading="purchasing" :disabled="purchasing"')
+    expect(membership).toContain(':loading="purchasing" :disabled="purchasing || !capabilities.payment.enabled"')
     expect(membership).toContain("<LoadingSpinner")
     expect(privacy).toContain(':loading="backupBusy" :disabled="backupBusy"')
-    expect(editor).toContain(':loading="importLoading" :disabled="importLoading || saveLoading || versionLoading || Boolean(versionComparingId || restoringVersionId || exporting)"')
+    expect(editor).toContain(':loading="importLoading" :disabled="importLoading || saveLoading || versionLoading || Boolean(versionComparingId || restoringVersionId || exporting) || !capabilities.resumeImport.enabled"')
     expect(editor).toContain(':loading="versionLoading" :disabled="versionLoading || Boolean(versionComparingId || restoringVersionId || importLoading || exporting)"')
     expect(jobSearch).toContain(':loading="marketSearchLoading" :disabled="marketSearchLoading"')
     expect(jobSearch).toContain(':loading="reviewLoading" :disabled="reviewLoading || pdfLoading"')
@@ -110,7 +110,7 @@ describe("runWithLoading", () => {
     const login = readFileSync(new URL("../pages/login/index.vue", import.meta.url), "utf8")
     const editor = readFileSync(new URL("../pages/resume-editor/index.vue", import.meta.url), "utf8")
     const collection = readFileSync(new URL("../pages/job-collection/index.vue", import.meta.url), "utf8")
-    expect(login).toContain(':loading="sending" :disabled="sending || loggingIn"')
+    expect(login).toContain(':loading="sending" :disabled="sending || loggingIn || !capabilities.smsLogin.enabled"')
     expect(login).toContain(':loading="loggingIn" :disabled="loggingIn || sending"')
     expect(login).toContain(':disabled="passwordAction !== null || sending || loggingIn"')
     expect(editor).toContain('const versionComparingId = ref("")')
@@ -233,7 +233,7 @@ describe("runWithLoading", () => {
     const collection = readFileSync(new URL("../pages/job-collection/index.vue", import.meta.url), "utf8")
     const jobSearch = readFileSync(new URL("../pages/job-search/index.vue", import.meta.url), "utf8")
     const progressiveScrollRoot = '<scroll-view class="page progressive-scroll-page" scroll-y @scrolltolower="showMore">'
-    const editableProgressiveScrollRoot = '<scroll-view class="page progressive-scroll-page" scroll-y :scroll-top="pageScrollTop" @scroll="pageScrollTop = $event.detail.scrollTop" @scrolltolower="showMore">'
+    const editableProgressiveScrollRoot = '<scroll-view class="page progressive-scroll-page" scroll-y :scroll-top="pageScrollTop" @scroll="onListScroll" @scrolltolower="showMore">'
     for (const page of [drafts, collection]) {
       expect(page).toContain("useIncrementalList")
       expect(page).toContain(progressiveScrollRoot)
@@ -242,6 +242,9 @@ describe("runWithLoading", () => {
     for (const page of [applications, evidence]) {
       expect(page).toContain("useIncrementalList")
       expect(page).toContain(editableProgressiveScrollRoot)
+      // @scroll 不得逐帧内联写 ref（小程序逐帧 setData 反模式），必须经节流函数。
+      expect(page).toContain("function onListScroll")
+      expect(page).not.toContain('@scroll="pageScrollTop = $event.detail.scrollTop"')
       expect(page).toContain('v-for="item in renderedItems"')
     }
     expect(drafts).not.toContain('v-for="item in drafts"')
@@ -281,5 +284,21 @@ describe("runWithLoading", () => {
     expect(jobSearch).toContain("removeSelectedRoleWithRipple")
     expect(app).toContain("--ui-tag-spring")
     expect(app).toContain("ui-tag-press-release")
+  })
+
+  it("gates optional provider actions behind public capabilities", () => {
+    const login = readFileSync(new URL("../pages/login/index.vue", import.meta.url), "utf8")
+    const membership = readFileSync(new URL("../pages/membership/index.vue", import.meta.url), "utf8")
+    const collection = readFileSync(new URL("../pages/job-collection/index.vue", import.meta.url), "utf8")
+    const editor = readFileSync(new URL("../pages/resume-editor/index.vue", import.meta.url), "utf8")
+    for (const page of [login, membership, collection, editor]) {
+      expect(page).toContain("getCapabilities")
+      expect(page).toContain("defaultCapabilities")
+    }
+    expect(login).toContain("capabilities.smsLogin.enabled")
+    expect(login).toContain("capabilities.wechatOauth.enabled")
+    expect(membership).toContain("capabilities.payment.enabled")
+    expect(collection).toContain("capabilities.jobMatching.enabled")
+    expect(editor).toContain("capabilities.resumeImport.enabled")
   })
 })

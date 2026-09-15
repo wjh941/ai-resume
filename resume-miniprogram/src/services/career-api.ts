@@ -63,7 +63,10 @@ const mapScoreBreakdown = (items: Array<Record<string, unknown>>) => items.map((
 
 export async function queryRoleSuggestions(query: string): Promise<RoleSuggestion[]> {
   const data = await request<{ items: Array<{ role_name: string; family: string; description: string }> }>(
-    `/api/role/suggestions?q=${encodeURIComponent(query)}`,
+    "/api/role/suggestions",
+    "GET",
+    undefined,
+    { query: { q: query } },
   )
   return data.items.map((item) => ({
     roleName: item.role_name,
@@ -74,7 +77,10 @@ export async function queryRoleSuggestions(query: string): Promise<RoleSuggestio
 
 export async function queryMajorSuggestions(query: string): Promise<MajorSuggestion[]> {
   const data = await request<{ items: Array<{ major_name: string; category: string; related_families: string[] }> }>(
-    `/api/major/suggestions?q=${encodeURIComponent(query)}`,
+    "/api/major/suggestions",
+    "GET",
+    undefined,
+    { query: { q: query } },
   )
   return data.items.map((item) => ({
     majorName: item.major_name,
@@ -88,7 +94,7 @@ export async function saveCareerProfile(profile: CareerProfilePayload): Promise<
 }
 
 export async function loadCareerProfile(clientId: string): Promise<CareerProfile> {
-  return fromProfile(await request<BackendProfile>(`/api/career/profile?client_id=${encodeURIComponent(clientId)}`))
+  return fromProfile(await request<BackendProfile>("/api/career/profile", "GET", undefined, { query: { client_id: clientId } }))
 }
 
 export async function generateCareerRecommendations(clientId: string): Promise<CareerRecommendationResult> {
@@ -102,7 +108,7 @@ export async function generateCareerRecommendations(clientId: string): Promise<C
       recommended_projects: string[]; practice_tasks: string[]
     }
     tiers: Record<string, Array<Record<string, unknown>>>
-  }>(`/api/career/recommend?client_id=${encodeURIComponent(clientId)}`, "POST")
+  }>("/api/career/recommend", "POST", undefined, { query: { client_id: clientId } })
   const mapRecommendation = (item: Record<string, unknown>) => {
     return {
       role: mapRole(item.role as Record<string, unknown>),

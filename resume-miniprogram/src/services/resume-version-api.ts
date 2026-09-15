@@ -46,9 +46,11 @@ export async function compareResumeVersions(
   leftId: string,
   rightId: string,
 ): Promise<string[]> {
-  const params = new URLSearchParams({ left_id: leftId, right_id: rightId })
   const data = await request<{ changed_fields: string[] }>(
-    `/api/draft/${encodeURIComponent(draftId)}/versions/compare?${params}`,
+    `/api/draft/${encodeURIComponent(draftId)}/versions/compare`,
+    "GET",
+    undefined,
+    { query: { left_id: leftId, right_id: rightId } },
   )
   return data.changed_fields
 }

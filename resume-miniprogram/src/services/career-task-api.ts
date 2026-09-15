@@ -49,7 +49,10 @@ const fromBackend = (item: BackendCareerTask): CareerTask => ({
 
 export async function listCareerTasks(planId: string): Promise<CareerTask[]> {
   const data = await request<{ items: BackendCareerTask[] }>(
-    `/api/career/tasks?plan_id=${encodeURIComponent(planId)}`,
+    "/api/career/tasks",
+    "GET",
+    undefined,
+    { query: { plan_id: planId } },
   )
   return data.items.map(fromBackend)
 }

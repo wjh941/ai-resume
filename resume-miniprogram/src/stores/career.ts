@@ -8,12 +8,11 @@ import type {
   WeeklyCareerTarget,
 } from "../types/career"
 import type { CareerBackupState } from "../utils/local-backup"
+import { deepClone as clone, getUniStorage as storage } from "../utils/persistence"
+import { userStorageKey } from "./session"
 
 const CHECKPOINT_KEY = "resume_demo_career_planner"
-
-type UniStorage = { getStorageSync(key: string): unknown; setStorageSync(key: string, value: unknown): void }
-const storage = (): UniStorage | null => (globalThis as typeof globalThis & { uni?: UniStorage }).uni ?? null
-const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
+export { CHECKPOINT_KEY }
 
 export const useCareerStore = defineStore("career", {
   state: () => ({
@@ -26,8 +25,9 @@ export const useCareerStore = defineStore("career", {
   }),
   actions: {
     checkpoint(): void {
-      storage()?.setStorageSync(CHECKPOINT_KEY, clone({
+      storage()?.setStorageSync(userStorageKey(CHECKPOINT_KEY), clone({
         profile: this.profile,
+        result: this.result,
         selectedTier: this.selectedTier,
         selectedRole: this.selectedRole,
         comparisonRoleNames: this.comparisonRoleNames,
@@ -35,9 +35,10 @@ export const useCareerStore = defineStore("career", {
       }))
     },
     restoreCheckpoint(): void {
-      const saved = storage()?.getStorageSync(CHECKPOINT_KEY) as Partial<typeof this.$state> | undefined
+      const saved = storage()?.getStorageSync(userStorageKey(CHECKPOINT_KEY)) as Partial<typeof this.$state> | undefined
       if (!saved) return
       this.profile = saved.profile ?? null
+      this.result = saved.result ?? null
       this.selectedTier = saved.selectedTier ?? "stable"
       this.selectedRole = saved.selectedRole ?? null
       this.comparisonRoleNames = saved.comparisonRoleNames ?? []

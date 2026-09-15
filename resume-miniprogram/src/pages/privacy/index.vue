@@ -73,23 +73,23 @@ function clearLocalData(): void {
 
 <template>
   <scroll-view class="page" scroll-y>
-    <text class="title">Local privacy</text>
+    <text class="title">本地隐私</text>
     <view class="section">
-      <text class="section-title">Backup this device</text>
-      <text class="description">Export or restore your local resume draft and career-planning workspace as a JSON file. Server records are not included.</text>
+      <text class="section-title">备份本机数据</text>
+      <text class="description">将本机简历草稿和职业规划工作区导出或恢复为 JSON 文件，不包含服务端记录。</text>
       <view class="backup-actions">
-        <button :loading="backupBusy" :disabled="backupBusy" @click="exportBackup">Export local backup</button>
-        <button :loading="backupBusy" :disabled="backupBusy" class="secondary" @click="confirmRestoreBackup">Restore local backup</button>
+        <button :loading="backupBusy" :disabled="backupBusy" @click="exportBackup">导出本地备份</button>
+        <button :loading="backupBusy" :disabled="backupBusy" class="secondary" @click="confirmRestoreBackup">恢复本地备份</button>
       </view>
     </view>
     <view class="section">
-      <text class="section-title">Clear this device</text>
-      <text class="description">Remove locally stored resume checkpoints, career planning state, consultation state, assessment state, and pending tracker entries.</text>
-      <button class="danger" @click="clearLocalData">Clear local workspace</button>
+      <text class="section-title">清理本机数据</text>
+      <text class="description">删除本地简历、职业规划、咨询、测评状态和待同步投递记录。</text>
+      <button class="danger" @click="clearLocalData">清理本地工作区</button>
     </view>
     <view class="section">
-      <text class="section-title">Server records</text>
-      <text class="description">Server drafts, evidence, and applications remain until they are individually deleted.</text>
+      <text class="section-title">服务端记录</text>
+      <text class="description">服务端草稿、经历证据和投递记录需要单独删除，清理本机数据不会影响它们。</text>
     </view>
   </scroll-view>
 </template>

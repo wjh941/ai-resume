@@ -29,5 +29,12 @@ export const useAssessmentStore = defineStore("career-assessment", {
     setInsights(insights: AnnualInsight[]): void {
       this.insights = insights
     },
+    resetAssessment(): void {
+      this.questions = []
+      this.notice = ""
+      this.answers = {}
+      this.result = null
+      this.insights = []
+    },
   },
 })

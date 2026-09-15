@@ -78,6 +78,7 @@ button:disabled, button[disabled] { background-color: var(--ui-disabled-bg) !imp
   .page { animation: none; }
   .ui-loading-spinner-ring { animation-duration: 1200ms; }
   .skeleton-card, .export-skeleton, .loading-skeletons { transition: none; }
+  .skeleton-line, .skeleton-heading { animation: none !important; }
 }
 .ui-error-tip { display: block; min-height: 72rpx; box-sizing: border-box; margin-top: 18rpx; padding: 18rpx 20rpx; color: var(--ui-error-color); background: var(--ui-error-bg); border: 1rpx solid var(--ui-error-border); border-radius: var(--ui-control-radius); font-size: 24rpx; line-height: 1.55; }
 .ui-error-tip::before { display: inline-flex; width: 32rpx; height: 32rpx; align-items: center; justify-content: center; box-sizing: border-box; margin-right: 12rpx; content: "!"; color: var(--ui-error-color); border: 2rpx solid currentColor; border-radius: 50%; font-size: 22rpx; font-weight: 700; line-height: 1; vertical-align: middle; }

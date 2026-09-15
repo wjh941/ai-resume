@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest"
 
 import { getAuthUser, setAuthSession } from "../stores/session"
-import { mapResumeImportPreview } from "../services/resume-import-api"
+import { hasResumeImportContent, mapResumeImportPreview } from "../services/resume-import-api"
+import { extractResumePdf } from "../services/resume-api"
+import { loadAssessmentData } from "../services/assessment-api"
 import { listOperatorKnowledge } from "../services/operator-api"
 
 const storage = new Map<string, unknown>()
@@ -29,6 +31,23 @@ beforeEach(() => {
 })
 
 describe("Phase10 client services", () => {
+  it("uploads a PDF with the current JWT", async () => {
+    setAuthSession("pdf-token", { userId: "user-1", phone: "13800138000" })
+    let uploadOptions: Record<string, unknown> | undefined
+    ;(globalThis as typeof globalThis & { uni: Record<string, unknown> }).uni.uploadFile = (options: Record<string, unknown>) => {
+      uploadOptions = options
+      ;(options.success as (response: { statusCode: number; data: string }) => void)({
+        statusCode: 200,
+        data: JSON.stringify({ code: "ok", data: { text: "resume text" } }),
+      })
+    }
+
+    await expect(extractResumePdf("wxfile://resume.pdf")).resolves.toBe("resume text")
+    expect(uploadOptions).toMatchObject({
+      header: { Authorization: "Bearer pdf-token" },
+    })
+  })
+
   it("persists the operator role and keeps old stored users as ordinary users", () => {
     setAuthSession("token", { userId: "user-1", phone: "13800138000", role: "operator" })
     expect(getAuthUser()?.role).toBe("operator")
@@ -52,6 +71,19 @@ describe("Phase10 client services", () => {
     expect(preview.sectionVisibility.selfEvaluation).toBe(true)
   })
 
+  it("rejects an empty imported resume preview", () => {
+    const preview = mapResumeImportPreview({
+      version: 1,
+      basic: { name: "", phone: "", email: "", city: "" },
+      job: { target_role: "", employment_type: "", expected_salary: "" },
+      education: [], employment: [], projects: [],
+      skills: { skills: [], certificates: [] }, self_evaluation: "",
+      section_visibility: { basic: true, job: true, education: true, employment: true, projects: true, skills: true, self_evaluation: true },
+    })
+
+    expect(hasResumeImportContent(preview)).toBe(false)
+  })
+
   it("requests operator knowledge with the stored JWT", async () => {
     setAuthSession("operator-token", { userId: "user-1", phone: "13800138000", role: "operator" })
 
@@ -61,5 +93,24 @@ describe("Phase10 client services", () => {
       url: "/api/operator/knowledge-items",
       header: { Authorization: "Bearer operator-token" },
     })
+  })
+
+  it("keeps assessment questions available when optional data is unavailable", async () => {
+    const uni = (globalThis as typeof globalThis & { uni: Record<string, unknown> }).uni
+    uni.request = async (options: Record<string, unknown>) => {
+      const url = String(options.url)
+      if (url.includes("annual-insights") || url.includes("/api/career/assessment?")) {
+        return { statusCode: 403, data: { code: "vip_required", message: "premium only" } }
+      }
+      return {
+        statusCode: 200,
+        data: { code: "ok", message: "", data: { items: [], notice: "notice" } },
+      }
+    }
+
+    const data = await loadAssessmentData("client-a")
+    expect(data.questions.notice).toBe("notice")
+    expect(data.insights).toEqual([])
+    expect(data.saved).toBeNull()
   })
 })

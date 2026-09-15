@@ -1,4 +1,5 @@
 import { apiUrl, request } from "./http"
+import { getAuthToken } from "../stores/session"
 import type {
   AdviceTopic,
   CareerAdvice,
@@ -114,7 +115,10 @@ export async function queryJob(roleName: string): Promise<JobIntelligence> {
 
 export async function queryJobSuggestions(query: string): Promise<JobSuggestion[]> {
   const response = await request<{ items: BackendJobSuggestion[] }>(
-    `/api/job/suggestions?q=${encodeURIComponent(query)}`,
+    "/api/job/suggestions",
+    "GET",
+    undefined,
+    { query: { q: query } },
   )
   return response.items.map((item) => ({
     roleName: item.role_name,
@@ -124,7 +128,10 @@ export async function queryJobSuggestions(query: string): Promise<JobSuggestion[
 
 export async function queryJobMarketSearch(roleName: string): Promise<MarketSearchReport> {
   const response = await request<BackendMarketSearchReport>(
-    `/api/job/market-search?role_name=${encodeURIComponent(roleName)}`,
+    "/api/job/market-search",
+    "GET",
+    undefined,
+    { query: { role_name: roleName } },
   )
   return {
     enabled: response.enabled,
@@ -233,6 +240,7 @@ type UniUploadFile = (options: {
   url: string
   filePath: string
   name: string
+  header?: Record<string, string>
   success: (response: { statusCode: number; data: string }) => void
   fail: (reason: unknown) => void
 }) => void
@@ -245,6 +253,7 @@ export async function extractResumePdf(filePath: string): Promise<string> {
       url: apiUrl("/api/consultation/resume-pdf-extract"),
       filePath,
       name: "file",
+      header: getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {},
       success: (response) => {
         try {
           const envelope = JSON.parse(response.data) as {

@@ -4,21 +4,11 @@ import { createEmptyDraft, type JobIntelligence, type ResumeDraft } from "../typ
 import type { EvidenceSuggestion } from "../types/evidence"
 import { applyEvidenceSuggestion as applyToDraft } from "../utils/evidence-suggestions"
 import type { ResumeBackupState } from "../utils/local-backup"
+import { deepClone as clone, getUniStorage as storage } from "../utils/persistence"
+import { userStorageKey } from "./session"
 
 const CHECKPOINT_KEY = "resume_demo_checkpoint"
-
-type UniStorage = {
-  getStorageSync(key: string): unknown
-  setStorageSync(key: string, value: unknown): void
-}
-
-function storage(): UniStorage | null {
-  return (globalThis as typeof globalThis & { uni?: UniStorage }).uni ?? null
-}
-
-function clone<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T
-}
+export { CHECKPOINT_KEY }
 
 export const useResumeStore = defineStore("resume", {
   state: () => ({
@@ -27,10 +17,10 @@ export const useResumeStore = defineStore("resume", {
   }),
   actions: {
     checkpoint(): void {
-      storage()?.setStorageSync(CHECKPOINT_KEY, clone({ activeJob: this.activeJob, draft: this.draft }))
+      storage()?.setStorageSync(userStorageKey(CHECKPOINT_KEY), clone({ activeJob: this.activeJob, draft: this.draft }))
     },
     restoreCheckpoint(): void {
-      const saved = storage()?.getStorageSync(CHECKPOINT_KEY)
+      const saved = storage()?.getStorageSync(userStorageKey(CHECKPOINT_KEY))
       if (!saved || typeof saved !== "object") return
       const checkpoint = saved as { activeJob?: JobIntelligence | null; draft?: ResumeDraft }
       if (checkpoint.draft) this.draft = clone(checkpoint.draft)

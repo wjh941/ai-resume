@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref } from "vue"
+import { onMounted, ref } from "vue"
 
 import { loginPasswordAccount, loginPhone, registerPasswordAccount, sendPhoneCode } from "../../services/auth-api"
 import { toUserMessage } from "../../services/http"
 import { setAuthSession } from "../../stores/session"
+import { restoreLocalWorkspace } from "../../utils/local-workspace"
+import { defaultCapabilities, getCapabilities, isCapabilityEnabled, type Capabilities } from "../../services/capability-api"
 
 const phone = ref("")
 const code = ref("")
@@ -15,6 +17,8 @@ const loggingIn = ref(false)
 const passwordAction = ref<"login" | "register" | null>(null)
 const hint = ref("")
 const error = ref("")
+const capabilities = ref<Capabilities>(defaultCapabilities())
+const capabilityLoading = ref(true)
 
 function validPhone(value: string): boolean {
   return /^1[3-9]\d{9}$/.test(value.trim())
@@ -30,6 +34,10 @@ function validPassword(value: string): boolean {
 
 function changeLoginMode(mode: "phone" | "password"): void {
   if (sending.value || loggingIn.value || passwordAction.value !== null) return
+  if (mode === "phone" && !isCapabilityEnabled(capabilities.value, "smsLogin")) {
+    error.value = capabilities.value.smsLogin.notice
+    return
+  }
   loginMode.value = mode
   hint.value = ""
   error.value = ""
@@ -37,6 +45,10 @@ function changeLoginMode(mode: "phone" | "password"): void {
 
 async function requestCode(): Promise<void> {
   if (sending.value || loggingIn.value || passwordAction.value !== null) return
+  if (!isCapabilityEnabled(capabilities.value, "smsLogin")) {
+    error.value = capabilities.value.smsLogin.notice
+    return
+  }
   const normalized = phone.value.trim()
   if (!validPhone(normalized)) {
     error.value = "请输入正确的手机号。"
@@ -56,6 +68,10 @@ async function requestCode(): Promise<void> {
 
 async function signIn(): Promise<void> {
   if (sending.value || loggingIn.value || passwordAction.value !== null) return
+  if (!isCapabilityEnabled(capabilities.value, "smsLogin")) {
+    error.value = capabilities.value.smsLogin.notice
+    return
+  }
   const normalized = phone.value.trim()
   if (!validPhone(normalized) || !code.value.trim()) {
     error.value = "请输入手机号和验证码。"
@@ -66,6 +82,7 @@ async function signIn(): Promise<void> {
   try {
     const session = await loginPhone(normalized, code.value.trim())
     setAuthSession(session.token, session.user)
+    restoreLocalWorkspace()
     uni.reLaunch({ url: "/pages/job-search/index" })
   } catch (reason) {
     error.value = toUserMessage(reason, "登录失败，请稍后重试。")
@@ -92,6 +109,7 @@ async function submitPassword(action: "login" | "register"): Promise<void> {
       ? await registerPasswordAccount(normalized, password.value)
       : await loginPasswordAccount(normalized, password.value)
     setAuthSession(session.token, session.user)
+    restoreLocalWorkspace()
     uni.reLaunch({ url: "/pages/job-search/index" })
   } catch (reason) {
     error.value = toUserMessage(reason, action === "register" ? "注册失败，请稍后重试。" : "登录失败，请稍后重试。")
@@ -107,6 +125,14 @@ function showWechatSetup(): void {
     showCancel: false,
   })
 }
+
+onMounted(async () => {
+  capabilities.value = await getCapabilities()
+  capabilityLoading.value = false
+  if (!capabilities.value.smsLogin.enabled && loginMode.value === "phone") {
+    loginMode.value = "password"
+  }
+})
 </script>
 
 <template>
@@ -114,27 +140,29 @@ function showWechatSetup(): void {
     <view class="login-card">
       <text class="title">登录你的求职工作台</text>
       <text class="copy">登录后可安全访问你的简历草稿、职业计划和账户设置。</text>
-      <view class="auth-tabs" role="tablist">
-        <button class="tab" :class="{ active: loginMode === 'phone' }" :disabled="Boolean(sending || loggingIn || passwordAction)" @click="changeLoginMode('phone')">手机号验证码</button>
-        <button class="tab" :class="{ active: loginMode === 'password' }" :disabled="Boolean(sending || loggingIn || passwordAction)" @click="changeLoginMode('password')">账号密码</button>
+      <view class="auth-tabs" role="tablist" aria-label="登录方式">
+        <button class="tab" role="tab" :aria-selected="loginMode === 'phone'" :class="{ active: loginMode === 'phone' }" :disabled="Boolean(sending || loggingIn || passwordAction) || !capabilities.smsLogin.enabled" @click="changeLoginMode('phone')">手机号验证码</button>
+        <button class="tab" role="tab" :aria-selected="loginMode === 'password'" :class="{ active: loginMode === 'password' }" :disabled="Boolean(sending || loggingIn || passwordAction)" @click="changeLoginMode('password')">账号密码</button>
       </view>
       <template v-if="loginMode === 'phone'">
         <view class="field"><text>手机号</text><input v-model="phone" type="number" maxlength="11" placeholder="13800138000" /></view>
-        <view class="field code-field"><text>验证码</text><input v-model="code" type="number" maxlength="6" placeholder="123456" /><button :loading="sending" :disabled="sending || loggingIn" @click="requestCode">获取验证码</button></view>
-        <text v-if="hint" class="hint">{{ hint }}</text>
+        <view class="field code-field"><text>验证码</text><input v-model="code" type="number" maxlength="6" placeholder="123456" /><button :loading="sending" :disabled="sending || loggingIn || !capabilities.smsLogin.enabled" @click="requestCode">获取验证码</button></view>
+         <text v-if="hint" class="hint">{{ hint }}</text>
+         <text v-if="!capabilityLoading && !capabilities.smsLogin.enabled" class="field-hint">{{ capabilities.smsLogin.notice }}</text>
       </template>
       <template v-else>
         <view class="field"><text>账号</text><input v-model="account" maxlength="32" placeholder="例如：career_owner" /></view>
         <view class="field"><text>密码</text><input v-model="password" password maxlength="72" placeholder="10-72 个字符" /></view>
         <text class="field-hint">账号仅支持小写英文字母、数字和 ._-；密码至少 10 个字符。</text>
       </template>
-      <text v-if="error" class="ui-error-tip">{{ error }}</text>
+      <text v-if="error" class="ui-error-tip" role="alert">{{ error }}</text>
       <button v-if="loginMode === 'phone'" class="primary" :loading="loggingIn" :disabled="loggingIn || sending" @click="signIn">登录</button>
       <template v-else>
         <button class="primary" :loading="passwordAction === 'login'" :disabled="passwordAction !== null || sending || loggingIn" @click="submitPassword('login')">账号登录</button>
         <button class="secondary" :loading="passwordAction === 'register'" :disabled="passwordAction !== null || sending || loggingIn" @click="submitPassword('register')">注册新账号</button>
       </template>
-      <button class="wechat" @click="showWechatSetup">微信登录</button>
+       <text v-if="!capabilityLoading && !capabilities.wechatOauth.enabled" class="field-hint capability-notice">{{ capabilities.wechatOauth.notice }}</text>
+       <button class="wechat" :disabled="!capabilities.wechatOauth.enabled" @click="showWechatSetup">微信登录</button>
     </view>
   </view>
 </template>

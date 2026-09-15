@@ -25,11 +25,11 @@ onMounted(() => { void load() })
 
 <template>
   <scroll-view class="page" scroll-y>
-    <view class="hero"><text class="eyebrow">ORDERS</text><text class="title">Membership order history</text><text class="copy">Demo orders are retained here for the signed-in account.</text></view>
-    <text v-if="loading" class="notice">Loading order history...</text>
-      <text v-else-if="error" class="ui-error-tip">{{ error }}</text>
+    <view class="hero"><text class="eyebrow">订单</text><text class="title">会员订单记录</text><text class="copy">当前账号的订单记录会保存在这里。</text></view>
+    <text v-if="loading" class="notice">正在加载订单记录</text>
+      <text v-else-if="error" class="ui-error-tip" role="alert">{{ error }}</text>
     <view v-for="item in orders" :key="item.orderId" class="order-card"><view><text class="order-id">{{ item.orderId }}</text><text class="copy">{{ item.packageType }} · {{ item.paymentStatus }} · {{ item.createTime }}</text></view><text class="amount">{{ (item.totalAmount / 100).toFixed(2) }}</text></view>
-    <view v-if="!loading && !error && !orders.length" class="empty-state"><view class="empty-illustration"><view></view><view></view><view></view></view><text>No membership orders yet</text></view>
+    <view v-if="!loading && !error && !orders.length" class="empty-state"><view class="empty-illustration" aria-hidden="true"><view></view><view></view><view></view></view><text>还没有会员订单</text></view>
   </scroll-view>
 </template>
 

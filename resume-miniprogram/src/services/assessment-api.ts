@@ -116,16 +116,29 @@ export async function submitAssessment(
 
 export async function loadAssessment(clientId: string): Promise<SavedAssessment> {
   return fromSavedAssessment(
-    await request<BackendSavedAssessment>(
-      `/api/career/assessment?client_id=${encodeURIComponent(clientId)}`,
-    ),
+    await request<BackendSavedAssessment>("/api/career/assessment", "GET", undefined, { query: { client_id: clientId } }),
   )
 }
 
+export async function loadAssessmentData(clientId: string): Promise<{
+  questions: AssessmentQuestionSet
+  insights: AnnualInsight[]
+  saved: SavedAssessment | null
+}> {
+  const questions = await getAssessmentQuestions()
+  const [insights, saved] = await Promise.all([
+    listAnnualInsights().catch(() => []),
+    loadAssessment(clientId).catch(() => null),
+  ])
+  return { questions, insights, saved }
+}
+
 export async function listAnnualInsights(year?: number): Promise<AnnualInsight[]> {
-  const query = year ? `?year=${encodeURIComponent(String(year))}` : ""
   const data = await request<{ items: BackendAnnualInsight[] }>(
-    `/api/career/annual-insights${query}`,
+    "/api/career/annual-insights",
+    "GET",
+    undefined,
+    { query: { year: year ? String(year) : undefined } },
   )
   return data.items.map(fromAnnualInsight)
 }

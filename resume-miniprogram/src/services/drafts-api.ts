@@ -123,13 +123,16 @@ export function toResumeDraft(record: DraftRecord): ResumeDraft {
 }
 
 export async function listDrafts(clientId: string): Promise<DraftRecord[]> {
-  const items = await request<BackendDraft[]>(`/api/draft/list?client_id=${encodeURIComponent(clientId)}`)
+  const items = await request<BackendDraft[]>("/api/draft/list", "GET", undefined, { query: { client_id: clientId } })
   return items.map(fromBackend)
 }
 
 export async function getDraft(clientId: string, draftId: string): Promise<DraftRecord> {
   return fromBackend(await request<BackendDraft>(
-    `/api/draft/${encodeURIComponent(draftId)}?client_id=${encodeURIComponent(clientId)}`,
+    `/api/draft/${encodeURIComponent(draftId)}`,
+    "GET",
+    undefined,
+    { query: { client_id: clientId } },
   ))
 }
 
@@ -143,7 +146,9 @@ export async function copyDraft(clientId: string, draftId: string): Promise<Draf
 
 export async function deleteDraft(clientId: string, draftId: string): Promise<void> {
   await request<{ id: string }>(
-    `/api/draft/${encodeURIComponent(draftId)}?client_id=${encodeURIComponent(clientId)}`,
+    `/api/draft/${encodeURIComponent(draftId)}`,
     "DELETE",
+    undefined,
+    { query: { client_id: clientId } },
   )
 }

@@ -5,7 +5,7 @@ import ResumePreview from "../../components/ResumePreview.vue"
 import LoadingSpinner from "../../components/LoadingSpinner.vue"
 import { requestPdfExport, requestWordExport } from "../../services/export-api"
 import { saveDraft } from "../../services/resume-api"
-import { uploadResumeImport } from "../../services/resume-import-api"
+import { hasResumeImportContent, uploadResumeImport } from "../../services/resume-import-api"
 import { getDraft, toResumeDraft } from "../../services/drafts-api"
 import {
   compareResumeVersions,
@@ -22,6 +22,7 @@ import { notify } from "../../utils/notifications"
 import { showErrorToast } from "../../utils/error-feedback"
 import { captureFocusRestore } from "../../utils/focus-restore"
 import type { ResumePayload } from "../../types/resume"
+import { defaultCapabilities, getCapabilities, isCapabilityEnabled, type Capabilities } from "../../services/capability-api"
 
 const store = useResumeStore()
 const resume = computed(() => store.draft.resume)
@@ -36,6 +37,8 @@ const importLoading = ref(false)
 const saveLoading = ref(false)
 const importFilename = ref("")
 const importPreview = ref<ResumePayload | null>(null)
+const capabilities = ref<Capabilities>(defaultCapabilities())
+const capabilityLoading = ref(true)
 const hasResumeContent = computed(() => Boolean(
   resume.value.basic.name.trim()
   || resume.value.job.targetRole.trim()
@@ -106,7 +109,7 @@ function chooseResumeFile(): Promise<PickedResumeFile> {
     picker({
       count: 1,
       type: "file",
-      extension: ["pdf", "doc", "docx"],
+      extension: ["pdf", "docx"],
       success: (result) => {
         const file = result.tempFiles?.[0]
         if (!file || !(file.path || file.tempFilePath)) {
@@ -122,12 +125,19 @@ function chooseResumeFile(): Promise<PickedResumeFile> {
 
 async function importResume(): Promise<void> {
   if (importLoading.value || saveLoading.value || versionLoading.value || versionComparingId.value || restoringVersionId.value || exporting.value) return
+  if (!isCapabilityEnabled(capabilities.value, "resumeImport")) {
+    showErrorToast(capabilities.value.resumeImport.notice)
+    return
+  }
   if (!store.draft.id && !(await save())) return
   if (!store.draft.id) return
   importLoading.value = true
   try {
     const file = await chooseResumeFile()
     const result = await uploadResumeImport(store.draft.id, file.path || file.tempFilePath || "")
+    if (!hasResumeImportContent(result.parsedResume)) {
+      throw new Error("未从文件中提取到可用内容，当前简历未被修改，请手动补充或更换文件")
+    }
     importFilename.value = result.originalFilename
     importPreview.value = result.parsedResume
     uni.showToast({ title: "解析预览已生成，请核对后应用", icon: "none" })
@@ -256,7 +266,11 @@ async function compareVersion(version: ResumeVersion) {
   }
 }
 
-onMounted(loadVersions)
+onMounted(async () => {
+  void loadVersions()
+  capabilities.value = await getCapabilities()
+  capabilityLoading.value = false
+})
 </script>
 
 <template>
@@ -270,11 +284,12 @@ onMounted(loadVersions)
         <button size="mini" @click="backToForm">返回填写</button>
         <button size="mini" @click="openApplicationTracker">加入投递计划</button>
         <button size="mini" class="primary" :loading="saveLoading" :disabled="saveLoading || Boolean(exporting)" @click="save">保存草稿</button>
-        <button size="mini" :loading="importLoading" :disabled="importLoading || saveLoading || versionLoading || Boolean(versionComparingId || restoringVersionId || exporting)" @click="importResume">导入简历</button>
+        <button size="mini" :loading="importLoading" :disabled="importLoading || saveLoading || versionLoading || Boolean(versionComparingId || restoringVersionId || exporting) || !capabilities.resumeImport.enabled" @click="importResume">导入简历</button>
         <button size="mini" :loading="exporting === 'word'" :disabled="Boolean(exporting || saveLoading || importLoading || versionLoading || versionComparingId || restoringVersionId)" @click="exportResume('word')">导出 Word</button>
         <button size="mini" :loading="exporting === 'pdf'" :disabled="Boolean(exporting || saveLoading || importLoading || versionLoading || versionComparingId || restoringVersionId)" @click="exportResume('pdf')">导出 PDF</button>
       </view>
     </view>
+    <text v-if="!capabilityLoading && !capabilities.resumeImport.enabled" class="capability-notice">{{ capabilities.resumeImport.notice }}</text>
     <view v-if="importPreview" class="import-panel">
       <view class="import-heading"><text>解析预览</text><text>{{ importFilename }}</text></view>
       <text class="import-copy">请先核对并补充关键信息，确认后再应用到当前简历。</text>
@@ -319,11 +334,14 @@ onMounted(loadVersions)
 </template>
 
 <style scoped>
-.page { min-height: 100vh; padding: 28rpx; box-sizing: border-box; overflow-x: hidden; background: #f7f8fa; }
+.page { min-height: 100dvh; padding: 28rpx; box-sizing: border-box; overflow-x: hidden; background: #f7f8fa; }
 .toolbar { display: flex; justify-content: space-between; gap: 24rpx; align-items: center; margin-bottom: 24rpx; }.title { display: block; color: #1f2329; font-size: 40rpx; font-weight: 700; }.subtitle { display: block; margin-top: 8rpx; color: #86909c; font-size: 23rpx; }
 .toolbar-actions { display: flex; gap: 12rpx; }.primary { color: #fff; background: #1677ff; }
 .version-panel { margin-bottom: 24rpx; padding: 20rpx 22rpx; background: #eef8ff; border: 1rpx solid #c7e5ff; border-radius: 16rpx; }.version-heading,.version-row,.version-actions,.version-create { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; }.version-heading text:first-child { color: #245b99; font-size: 28rpx; font-weight: 700; }.version-heading text:last-child,.version-time,.version-empty { color: #59728d; font-size: 22rpx; }.version-create { margin-top: 14rpx; }.version-create input { flex: 1; height: 64rpx; padding: 0 16rpx; color: #1f2329; background: #fff; border: 1rpx solid #d6e8ff; border-radius: 10rpx; font-size: 24rpx; }.version-create button { flex-shrink: 0; margin: 0; }.version-list { margin-top: 14rpx; }.version-row { padding: 12rpx 0; border-top: 1rpx solid #dceaf7; }.version-note,.version-time { display: block; }.version-note { color: #334e68; font-size: 24rpx; }.version-time { margin-top: 4rpx; }.version-actions { justify-content: flex-end; }.version-actions button { margin: 0; font-size: 21rpx; }.version-active { color: #1677ff; font-size: 22rpx; }.version-empty,.version-diff { display: block; margin-top: 14rpx; line-height: 1.5; }.version-diff { color: #5c4b2a; font-size: 22rpx; }
+.capability-notice { display: block; margin: 10rpx 0 20rpx; color: #64748b; font-size: 23rpx; line-height: 1.5; }
 .import-panel { margin-bottom: 24rpx; padding: 20rpx 22rpx; background: #fff; border: 1rpx solid #cfe4fb; border-radius: 16rpx; }.import-heading,.import-actions { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; }.import-heading text:first-child { color: #245b99; font-size: 28rpx; font-weight: 700; }.import-heading text:last-child { max-width: 55%; color: #59728d; font-size: 22rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.import-copy { display: block; margin-top: 10rpx; color: #59728d; font-size: 23rpx; line-height: 1.55; }.import-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12rpx; margin-top: 16rpx; }.import-fields input { min-width: 0; height: 64rpx; padding: 0 14rpx; box-sizing: border-box; color: #1f2937; background: #f8fafc; border: 1rpx solid #dfe7f1; border-radius: 10rpx; font-size: 24rpx; }.import-actions { justify-content: flex-end; margin-top: 16rpx; }.import-actions button { margin: 0; }
 .export-skeleton { min-height: 720rpx; padding: 48rpx; background: #fff; border: 1rpx solid #e7edf5; border-radius: 20rpx; }.skeleton-heading,.skeleton-line { height: 24rpx; margin-top: 24rpx; border-radius: 8rpx; background: linear-gradient(90deg, #edf2f7 25%, #f8fafc 40%, #edf2f7 65%); background-size: 400% 100%; animation: shimmer 1.2s ease-in-out infinite; }.skeleton-heading { width: 46%; height: 40rpx; margin-top: 0; }.skeleton-line { width: 100%; }.skeleton-line.short { width: 58%; }@keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
 .empty-state { padding: 70rpx 32rpx; text-align: center; background: #fff; border: 1rpx solid #e7edf5; border-radius: 20rpx; }.empty-illustration { display: flex; flex-direction: column; gap: 9rpx; width: 126rpx; margin: 0 auto 24rpx; padding: 22rpx; background: #eef6ff; border: 1rpx solid #d4e8ff; border-radius: 18rpx; }.empty-illustration view { height: 10rpx; background: #9fc8f7; border-radius: 999rpx; }.empty-illustration view:nth-child(2) { width: 78%; }.empty-illustration view:nth-child(3) { width: 55%; }.empty-title,.empty-copy { display: block; }.empty-title { color: #1f3e61; font-size: 32rpx; font-weight: 700; }.empty-copy { margin-top: 12rpx; color: #728198; font-size: 24rpx; }.empty-action { margin-top: 26rpx; }
+@media (max-width: 600px) { .toolbar { align-items: flex-start; flex-direction: column; }.toolbar-actions { width: 100%; flex-wrap: wrap; }.toolbar-actions button { flex: 1 1 calc(50% - 12rpx); min-width: 0; }.version-heading,.version-create { align-items: stretch; flex-direction: column; }.version-actions { flex-wrap: wrap; }.import-fields { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .skeleton-heading,.skeleton-line { animation: none; } }
 </style>

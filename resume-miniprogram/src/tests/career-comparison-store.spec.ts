@@ -39,4 +39,20 @@ describe("career comparison state", () => {
     expect(store.toggleComparisonRole("产品经理")).toBe(false)
     expect(store.comparisonRoleNames).toHaveLength(4)
   })
+
+  it("persists and restores the latest recommendation result", () => {
+    const store = useCareerStore()
+    const result = {
+      profile: {
+        clientId: "client-a", identityCode: "student", major: "计算机", educationLevel: "本科", graduationYear: 2026,
+        cityPreferences: [], minimumSalary: "", industryPreferences: [], workTypes: [], skills: [], draftId: null,
+      },
+      tiers: [], generatedAt: "2026-08-26T00:00:00Z",
+    } as never
+    store.setResult(result)
+    store.resetPlanner(false)
+    store.restoreCheckpoint()
+
+    expect(store.result).toEqual(result)
+  })
 })

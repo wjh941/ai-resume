@@ -3,8 +3,7 @@ import { computed, onMounted, ref } from "vue"
 
 import LoadingSpinner from "../../components/LoadingSpinner.vue"
 import {
-  getAssessmentQuestions,
-  listAnnualInsights,
+  loadAssessmentData,
   submitAssessment,
 } from "../../services/assessment-api"
 import { getClientId } from "../../stores/session"
@@ -83,12 +82,10 @@ async function initialize() {
   loading.value = true
   error.value = ""
   try {
-    const [questions, insights] = await Promise.all([
-      getAssessmentQuestions(),
-      listAnnualInsights(),
-    ])
-    store.setQuestions(questions.items, questions.notice)
-    store.setInsights(insights)
+    const data = await loadAssessmentData(getClientId())
+    store.setQuestions(data.questions.items, data.questions.notice)
+    store.setInsights(data.insights)
+    if (data.saved) store.setResult(data.saved)
   } catch (reason) {
     error.value = reason instanceof Error ? reason.message : "测评加载失败，请检查后端服务。"
   } finally {

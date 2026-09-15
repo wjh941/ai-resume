@@ -90,8 +90,10 @@ export async function saveApplication(input: ApplicationInput): Promise<Applicat
 
 export async function deleteApplication(clientId: string, applicationId: string): Promise<void> {
   await request<{ id: string }>(
-    `/api/applications/${encodeURIComponent(applicationId)}?client_id=${encodeURIComponent(clientId)}`,
+    `/api/applications/${encodeURIComponent(applicationId)}`,
     "DELETE",
+    undefined,
+    { query: { client_id: clientId } },
   )
 }
 

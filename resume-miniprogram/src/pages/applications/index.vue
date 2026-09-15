@@ -13,6 +13,7 @@ import {
 } from "../../services/application-api"
 import { useApplicationsStore } from "../../stores/applications"
 import { getClientId } from "../../stores/session"
+import { toUserMessage } from "../../services/http"
 import type {
   ApplicationInput,
   ApplicationRecord,
@@ -47,6 +48,15 @@ const error = ref("")
 const form = ref<ApplicationInput>(emptyForm())
 const interviewDate = ref("")
 const pageScrollTop = ref(0)
+// scroll-view 的 @scroll 每帧触发；逐帧写 ref 在小程序上会逐帧 setData。
+// 仅用于“编辑时回顶”，节流到 150ms 足够保持 scroll-top 值新鲜。
+let lastScrollSyncAt = 0
+function onListScroll(event: Event) {
+  const now = Date.now()
+  if (now - lastScrollSyncAt < 150) return
+  lastScrollSyncAt = now
+  pageScrollTop.value = Number((event as unknown as { detail?: { scrollTop?: number } }).detail?.scrollTop ?? 0)
+}
 const timelineDraft = ref({ applicationId: "", title: "", description: "", occurredAt: "" })
 const reminderAt = ref("")
 
@@ -117,6 +127,8 @@ async function syncPending() {
       uni.showToast({ title: `已同步 ${result.synced} 条记录`, icon: "success" })
     } else if (result.remaining) {
       uni.showToast({ title: "网络仍不可用，待同步记录已保留", icon: "none" })
+    } else if (result.skipped) {
+      uni.showToast({ title: `${result.skipped} 条记录内容有误已跳过，可编辑后重新保存`, icon: "none", duration: 3000 })
     }
   } finally {
     syncing.value = false
@@ -170,6 +182,9 @@ async function save() {
     await load()
     resetForm()
     uni.showToast({ title: "投递计划已保存", icon: "success" })
+  } catch (reason) {
+    // 校验失败等业务错误不再进入离线队列，直接提示原因。
+    showErrorToast(toUserMessage(reason, "投递计划保存失败，请检查内容后重试"))
   } finally {
     saving.value = false
   }
@@ -260,7 +275,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <scroll-view class="page progressive-scroll-page" scroll-y :scroll-top="pageScrollTop" @scroll="pageScrollTop = $event.detail.scrollTop" @scrolltolower="showMore">
+  <scroll-view class="page progressive-scroll-page" scroll-y :scroll-top="pageScrollTop" @scroll="onListScroll" @scrolltolower="showMore">
     <view class="content">
       <view class="hero">
         <text class="title">投递行动台</text>

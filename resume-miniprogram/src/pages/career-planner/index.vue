@@ -97,17 +97,28 @@ function chooseTier(tier: RecommendationTier) {
   }, 0)
 }
 
-watch(majorQuery, async (value) => {
+// 联想查询：300ms 防抖 + 请求序号守卫，慢响应不再覆盖新响应，逐键输入不再逐键发请求。
+const MAJOR_QUERY_DEBOUNCE_MS = 300
+let majorQuerySeq = 0
+let majorQueryTimer: ReturnType<typeof setTimeout> | undefined
+
+watch(majorQuery, (value) => {
   const query = value.trim()
+  if (majorQueryTimer) clearTimeout(majorQueryTimer)
   if (!query) {
+    majorQuerySeq += 1
     majorSuggestions.value = []
     return
   }
-  try {
-    majorSuggestions.value = await queryMajorSuggestions(query)
-  } catch {
-    majorSuggestions.value = []
-  }
+  majorQueryTimer = setTimeout(async () => {
+    const seq = ++majorQuerySeq
+    try {
+      const suggestions = await queryMajorSuggestions(query)
+      if (seq === majorQuerySeq) majorSuggestions.value = suggestions
+    } catch {
+      if (seq === majorQuerySeq) majorSuggestions.value = []
+    }
+  }, MAJOR_QUERY_DEBOUNCE_MS)
 })
 
 function splitValues(value: string): string[] {
@@ -317,6 +328,7 @@ onMounted(loadCareerTasks)
 onUnmounted(() => {
   if (tierTransitionTimer) clearTimeout(tierTransitionTimer)
   if (tierUpdateTimer) clearTimeout(tierUpdateTimer)
+  if (majorQueryTimer) clearTimeout(majorQueryTimer)
 })
 </script>
 

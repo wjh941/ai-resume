@@ -3,6 +3,7 @@ import { onMounted, ref } from "vue"
 
 import LoadingSpinner from "../../components/LoadingSpinner.vue"
 import { listKnowledgeSources, startOfficialKnowledgeSync } from "../../services/knowledge-sync-api"
+import { getAuthUser } from "../../stores/session"
 import type { KnowledgeSource, KnowledgeSyncSummary } from "../../types/knowledge-sync"
 
 const sources = ref<KnowledgeSource[]>([])
@@ -10,6 +11,8 @@ const lastRun = ref<KnowledgeSyncSummary | null>(null)
 const loading = ref(false)
 const sourceLoading = ref(false)
 const error = ref("")
+// 同步端点要求运营权限（后端 RBAC 收口）；非运营账号隐藏入口，只保留只读状态展示。
+const isOperator = getAuthUser()?.role === "operator"
 
 async function loadSources() {
   sourceLoading.value = true
@@ -52,8 +55,9 @@ onMounted(loadSources)
         <view>
           <text class="section-title">初始化完整岗位库</text>
           <text class="hint">自动下载、解析并增量写入已启用的合规官方数据源，用户手动维护的岗位不会被覆盖。</text>
+          <text v-if="!isOperator" class="hint operator-hint">该操作需运营账号执行；当前账号可查看数据源状态。</text>
         </view>
-        <button class="primary" :loading="loading" :disabled="loading" @click="initializeKnowledgebase">一键初始化完整岗位库</button>
+        <button v-if="isOperator" class="primary" :loading="loading" :disabled="loading" @click="initializeKnowledgebase">一键初始化完整岗位库</button>
       <text v-if="error" class="ui-error-tip">{{ error }}</text>
       </view>
 

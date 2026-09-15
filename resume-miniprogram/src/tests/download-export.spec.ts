@@ -15,7 +15,7 @@ beforeEach(() => {
   saveCalls.length = 0
   clipboardCalls.length = 0
   toastCalls.length = 0
-  ;(globalThis as typeof globalThis & { window?: unknown }).window = undefined
+  delete (globalThis as { window?: unknown }).window
   ;(globalThis as typeof globalThis & { uni: Record<string, unknown> }).uni = {
     request: async (options: Record<string, unknown>) => {
       requestCalls.push({
@@ -70,8 +70,8 @@ describe("export requests", () => {
 describe("downloadExport", () => {
   it("opens the resolved download URL on H5", async () => {
     const opened: string[] = []
-    ;(globalThis as typeof globalThis & { window: { open: (...args: string[]) => void } }).window = {
-      open: (url: string) => { opened.push(url) },
+    ;(globalThis as unknown as { window: { open: (url?: string | URL) => Window | null } }).window = {
+      open: (url?: string | URL) => { if (url) opened.push(String(url)); return null },
     }
 
     await downloadExport("/downloads/token", "resume.docx", "h5")

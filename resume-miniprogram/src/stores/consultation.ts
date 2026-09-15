@@ -1,8 +1,11 @@
 import { defineStore } from "pinia"
 
 import type { ConsultationStage, IdentityCode } from "../types/consultation"
+import { getUniStorage as storage } from "../utils/persistence"
+import { userStorageKey } from "./session"
 
 const CONSULTATION_STATE_KEY = "resume_demo_consultation"
+export { CONSULTATION_STATE_KEY }
 
 export const IDENTITY_PROMPT =
   "请选择你当前求职身份（回复对应数字）：\n" +
@@ -19,15 +22,6 @@ export const IDENTITY_OPTIONS: Array<{ code: IdentityCode; label: string }> = [
   { code: "4", label: "无业待业（有工作经验空档期）" },
   { code: "5", label: "零基础跨行业转行" },
 ]
-
-type UniStorage = {
-  getStorageSync(key: string): unknown
-  setStorageSync(key: string, value: unknown): void
-}
-
-function storage(): UniStorage | null {
-  return (globalThis as typeof globalThis & { uni?: UniStorage }).uni ?? null
-}
 
 function isIdentityCode(value: unknown): value is IdentityCode {
   return typeof value === "string" && IDENTITY_OPTIONS.some((option) => option.code === value)
@@ -68,7 +62,7 @@ export const useConsultationStore = defineStore("consultation", {
       this.persist()
     },
     restore(): void {
-      const saved = storage()?.getStorageSync(CONSULTATION_STATE_KEY)
+      const saved = storage()?.getStorageSync(userStorageKey(CONSULTATION_STATE_KEY))
       if (!saved || typeof saved !== "object") return
       const state = saved as {
         pendingRoleName?: unknown
@@ -79,7 +73,7 @@ export const useConsultationStore = defineStore("consultation", {
       this.stage = "role-entry"
     },
     persist(): void {
-      storage()?.setStorageSync(CONSULTATION_STATE_KEY, {
+      storage()?.setStorageSync(userStorageKey(CONSULTATION_STATE_KEY), {
         pendingRoleName: this.pendingRoleName,
         identityCode: this.identityCode,
       })

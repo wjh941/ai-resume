@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest"
 import { createPinia, setActivePinia } from "pinia"
 
 import { useApplicationsStore } from "../stores/applications"
+import { setAuthSession } from "../stores/session"
 import { clearLocalCareerWorkspace } from "../utils/local-privacy"
 
 const storage = new Map<string, unknown>()
@@ -49,5 +50,18 @@ describe("local career workspace privacy", () => {
     applicationsStore.clearLocalData()
 
     expect(applicationsStore.pendingCount).toBe(0)
+  })
+
+  it("clears the authenticated user's scoped workspace keys", () => {
+    setAuthSession("token-a", { userId: "user-a", phone: "13800138000" })
+    storage.set("resume_demo_checkpoint:user-a", { draft: true })
+    storage.set("resume_demo_application_pending:user-a", [{ roleName: "data engineer" }])
+    storage.set("resume_demo_checkpoint:user-b", { draft: true })
+
+    clearLocalCareerWorkspace()
+
+    expect(storage.has("resume_demo_checkpoint:user-a")).toBe(false)
+    expect(storage.has("resume_demo_application_pending:user-a")).toBe(false)
+    expect(storage.has("resume_demo_checkpoint:user-b")).toBe(true)
   })
 })

@@ -28,6 +28,22 @@ export type ResumeImportResult = {
   parsedResume: ResumePayload
 }
 
+export function hasResumeImportContent(resume: ResumePayload): boolean {
+  return Boolean(
+    resume.basic.name.trim()
+    || resume.basic.phone.trim()
+    || resume.basic.email.trim()
+    || resume.basic.city.trim()
+    || resume.job.targetRole.trim()
+    || resume.education.length
+    || resume.employment.length
+    || resume.projects.length
+    || resume.skills.skills.length
+    || resume.skills.certificates.length
+    || resume.selfEvaluation.trim(),
+  )
+}
+
 type UniUploadFile = (options: {
   url: string
   filePath: string

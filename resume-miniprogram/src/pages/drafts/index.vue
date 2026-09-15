@@ -111,26 +111,26 @@ onMounted(load)
 <template>
   <scroll-view class="page progressive-scroll-page" scroll-y @scrolltolower="showMore">
     <view class="heading-row">
-      <view><text class="title">Drafts</text><text class="subtitle">Open, copy, or prepare a tracker entry.</text></view>
-      <button size="mini" :loading="loading" :disabled="loading" @click="load">Refresh</button>
+      <view><text class="title">简历草稿</text><text class="subtitle">打开、复制草稿，或准备投递记录。</text></view>
+      <button size="mini" :loading="loading" :disabled="loading" @click="load">刷新</button>
     </view>
-    <view v-if="loading" class="notice"><LoadingSpinner size="sm" label="Loading drafts..." /><text>Loading drafts...</text></view>
-      <text v-else-if="error" class="ui-error-tip">{{ error }}</text>
+    <view v-if="loading" class="notice"><LoadingSpinner size="sm" label="正在加载简历草稿" /><text>正在加载简历草稿</text></view>
+      <text v-else-if="error" class="ui-error-tip" role="alert">{{ error }}</text>
     <view v-else-if="!drafts.length" class="empty-state">
       <view class="empty-illustration" aria-hidden="true"><view></view><view></view><view></view></view>
-      <text class="empty-title">No resume drafts yet</text>
-      <text class="notice">Your saved resume history will appear here.</text>
+      <text class="empty-title">还没有简历草稿</text>
+      <text class="notice">保存后的简历会显示在这里。</text>
       <text class="empty-helper">本机填写中的内容也会自动保留。</text>
       <button class="empty-action" @click="openResumeForm">前往填写简历</button>
     </view>
     <view v-for="item in renderedItems" :key="item.id" class="draft ui-long-list-item">
-      <text class="draft-title">{{ item.jobTitle || item.resume.job.targetRole || "Untitled draft" }}</text>
-      <text class="draft-meta">Updated {{ item.updatedAt }}</text>
+      <text class="draft-title">{{ item.jobTitle || item.resume.job.targetRole || "未命名草稿" }}</text>
+      <text class="draft-meta">更新时间：{{ item.updatedAt }}</text>
       <view class="actions">
-        <button size="mini" class="primary" :loading="pendingAction === 'open' && pendingDraftId === item.id" :disabled="Boolean(pendingAction)" @click="openDraft(item)">Open</button>
-        <button size="mini" :loading="pendingAction === 'copy' && pendingDraftId === item.id" :disabled="Boolean(pendingAction)" @click="copy(item)">Copy</button>
-        <button size="mini" @click="createTrackerPrefill(item)">Tracker</button>
-        <button size="mini" class="danger" :loading="pendingAction === 'delete' && pendingDraftId === item.id" :disabled="Boolean(pendingAction)" @click="remove(item)">Delete</button>
+        <button size="mini" class="primary" :loading="pendingAction === 'open' && pendingDraftId === item.id" :disabled="Boolean(pendingAction)" @click="openDraft(item)">打开</button>
+        <button size="mini" :loading="pendingAction === 'copy' && pendingDraftId === item.id" :disabled="Boolean(pendingAction)" @click="copy(item)">复制</button>
+        <button size="mini" @click="createTrackerPrefill(item)">投递记录</button>
+        <button size="mini" class="danger" :loading="pendingAction === 'delete' && pendingDraftId === item.id" :disabled="Boolean(pendingAction)" @click="remove(item)">删除</button>
       </view>
     </view>
     <text v-if="hasMore" class="progressive-list-hint">继续下滑显示更多</text>

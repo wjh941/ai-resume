@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "scripts": {
     "test:unit": "vitest run",
+    "typecheck": "tsc --noEmit",
     "dev:h5": "uni -p h5",
     "build:h5": "uni build -p h5",
     "dev:mp-weixin": "uni -p mp-weixin",

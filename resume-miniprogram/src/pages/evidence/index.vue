@@ -33,6 +33,14 @@ const {
 } = useIncrementalList(evidence)
 const loading = ref(false)
 const pageScrollTop = ref(0)
+// @scroll 每帧触发，逐帧写 ref 会造成小程序逐帧 setData；节流保住“编辑回顶”所需的新鲜值。
+let lastScrollSyncAt = 0
+function onListScroll(event: Event) {
+  const now = Date.now()
+  if (now - lastScrollSyncAt < 150) return
+  lastScrollSyncAt = now
+  pageScrollTop.value = Number((event as unknown as { detail?: { scrollTop?: number } }).detail?.scrollTop ?? 0)
+}
 const saving = ref(false)
 const pendingDeleteId = ref<string | null>(null)
 const form = ref<ResumeEvidenceInput>(emptyForm())
@@ -128,7 +136,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <scroll-view class="page progressive-scroll-page" scroll-y :scroll-top="pageScrollTop" @scroll="pageScrollTop = $event.detail.scrollTop" @scrolltolower="showMore">
+  <scroll-view class="page progressive-scroll-page" scroll-y :scroll-top="pageScrollTop" @scroll="onListScroll" @scrolltolower="showMore">
     <view class="content">
       <view class="hero">
         <text class="eyebrow">FACT-BASED RESUME</text>
