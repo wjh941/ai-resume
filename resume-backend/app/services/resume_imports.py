@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
 
@@ -8,6 +9,7 @@ from fastapi import UploadFile
 from app.config import Settings
 from app.repositories.drafts import DraftRepository
 from app.repositories.resume_imports import ResumeImportRecord, ResumeImportRepository
+from app.services.resume_parser import ResumeParseError, parse_resume_file
 
 
 class ResumeImportValidationError(ValueError):
@@ -16,7 +18,6 @@ class ResumeImportValidationError(ValueError):
 
 _ALLOWED_UPLOADS = {
     ".pdf": "application/pdf",
-    ".doc": "application/msword",
     ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
 
@@ -54,6 +55,7 @@ class ResumeImportService:
         self._imports = imports
         self._directory = settings.temp_file_path / "resume-imports"
         self._max_file_bytes = settings.resume_import_max_file_bytes
+        self._expire_minutes = settings.resume_import_expire_minutes
 
     async def accept_upload(
         self,
@@ -66,7 +68,7 @@ class ResumeImportService:
         suffix = Path(original_filename).suffix.lower()
         expected_content_type = _ALLOWED_UPLOADS.get(suffix)
         if not expected_content_type or upload.content_type != expected_content_type:
-            raise ResumeImportValidationError("仅支持 PDF、DOC 和 DOCX 格式的简历文件。")
+            raise ResumeImportValidationError("仅支持 PDF 和 DOCX 格式的简历文件。")
 
         import_id = uuid4().hex
         self._directory.mkdir(parents=True, exist_ok=True)
@@ -79,7 +81,11 @@ class ResumeImportService:
                     if written > self._max_file_bytes:
                         raise ResumeImportValidationError("简历文件超过当前允许的大小限制。")
                     target.write(chunk)
-            # TODO: Malware scanning and PDF/Word parsing are deferred until provider integration is approved.
+            _validate_file_signature(destination, suffix)
+            try:
+                parsed = parse_resume_file(destination, suffix)
+            except ResumeParseError as error:
+                raise ResumeImportValidationError(str(error)) from error
             return self._imports.create(
                 import_id,
                 user_id,
@@ -88,10 +94,31 @@ class ResumeImportService:
                 original_filename,
                 expected_content_type,
                 written,
-                empty_resume_preview(),
+                parsed.resume,
             )
         except Exception:
             destination.unlink(missing_ok=True)
             raise
         finally:
             await upload.close()
+
+    def cleanup_expired(self, now: datetime | None = None) -> int:
+        current = now or datetime.now(timezone.utc)
+        cutoff = current - timedelta(minutes=self._expire_minutes)
+        expired = self._imports.list_expired(cutoff)
+        for _, stored_filename in expired:
+            candidate = (self._directory / stored_filename).resolve()
+            try:
+                candidate.relative_to(self._directory.resolve())
+            except ValueError:
+                continue
+            candidate.unlink(missing_ok=True)
+        return self._imports.delete_many([import_id for import_id, _ in expired])
+
+
+def _validate_file_signature(path: Path, suffix: str) -> None:
+    with path.open("rb") as source:
+        signature = source.read(8)
+    expected = b"%PDF-" if suffix == ".pdf" else b"PK\x03\x04"
+    if not signature.startswith(expected):
+        raise ResumeImportValidationError("简历文件格式无效，请上传真实的 PDF 或 DOCX 文件。")

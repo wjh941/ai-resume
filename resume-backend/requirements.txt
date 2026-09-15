@@ -1,15 +1,19 @@
+# 基础依赖：个人/轻量部署安装这些即可运行 API、SQLite、Word 导出与本地知识库。
 fastapi
 uvicorn
 pydantic
 httpx
 python-docx
-weasyprint
-aiofiles
 pypdf
 python-multipart
 PyJWT>=2.8,<3
 bcrypt>=4.0,<5
-SQLAlchemy>=2.0,<3
-alembic>=1.13,<2
-psycopg[binary]>=3.1,<4
-APScheduler>=3.10,<4
+
+# ---- 可选 extras：按部署形态追加安装（均已在代码中惰性导入）----
+# PDF 导出渲染器（二选一，对应 PDF_RENDERER 环境变量）：
+#   weasyprint                  # 服务器渲染，需系统级 Pango/Cairo（Docker 镜像已内置）
+#   playwright                  # 浏览器渲染，另需执行 `playwright install chromium`
+# psycopg[binary]>=3.1,<4       # 生产 PostgreSQL（配置 DATABASE_URL 时）
+# SQLAlchemy>=2.0,<3            # alembic 迁移工具链（仅执行数据库迁移时）
+# alembic>=1.13,<2
+# APScheduler>=3.10,<4          # 独立 worker 进程（worker.py）

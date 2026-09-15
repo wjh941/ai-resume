@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from fastapi.testclient import TestClient
 
 
@@ -48,3 +50,23 @@ def test_client_error_route_is_registered_once(api_client) -> None:
     ]
 
     assert len(routes) == 1
+
+
+def test_api_access_log_covers_api_paths_only(api_client, monkeypatch) -> None:
+    from app.services import observability
+
+    logged: list[str] = []
+    monkeypatch.setattr(observability.logger, "log", lambda _level, message: logged.append(message))
+
+    api_client.get("/health")
+    response = api_client.post("/api/job/match", json={})
+
+    access_logs = [message for message in logged if message.startswith("api access")]
+    assert response.status_code == 200
+    assert len(access_logs) == 1
+    payload = json.loads(access_logs[0].split(" ", 2)[2])
+    assert payload["method"] == "POST"
+    assert payload["path"] == "/api/job/match"
+    assert payload["status_code"] == 200
+    assert payload["duration_ms"] >= 0
+    assert payload["request_id"]

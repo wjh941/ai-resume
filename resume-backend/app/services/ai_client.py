@@ -400,15 +400,10 @@ class OpenAICompatibleClient:
         return str(content)
 
 
-class ArkAIClient(OpenAICompatibleClient):
-    pass
-
-
 def build_ai_client(settings: Settings) -> AIClient:
     if settings.ai_provider not in {"ark", "openai_compatible"}:
         return DevelopmentAIClient() if not settings.production else UnconfiguredAIClient()
     if not settings.ai_api_key or not settings.ai_model:
         return DevelopmentAIClient() if not settings.production else UnconfiguredAIClient()
-    if settings.ai_provider == "ark":
-        return ArkAIClient(settings)
+    # Ark 与 OpenAI 均走同一 Chat Completions 兼容传输层，无需独立子类。
     return OpenAICompatibleClient(settings)

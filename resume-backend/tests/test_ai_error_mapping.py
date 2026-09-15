@@ -10,6 +10,7 @@ from app.services.career_assessment import assessment_questions
 
 def test_missing_ai_credentials_select_a_friendly_unconfigured_client(monkeypatch):
     monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("JWT_SECRET", "test-ai-production-secret")
     monkeypatch.setenv("AI_PROVIDER", "openai_compatible")
     monkeypatch.setenv("AI_API_KEY", "")
     monkeypatch.setenv("AI_MODEL", "")

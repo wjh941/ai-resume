@@ -11,9 +11,29 @@ class PdfRendererUnavailableError(Exception):
     pass
 
 
+_CHROMIUM_BINARY_NAMES = (
+    "chrome.exe",
+    "chrome",
+    "chromium",
+    "Chromium",
+    "headless_shell",
+    "headless_shell.exe",
+)
+
+
 def chromium_is_available(browser_root: str) -> bool:
+    if not browser_root:
+        return False
     root = Path(browser_root)
-    return root.is_dir() and any(root.rglob("chrome.exe"))
+    if not root.is_dir():
+        return False
+    # Playwright 缓存布局按平台不同：Windows 为 chrome.exe，Linux 为 chrome/headless_shell，
+    # macOS 为 Chromium.app 内的 Chromium 可执行文件。
+    return any(
+        match
+        for name in _CHROMIUM_BINARY_NAMES
+        for match in root.rglob(name)
+    )
 
 
 async def render_pdf_resume(
@@ -123,32 +143,43 @@ def _entry(title: str, meta: str, description: str = "") -> str:
 
 
 async def _render_with_playwright(html: str, output_path: Path, browser_root: str) -> None:
-    if not chromium_is_available(browser_root):
+    if browser_root and not chromium_is_available(browser_root):
         raise PdfRendererUnavailableError("Chromium is not installed for the configured Playwright browser path")
-    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = browser_root
+    # browser_root 留空时交由 playwright 自行解析默认浏览器缓存（`playwright install` 的落点）。
+    previous_browsers_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
+    if browser_root:
+        os.environ["PLAYWRIGHT_BROWSERS_PATH"] = browser_root
     try:
-        from playwright.async_api import async_playwright
-    except ImportError as error:
-        raise PdfRendererUnavailableError("Playwright is not installed") from error
+        try:
+            from playwright.async_api import async_playwright
+        except ImportError as error:
+            raise PdfRendererUnavailableError("Playwright is not installed") from error
 
-    try:
-        async with async_playwright() as playwright:
-            browser = await playwright.chromium.launch()
-            try:
-                page = await browser.new_page()
-                await page.set_content(html)
-                await page.pdf(
-                    path=str(output_path),
-                    format="A4",
-                    print_background=True,
-                    prefer_css_page_size=True,
-                )
-            finally:
-                await browser.close()
-    except PdfRendererUnavailableError:
-        raise
-    except Exception as error:
-        raise PdfRendererUnavailableError("Playwright could not render the PDF") from error
+        try:
+            async with async_playwright() as playwright:
+                browser = await playwright.chromium.launch()
+                try:
+                    page = await browser.new_page()
+                    await page.set_content(html)
+                    await page.pdf(
+                        path=str(output_path),
+                        format="A4",
+                        print_background=True,
+                        prefer_css_page_size=True,
+                    )
+                finally:
+                    await browser.close()
+        except PdfRendererUnavailableError:
+            raise
+        except Exception as error:
+            raise PdfRendererUnavailableError("Playwright could not render the PDF") from error
+    finally:
+        # 恢复进程环境，避免测试或并发请求间的配置泄漏。
+        if browser_root:
+            if previous_browsers_path is None:
+                os.environ.pop("PLAYWRIGHT_BROWSERS_PATH", None)
+            else:
+                os.environ["PLAYWRIGHT_BROWSERS_PATH"] = previous_browsers_path
 
 
 def _render_with_weasyprint(html: str, output_path: Path) -> None:

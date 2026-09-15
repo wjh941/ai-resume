@@ -11,6 +11,7 @@ from app.services.auth import current_user_id
 from app.services.job_matching import MatchContext
 from app.services.rewrite_guard import validate_rewrite_facts
 from app.services.membership import VipPermissionError, VipStatus, get_current_vip
+from app.services.rate_limit import enforce_ai_rate_limit
 from app.services.report_tiering import make_report_evidence, project_report
 
 
@@ -68,6 +69,7 @@ async def query_job(
     payload: JobQueryRequest,
     request: Request,
     vip: VipStatus = Depends(get_current_vip),
+    _rate_limit: None = Depends(enforce_ai_rate_limit),
 ):
     role_name = " ".join(payload.role_name.split())
     cache = request.app.state.job_cache
@@ -108,6 +110,7 @@ async def match_jobs(
     request: Request,
     user_id: str = Depends(current_user_id),
     vip: VipStatus = Depends(get_current_vip),
+    _rate_limit: None = Depends(enforce_ai_rate_limit),
 ):
     # Candidate context is built from the JWT owner only; request bodies contain filters, never identity.
     context = _match_context(request, user_id, payload.target_role)
@@ -165,6 +168,7 @@ async def rewrite_resume(
     payload: ResumeRewriteRequest,
     request: Request,
     vip: VipStatus = Depends(get_current_vip),
+    _rate_limit: None = Depends(enforce_ai_rate_limit),
 ):
     if payload.mode == "deep" and vip.vip_level == "free":
         raise VipPermissionError("深度 AI 润色需要基础会员或高级会员")

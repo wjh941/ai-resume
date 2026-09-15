@@ -169,6 +169,10 @@ def connect(database_path: DatabaseTarget, *, timeout_seconds: float | None = No
     # 本期 SQLite 必须逐连接启用外键；二期数据库迁移由同一仓储 user_id 接口承接。
     connection.execute("PRAGMA foreign_keys = ON")
     connection.execute(f"PRAGMA busy_timeout = {int(timeout * 1000)}")
+    # WAL 模式（启动时设置，持久化到库文件）下官方推荐 synchronous=NORMAL：
+    # 提交不再逐次 fsync，写延迟明显下降；代价仅为断电时可能回滚最近事务，
+    # 应用崩溃不丢数据。生产高持久性需求走 PostgreSQL。
+    connection.execute("PRAGMA synchronous = NORMAL")
     return connection
 
 
@@ -360,21 +364,6 @@ def initialize_database(database_path: DatabaseTarget, *, timeout_seconds: float
             );
             CREATE INDEX IF NOT EXISTS idx_order_record_owner_created
             ON order_record (user_id, create_time DESC, order_id DESC);
-            CREATE TABLE IF NOT EXISTS job_favorite (
-                id TEXT PRIMARY KEY,
-                user_id TEXT NOT NULL REFERENCES users(user_id),
-                role_name TEXT NOT NULL,
-                note TEXT NOT NULL DEFAULT '',
-                created_at TEXT NOT NULL,
-                UNIQUE (user_id, role_name)
-            );
-            CREATE INDEX IF NOT EXISTS idx_job_favorite_owner_created
-            ON job_favorite (user_id, created_at DESC, id DESC);
-            CREATE TABLE IF NOT EXISTS job_match_subscription (
-                user_id TEXT PRIMARY KEY REFERENCES users(user_id),
-                enabled INTEGER NOT NULL DEFAULT 0 CHECK (enabled IN (0, 1)),
-                updated_at TEXT NOT NULL
-            );
             CREATE TABLE IF NOT EXISTS job_favorite (
                 id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL REFERENCES users(user_id),

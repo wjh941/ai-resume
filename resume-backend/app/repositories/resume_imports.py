@@ -44,7 +44,7 @@ class ResumeImportRepository:
                 INSERT INTO resume_import
                 (id, user_id, draft_id, stored_filename, original_filename, content_type,
                  byte_size, status, parsed_resume_json, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'parsed_mock', ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'parsed', ?, ?)
                 """,
                 (
                     import_id,
@@ -58,4 +58,27 @@ class ResumeImportRepository:
                     datetime.now(timezone.utc).isoformat(),
                 ),
             )
-        return ResumeImportRecord(import_id, "parsed_mock", original_filename, parsed_resume)
+        return ResumeImportRecord(import_id, "parsed", original_filename, parsed_resume)
+
+    def list_expired(self, cutoff: datetime) -> list[tuple[str, str]]:
+        with connect(self._database_target) as connection:
+            rows = connection.execute(
+                "SELECT id, stored_filename FROM resume_import WHERE created_at < ?",
+                (cutoff.isoformat(),),
+            ).fetchall()
+        return [(str(row["id"]), str(row["stored_filename"])) for row in rows]
+
+    def delete_many(self, import_ids: list[str]) -> int:
+        if not import_ids:
+            return 0
+        deleted = 0
+        with connect(self._database_target) as connection:
+            for offset in range(0, len(import_ids), 500):
+                batch = import_ids[offset : offset + 500]
+                placeholders = ", ".join("?" for _ in batch)
+                cursor = connection.execute(
+                    f"DELETE FROM resume_import WHERE id IN ({placeholders})",
+                    batch,
+                )
+                deleted += int(cursor.rowcount)
+        return deleted

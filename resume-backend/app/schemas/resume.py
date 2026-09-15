@@ -24,6 +24,7 @@ class EducationItem(BaseModel):
     degree: str = ""
     start_date: str = ""
     end_date: str = ""
+    courses: str = ""
 
 
 class EmploymentItem(BaseModel):

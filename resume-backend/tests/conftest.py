@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 import pytest
 from fastapi.testclient import TestClient
 from pathlib import Path
@@ -11,6 +13,11 @@ import sys
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
+
+# 测试封闭性：禁止 load_settings() 读取开发者本地 .env（其中可能包含
+# 非默认 JWT_SECRET、PRODUCTION=false 等），否则生产加固断言会假失败。
+# conftest 先于测试模块导入执行，因此此处在任何 app 导入前生效。
+os.environ.setdefault("RESUME_SKIP_DOTENV", "1")
 
 
 @pytest.fixture
@@ -70,6 +77,16 @@ def grant_vip(api_client, level: str = "premium", days: int = 365) -> None:
         )
 
 
+def operator_headers(api_client) -> dict[str, str]:
+    """测试夹具：把当前登录用户提升为 operator 并重签 Token，模拟白名单运营账号。"""
+    token = api_client.headers["Authorization"].split(" ", 1)[1]
+    user_id = api_client.app.state.auth_service.verify(token)
+    with sqlite3.connect(api_client.app.state.settings.database_path) as connection:
+        connection.execute("UPDATE users SET role = 'operator' WHERE user_id = ?", (user_id,))
+    user = api_client.app.state.user_repository.get(user_id)
+    return {"Authorization": f"Bearer {api_client.app.state.auth_service.issue_token(user)}"}
+
+
 def make_resume_payload() -> dict:
     return {
         "version": 1,
@@ -91,6 +108,7 @@ def make_resume_payload() -> dict:
                 "degree": "Bachelor",
                 "start_date": "2018-09",
                 "end_date": "2022-06",
+                "courses": "",
             }
         ],
         "employment": [

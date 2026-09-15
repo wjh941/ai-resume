@@ -85,7 +85,11 @@ async def export_pdf(
             access.vip.watermark_text,
         )
         result = request.app.state.download_service.register(access.user_id, output_path, filename)
-    except (OSError, PdfRendererUnavailableError, ExportPathError) as error:
+    except PdfRendererUnavailableError:
+        # 渲染器缺失是可诊断的独立错误：保留专用错误码，让运维能区分"没装渲染器"与"导出失败"。
+        _discard_partial_output(output_path)
+        raise
+    except (OSError, ExportPathError) as error:
         _discard_partial_output(output_path)
         raise ExportGenerationError("PDF export failed") from error
     return success(result.model_dump(mode="json"))

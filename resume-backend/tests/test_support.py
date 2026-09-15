@@ -20,7 +20,7 @@ from app.schemas.career import (
     PromotionNode,
     PromotionTrack,
 )
-from app.services.career_consultation import (
+from career_consultation_stub import (
     build_career_advice,
     build_job_consultation,
     build_resume_review,

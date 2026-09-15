@@ -7,11 +7,14 @@ from uuid import uuid4
 from app.config import Settings
 from app.db import DatabaseTarget, connect
 from app.repositories.applications import ApplicationRepository
+from app.repositories.drafts import DraftRepository
 from app.repositories.job_collections import JobCollectionRepository
 from app.repositories.membership import MembershipRepository
 from app.repositories.push_logs import PushLogRepository
+from app.repositories.resume_imports import ResumeImportRepository
 from app.services.downloads import DownloadService
 from app.services.push import PushDispatcher
+from app.services.resume_imports import ResumeImportService
 
 
 class TaskLeaseRepository:
@@ -77,6 +80,7 @@ class BackgroundWorker:
         temp_directory: Path,
         export_expire_minutes: int,
         order_expire_minutes: int,
+        resume_import_expire_minutes: int,
         lock_ttl_seconds: int,
         owner_id: str | None = None,
     ) -> None:
@@ -87,6 +91,11 @@ class BackgroundWorker:
         self._membership = MembershipRepository(database_target)
         self._push = PushDispatcher(settings, PushLogRepository(database_target))
         self._downloads = DownloadService(database_target, temp_directory, export_expire_minutes)
+        self._resume_imports = ResumeImportService(
+            settings,
+            DraftRepository(database_target),
+            ResumeImportRepository(database_target),
+        )
         self._order_expire_minutes = order_expire_minutes
         self._lock_ttl_seconds = lock_ttl_seconds
         self._owner_id = owner_id or uuid4().hex
@@ -99,6 +108,7 @@ class BackgroundWorker:
             settings.temp_file_path,
             settings.export_file_expire_minutes,
             settings.order_payment_expire_minutes,
+            settings.resume_import_expire_minutes,
             settings.worker_lock_ttl_seconds,
             owner_id,
         )
@@ -110,6 +120,9 @@ class BackgroundWorker:
             ),
             "expired_exports": self._run_with_lease(
                 "expired_exports", self._downloads.cleanup_expired
+            ),
+            "expired_resume_imports": self._run_with_lease(
+                "expired_resume_imports", self._resume_imports.cleanup_expired
             ),
             "expired_orders": self._run_with_lease(
                 "expired_orders",

@@ -8,6 +8,7 @@ from pypdf import PdfReader
 from app.schemas.common import success
 from app.schemas.consultation import AdviceRequest, JobConsultationRequest, ResumeReviewRequest
 from app.services.membership import VipStatus, require_vip_feature
+from app.services.rate_limit import enforce_ai_rate_limit
 
 
 router = APIRouter()
@@ -18,6 +19,7 @@ async def job_analysis(
     payload: JobConsultationRequest,
     request: Request,
     _: VipStatus = Depends(require_vip_feature("full_job_report")),
+    _rate_limit: None = Depends(enforce_ai_rate_limit),
 ):
     job = await _get_job_intelligence(payload.role_name, request)
     result = await request.app.state.ai_client.build_job_consultation(
@@ -29,7 +31,11 @@ async def job_analysis(
 
 
 @router.post("/api/consultation/resume-review")
-async def resume_review(payload: ResumeReviewRequest, request: Request):
+async def resume_review(
+    payload: ResumeReviewRequest,
+    request: Request,
+    _rate_limit: None = Depends(enforce_ai_rate_limit),
+):
     result = await request.app.state.ai_client.review_resume_text(
         payload.resume_text,
         payload.identity_code,
@@ -40,7 +46,11 @@ async def resume_review(payload: ResumeReviewRequest, request: Request):
 
 
 @router.post("/api/consultation/advice")
-async def career_advice(payload: AdviceRequest, request: Request):
+async def career_advice(
+    payload: AdviceRequest,
+    request: Request,
+    _rate_limit: None = Depends(enforce_ai_rate_limit),
+):
     result = await request.app.state.ai_client.build_career_advice(
         payload.identity_code,
         payload.topic,

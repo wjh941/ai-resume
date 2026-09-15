@@ -14,6 +14,7 @@ def test_production_hides_docs_rejects_unknown_origin_and_adds_security_headers(
     monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "resume.db"))
     monkeypatch.setenv("TEMP_FILE_PATH", str(tmp_path / "exports"))
     monkeypatch.setenv("PRODUCTION", "true")
+    monkeypatch.setenv("JWT_SECRET", "test-phase8-production-secret")
     monkeypatch.setenv("CORS_ORIGINS", "https://app.example.com")
 
     from main import create_app

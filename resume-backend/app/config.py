@@ -5,7 +5,14 @@ from pathlib import Path
 import os
 
 
+_DEFAULT_JWT_SECRET = "development-only-change-me"
+
+
 def _load_dotenv(path: Path) -> None:
+    # 测试进程设置 RESUME_SKIP_DOTENV=1（见 tests/conftest.py），
+    # 避免开发者本地 .env 泄漏进测试环境导致生产加固断言出现假失败。
+    if os.getenv("RESUME_SKIP_DOTENV") == "1":
+        return
     if not path.exists():
         return
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -37,7 +44,7 @@ class Settings:
     web_search_base_url: str = "https://api.tavily.com"
     web_search_max_results: int = 5
     # 本期 SQLite 过渡鉴权配置；二期切换云数据库时 JWT 载荷规则保持不变。
-    jwt_secret: str = "development-only-change-me"
+    jwt_secret: str = _DEFAULT_JWT_SECRET
     jwt_expire_hours: int = 24
     auth_demo_mode: bool = True
     sms_provider: str = "disabled"
@@ -71,6 +78,10 @@ class Settings:
     sqlite_timeout_seconds: float = 3.0
     auth_rate_limit_max_requests: int = 10
     auth_rate_limit_window_seconds: int = 60
+    ai_rate_limit_max_requests: int = 30
+    ai_rate_limit_window_seconds: int = 60
+    client_error_rate_limit_max_requests: int = 10
+    client_error_rate_limit_window_seconds: int = 60
     worker_enabled: bool = False
     worker_scan_interval_seconds: int = 300
     worker_lock_ttl_seconds: int = 600
@@ -79,6 +90,7 @@ class Settings:
     log_level: str = "INFO"
     resume_import_max_file_bytes: int = 10 * 1024 * 1024
     password_bcrypt_rounds: int = 12
+    resume_import_expire_minutes: int = 24 * 60
 
     @property
     def database_target(self) -> Path | str:
@@ -112,7 +124,7 @@ def load_settings() -> Settings:
     backend_root = Path(__file__).resolve().parents[1]
     _load_dotenv(backend_root / ".env")
     app_env = os.getenv("APP_ENV", "development")
-    return Settings(
+    settings = Settings(
         app_env=app_env,
         app_host=os.getenv("APP_HOST", "127.0.0.1"),
         app_port=int(os.getenv("APP_PORT", "8000")),
@@ -129,14 +141,13 @@ def load_settings() -> Settings:
         export_file_expire_minutes=int(os.getenv("EXPORT_FILE_EXPIRE_MINUTES", "60")),
         sqlite_timeout_seconds=float(os.getenv("SQLITE_TIMEOUT_SECONDS", "3")),
         pdf_renderer=os.getenv("PDF_RENDERER", "playwright"),
-        playwright_browsers_path=os.getenv(
-            "PLAYWRIGHT_BROWSERS_PATH", "D:/Projects/ai-resume-miniprogram/.cache/playwright"
-        ),
+        # 留空表示交由 playwright 自行解析默认浏览器缓存；不再硬编码开发者本机路径。
+        playwright_browsers_path=os.getenv("PLAYWRIGHT_BROWSERS_PATH", "").strip(),
         web_search_provider=os.getenv("WEB_SEARCH_PROVIDER", "disabled"),
         tavily_api_key=os.getenv("TAVILY_API_KEY", ""),
         web_search_base_url=os.getenv("WEB_SEARCH_BASE_URL", "https://api.tavily.com"),
         web_search_max_results=int(os.getenv("WEB_SEARCH_MAX_RESULTS", "5")),
-        jwt_secret=os.getenv("JWT_SECRET", "development-only-change-me"),
+        jwt_secret=os.getenv("JWT_SECRET", _DEFAULT_JWT_SECRET),
         jwt_expire_hours=int(os.getenv("JWT_EXPIRE_HOURS", "24")),
         auth_demo_mode=_read_bool("AUTH_DEMO_MODE", app_env != "production"),
         sms_provider=os.getenv("SMS_PROVIDER", "disabled").strip().lower(),
@@ -167,6 +178,10 @@ def load_settings() -> Settings:
         cors_origins=_read_csv("CORS_ORIGINS"),
         auth_rate_limit_max_requests=int(os.getenv("AUTH_RATE_LIMIT_MAX_REQUESTS", "10")),
         auth_rate_limit_window_seconds=int(os.getenv("AUTH_RATE_LIMIT_WINDOW_SECONDS", "60")),
+        ai_rate_limit_max_requests=int(os.getenv("AI_RATE_LIMIT_MAX_REQUESTS", "30")),
+        ai_rate_limit_window_seconds=int(os.getenv("AI_RATE_LIMIT_WINDOW_SECONDS", "60")),
+        client_error_rate_limit_max_requests=int(os.getenv("CLIENT_ERROR_RATE_LIMIT_MAX_REQUESTS", "10")),
+        client_error_rate_limit_window_seconds=int(os.getenv("CLIENT_ERROR_RATE_LIMIT_WINDOW_SECONDS", "60")),
         worker_enabled=_read_bool("WORKER_ENABLED", False),
         worker_scan_interval_seconds=max(15, int(os.getenv("TASK_SCAN_INTERVAL_SECONDS", "300"))),
         worker_lock_ttl_seconds=max(30, int(os.getenv("WORKER_LOCK_TTL_SECONDS", "600"))),
@@ -179,4 +194,8 @@ def load_settings() -> Settings:
         log_level=os.getenv("LOG_LEVEL", "INFO").strip().upper(),
         resume_import_max_file_bytes=max(1, int(os.getenv("RESUME_IMPORT_MAX_FILE_BYTES", str(10 * 1024 * 1024)))),
         password_bcrypt_rounds=min(31, max(4, int(os.getenv("PASSWORD_BCRYPT_ROUNDS", "12")))),
+        resume_import_expire_minutes=max(1, int(os.getenv("RESUME_IMPORT_EXPIRE_MINUTES", str(24 * 60)))),
     )
+    if settings.production and settings.jwt_secret in {"", _DEFAULT_JWT_SECRET}:
+        raise ValueError("JWT_SECRET must be configured to a non-default value in production")
+    return settings

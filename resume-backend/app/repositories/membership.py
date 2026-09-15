@@ -130,19 +130,6 @@ class MembershipRepository:
                 (user_id, cutoff),
             )
 
-    def expire_all_pending_orders(self, expire_minutes: int) -> int:
-        cutoff = (datetime.now(timezone.utc) - timedelta(minutes=expire_minutes)).isoformat()
-        with connect(self._database_path) as connection:
-            cursor = connection.execute(
-                """
-                UPDATE order_record
-                SET payment_status = 'expired'
-                WHERE payment_status = 'pending' AND create_time <= ?
-                """,
-                (cutoff,),
-            )
-        return int(cursor.rowcount)
-
     def list_expired_orders(self) -> list[dict[str, str]]:
         with connect(self._database_path) as connection:
             rows = connection.execute(

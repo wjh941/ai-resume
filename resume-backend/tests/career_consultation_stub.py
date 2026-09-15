@@ -1,3 +1,10 @@
+"""测试专用确定性咨询响应构造器。
+
+原为 ``app/services/career_consultation.py``；生产代码（真实 LLM 链路）零引用后，
+仅剩 tests/test_support.py 的 TestAIClient 用它离线构造演示响应，因此整体移入
+测试侧。生产代码不得导入本模块。
+"""
+
 from __future__ import annotations
 
 from app.schemas.consultation import (

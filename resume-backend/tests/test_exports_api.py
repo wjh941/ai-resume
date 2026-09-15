@@ -84,6 +84,28 @@ def test_playwright_pdf_prefers_css_page_size(monkeypatch, tmp_path):
     assert pdf_kwargs["prefer_css_page_size"] is True
 
 
+def test_chromium_detection_supports_cross_platform_layouts(tmp_path):
+    # Linux 布局：chromium-<rev>/chrome-linux/chrome
+    linux_layout = tmp_path / "chromium-1234" / "chrome-linux"
+    linux_layout.mkdir(parents=True)
+    (linux_layout / "chrome").write_bytes(b"\x7fELF")
+    assert chromium_is_available(str(tmp_path)) is True
+
+    # Windows 布局：chromium-<rev>/chrome-win/chrome.exe
+    win_layout = tmp_path / "chromium-1234" / "chrome-win"
+    win_layout.mkdir(parents=True)
+    (win_layout / "chrome.exe").write_bytes(b"MZ")
+    assert chromium_is_available(str(tmp_path)) is True
+
+    # headless shell 布局与空目录、空配置
+    shell_layout = tmp_path / "chromium_headless_shell-1234" / "chrome-linux"
+    shell_layout.mkdir(parents=True)
+    (shell_layout / "headless_shell").write_bytes(b"\x7fELF")
+    assert chromium_is_available(str(tmp_path)) is True
+    assert chromium_is_available(str(tmp_path / "missing")) is False
+    assert chromium_is_available("") is False
+
+
 def test_word_export_returns_safe_filename_and_download(api_client):
     draft = save_draft(api_client)
 
@@ -230,10 +252,10 @@ def test_pdf_renderer_failure_removes_partial_output_and_returns_export_error(ap
         client.headers.update(api_client.headers)
         response = client.post("/api/export/pdf", json={"draft_id": draft["id"]})
 
+    # 渲染器缺失保留专用错误码（区别于磁盘等导出故障），且不残留半成品文件。
     assert response.status_code == 503
-    assert response.json()["code"] == "export_error"
+    assert response.json()["code"] == "pdf_renderer_unavailable"
     assert not list(api_client.app.state.settings.temp_file_path.glob("*.pdf"))
-    assert "export error" in caplog.text.lower()
 
 
 def test_download_rejects_tampered_path_outside_export_storage(api_client, tmp_path):

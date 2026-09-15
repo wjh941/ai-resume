@@ -1,17 +1,22 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 
 from app.repositories.knowledgebase import KnowledgebaseRoleNotFoundError
 from app.schemas.common import success
 from app.schemas.knowledgebase import KnowledgebaseRoleInput
+from app.services.auth import AuthPrincipal, require_operator
 
 
 router = APIRouter()
 
 
 @router.post("/api/knowledgebase/roles")
-async def create_role(payload: KnowledgebaseRoleInput, request: Request):
+async def create_role(
+    payload: KnowledgebaseRoleInput,
+    request: Request,
+    _: AuthPrincipal = Depends(require_operator),
+):
     role = request.app.state.knowledgebase_repository.create_manual_role(payload)
     return success(role.model_dump())
 
@@ -23,7 +28,10 @@ async def get_role(role_name: str, request: Request):
 
 
 @router.post("/api/knowledgebase/sync/official")
-async def sync_official_dataset(request: Request):
+async def sync_official_dataset(
+    request: Request,
+    _: AuthPrincipal = Depends(require_operator),
+):
     summary = await request.app.state.official_dataset_sync_service.sync()
     return success(summary.model_dump())
 

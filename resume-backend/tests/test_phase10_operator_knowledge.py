@@ -1,15 +1,6 @@
 from __future__ import annotations
 
-import sqlite3
-
-
-def _operator_headers(api_client) -> dict[str, str]:
-    token = api_client.headers["Authorization"].split(" ", 1)[1]
-    user_id = api_client.app.state.auth_service.verify(token)
-    with sqlite3.connect(api_client.app.state.settings.database_path) as connection:
-        connection.execute("UPDATE users SET role = 'operator' WHERE user_id = ?", (user_id,))
-    user = api_client.app.state.user_repository.get(user_id)
-    return {"Authorization": f"Bearer {api_client.app.state.auth_service.issue_token(user)}"}
+from conftest import operator_headers as _operator_headers
 
 
 def test_regular_user_cannot_access_operator_knowledge(api_client) -> None:

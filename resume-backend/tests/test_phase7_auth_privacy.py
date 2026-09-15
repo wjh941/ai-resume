@@ -9,6 +9,7 @@ from conftest import make_draft_payload
 
 def test_production_sms_service_sends_a_gateway_code_and_rejects_reuse(monkeypatch):
     monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("JWT_SECRET", "test-phase7-production-secret")
     monkeypatch.setenv("AUTH_DEMO_MODE", "false")
     monkeypatch.setenv("SMS_PROVIDER", "http")
     monkeypatch.setenv("SMS_HTTP_ENDPOINT", "https://sms.example.test/send")

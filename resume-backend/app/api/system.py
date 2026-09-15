@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
 
 from app.config import Settings, load_settings
@@ -13,6 +13,7 @@ from app.db import connect
 from app.schemas.common import success
 from app.services.ai_client import build_ai_client
 from app.services.observability import log_event
+from app.services.rate_limit import enforce_client_error_rate_limit
 
 
 router = APIRouter(prefix="/api/system", tags=["system"])
@@ -76,6 +77,56 @@ def health_detail(settings: Settings) -> dict[str, object]:
     return {**summary, "storage": _storage_health(settings)}
 
 
+def _feature(enabled: bool, mode: str, notice: str) -> dict[str, object]:
+    return {"enabled": enabled, "mode": mode, "notice": notice}
+
+
+def capability_features(settings: Settings) -> dict[str, dict[str, object]]:
+    sms_configured = bool(
+        settings.sms_provider == "http"
+        and settings.sms_access_key
+        and settings.sms_access_secret
+        and settings.sms_http_endpoint
+        and settings.sms_sign_name
+        and settings.sms_template_id
+    )
+    sms_mode = "real" if sms_configured else ("demo" if settings.auth_demo_mode else "disabled")
+    payment_mode = (
+        "demo"
+        if settings.membership_enabled and settings.payment_demo_mode and not settings.production
+        else "disabled"
+    )
+    job_matching_real = bool(
+        settings.web_search_provider != "disabled" and settings.tavily_api_key
+    )
+    return {
+        "resume_import": _feature(
+            settings.resume_import_max_file_bytes > 0,
+            "real" if settings.resume_import_max_file_bytes > 0 else "disabled",
+            "支持 PDF、DOCX 简历导入。" if settings.resume_import_max_file_bytes > 0 else "简历导入暂不可用。",
+        ),
+        "sms_login": _feature(sms_mode != "disabled", sms_mode, {
+            "real": "已配置短信登录服务。",
+            "demo": "当前使用演示短信登录。",
+            "disabled": "短信登录暂不可用。",
+        }[sms_mode]),
+        # The callback endpoint is still an explicit 501, so credentials alone
+        # must not advertise an unusable provider as ready.
+        "wechat_oauth": _feature(False, "disabled", "微信登录服务尚未完成部署。"),
+        "payment": _feature(payment_mode != "disabled", payment_mode, {
+            "real": "已配置真实支付服务。",
+            "demo": "当前使用演示支付。",
+            "disabled": "支付服务暂不可用。",
+        }[payment_mode]),
+        "push_notifications": _feature(False, "disabled", "推送通知暂不可用。"),
+        "job_matching": _feature(
+            True,
+            "real" if job_matching_real else "demo",
+            "已配置岗位数据匹配服务。" if job_matching_real else "当前使用本地岗位数据进行匹配。",
+        ),
+    }
+
+
 def health_summary(settings: Settings) -> dict[str, object]:
     database = _database_health(settings)
     return {
@@ -83,6 +134,7 @@ def health_summary(settings: Settings) -> dict[str, object]:
         "database": database,
         "push_dispatcher_mode": settings.push_dispatcher_mode,
         "worker": _worker_health(settings),
+        "features": capability_features(settings),
         "backup": {
             "status": "manual",
             "hint": "Run the platform backup script and validate a restore before production deployment.",
@@ -173,7 +225,11 @@ def system_health_detail(request: Request) -> dict[str, object]:
 
 
 @router.post("/client-errors")
-def report_client_error(payload: ClientErrorPayload, request: Request) -> dict[str, object]:
+def report_client_error(
+    payload: ClientErrorPayload,
+    request: Request,
+    _rate_limit: None = Depends(enforce_client_error_rate_limit),
+) -> dict[str, object]:
     log_event(
         request,
         40,

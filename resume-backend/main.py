@@ -4,9 +4,10 @@ import asyncio
 from contextlib import asynccontextmanager, suppress
 import logging
 import sqlite3
+from time import monotonic
 from uuid import uuid4
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -47,7 +48,7 @@ from app.services.auth import AuthService
 from app.services.sms import SmsService
 from app.services.auth import current_user_id
 from app.services.membership import MembershipPackageConflictError, MembershipService, PaymentChannelUnavailableError, PaymentDemoDisabledError, PaymentSignatureInvalidError, VipPermissionError, get_current_vip
-from app.services.rate_limit import InMemoryRateLimiter
+from app.services.rate_limit import InMemoryRateLimiter, RateLimitExceededError
 from app.services.push import PushDispatcher
 from app.services.resume_imports import ResumeImportService
 from app.services.observability import configure_logging, log_event
@@ -85,6 +86,19 @@ async def _cleanup_downloads_periodically(download_service: DownloadService) -> 
         download_service.cleanup_expired()
 
 
+def _log_api_access(request: Request, response: Response, started: float) -> None:
+    # 轻量访问日志：只记 /api 业务路径，/health 等探活端点不记，避免噪音。
+    if not request.url.path.startswith("/api"):
+        return
+    log_event(
+        request,
+        logging.INFO,
+        "api_access",
+        status_code=response.status_code,
+        duration_ms=round((monotonic() - started) * 1000, 2),
+    )
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or load_settings()
     configure_logging(settings.log_level)
@@ -117,11 +131,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         settings.auth_rate_limit_max_requests,
         settings.auth_rate_limit_window_seconds,
     )
+    app.state.ai_rate_limiter = InMemoryRateLimiter(
+        settings.ai_rate_limit_max_requests,
+        settings.ai_rate_limit_window_seconds,
+    )
+    app.state.client_error_rate_limiter = InMemoryRateLimiter(
+        settings.client_error_rate_limit_max_requests,
+        settings.client_error_rate_limit_window_seconds,
+    )
 
     @app.middleware("http")
     async def add_request_id_and_limit_auth(request: Request, call_next):
         request_id = uuid4().hex
         request.state.request_id = request_id
+        started = monotonic()
         origin = request.headers.get("origin")
         if settings.production and origin and origin not in settings.cors_origins:
             response = JSONResponse(
@@ -130,6 +153,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             )
             response.headers["X-Request-ID"] = request_id
             _add_security_headers(response, settings.production)
+            _log_api_access(request, response, started)
             return response
         if request.method == "POST" and request.url.path.startswith("/api/auth/"):
             client_host = request.client.host if request.client else "unknown"
@@ -143,11 +167,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 )
                 response.headers["X-Request-ID"] = request_id
                 _add_security_headers(response, settings.production)
+                _log_api_access(request, response, started)
                 return response
 
         response = await call_next(request)
         response.headers["X-Request-ID"] = request_id
         _add_security_headers(response, settings.production)
+        _log_api_access(request, response, started)
         return response
     app.state.user_repository = UserRepository(database_target)
     app.state.password_account_repository = PasswordAccountRepository(database_target)
@@ -254,6 +280,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         log_event(request, logging.ERROR, "database_error", error_type=type(exception).__name__)
         return JSONResponse(status_code=503, content=error("database_error", "Database operation failed"))
 
+    try:
+        # psycopg 是可选依赖（纯 SQLite 部署可不装）；缺失时跳过 PostgreSQL 错误映射。
+        from psycopg import Error as PsycopgError
+
+        @app.exception_handler(PsycopgError)
+        def postgres_database_error(request: Request, exception: PsycopgError):
+            log_event(request, logging.ERROR, "database_error", error_type=type(exception).__name__)
+            return JSONResponse(status_code=503, content=error("database_error", "Database operation failed"))
+    except ImportError:
+        pass
+
+    @app.exception_handler(RateLimitExceededError)
+    def ai_rate_limited(request: Request, exception: RateLimitExceededError):
+        log_event(request, logging.INFO, "ai_rate_limited", retry_after_seconds=exception.retry_after_seconds)
+        return JSONResponse(
+            status_code=429,
+            content=error("rate_limited", "Too many AI requests. Please try again later."),
+            headers={"Retry-After": str(exception.retry_after_seconds)},
+        )
+
     @app.exception_handler(ExportEmptyError)
     def export_empty(request: Request, _: ExportEmptyError):
         logger.info("export error: %s %s (empty resume)", request.method, request.url.path)
@@ -346,7 +392,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/health")
     def health():
-        summary = system.health_summary(settings)
+        current_settings = app.state.settings
+        summary = system.health_summary(current_settings)
         return success({
             "status": summary["status"],
             "capabilities": ["job_plan", "job_match", "ai_setup"],
@@ -355,11 +402,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "critical_config": summary["critical_config"],
             "push_dispatcher_mode": summary["push_dispatcher_mode"],
             "worker": summary["worker"],
+            "features": summary["features"],
         })
 
     @app.get("/health/detail")
     def health_detail():
-        return success(system.health_detail(settings))
+        return success(system.health_detail(app.state.settings))
 
     # 业务 Router 在组装处统一注入 JWT 依赖，新增端点不会遗漏鉴权边界。
     business_routers = (
