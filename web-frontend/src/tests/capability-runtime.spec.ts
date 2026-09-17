@@ -27,6 +27,7 @@ vi.mock("../lib/auth", () => ({
 
 vi.mock("../lib/api", () => ({
   requestApi: vi.fn(),
+  SLOW_REQUEST_TIMEOUT_MS: 120_000,
 }))
 
 const requestApiMock = vi.mocked(requestApi)
@@ -181,6 +182,8 @@ describe.each([
     reasonId: "jobs-professional-mode-reason",
     result: { role_name: "Data analyst" },
     simplifiedPayload: { role_name: "Data analyst", report_mode: "simplified" },
+    // JobsView 的岗位查询走慢超时选项，requestApi 收到第三个参数。
+    slowTimeoutOptions: { timeoutMs: 120_000 },
     demoResult: {
       role_name: "Data analyst",
       report: { mode: "professional", summary: "Demo summary", actions: [], source_notice: "Source", evidence: [] },
@@ -211,8 +214,9 @@ describe.each([
       },
     },
     simplifiedPayload: { role_name: "Data analyst", year: 2024, report_mode: "simplified" },
+    slowTimeoutOptions: undefined,
   },
-])("$name capability gates", ({ component, querySelector, roleInput, reasonId, result, demoResult, simplifiedPayload }) => {
+])("$name capability gates", ({ component, querySelector, roleInput, reasonId, result, demoResult, simplifiedPayload, slowTimeoutOptions }) => {
   function mountView() {
     const test = testCapabilities({ jobMatching: disabled("Professional matching is unavailable") })
     const wrapper = mount(component, {
@@ -316,10 +320,15 @@ describe.each([
     await wrapper.find("form").trigger("submit")
     await flushPromises()
 
-    expect(requestApiMock).toHaveBeenCalledWith(querySelector, {
-      method: "POST",
-      body: JSON.stringify(simplifiedPayload),
-    })
+    const expectedArgs: unknown[] = [
+      querySelector,
+      {
+        method: "POST",
+        body: JSON.stringify(simplifiedPayload),
+      },
+    ]
+    if (slowTimeoutOptions) expectedArgs.push(slowTimeoutOptions)
+    expect(requestApiMock).toHaveBeenCalledWith(...expectedArgs)
   })
 })
 

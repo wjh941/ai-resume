@@ -400,7 +400,7 @@ describe("typed domain adapters", () => {
     expect(requestMock).toHaveBeenNthCalledWith(2, "/api/career/assessment/submit", expect.objectContaining({
       method: "POST",
       body: JSON.stringify({ answers: { q1: 4 }, report_mode: "professional" }),
-    }))
+    }), { timeoutMs: 120_000 })
   })
 
   it("loads recommendations and compares selected roles", async () => {

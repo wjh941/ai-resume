@@ -2,7 +2,7 @@
 import { BookmarkPlus, BriefcaseBusiness, Search } from "lucide-vue-next"
 import { computed, inject, ref, watch } from "vue"
 
-import { requestApi } from "../lib/api"
+import { requestApi, SLOW_REQUEST_TIMEOUT_MS } from "../lib/api"
 import { getApiErrorMessage } from "../lib/api-error"
 import { useApiResource } from "../composables/useApiResource"
 import AsyncButton from "../components/AsyncButton.vue"
@@ -78,7 +78,7 @@ const {
   const nextResult = await requestApi<JobResult>("/api/job/query", {
     method: "POST",
     body: JSON.stringify({ role_name: roleName.value.trim(), report_mode: reportMode.value }),
-  })
+  }, { timeoutMs: SLOW_REQUEST_TIMEOUT_MS })
   resultCapabilityMode.value = nextResult.report?.mode === "professional" ? requestedCapabilityMode : null
   return nextResult
 }, { fallbackMessage: "岗位分析暂时不可用。请确认 AI 服务已配置，或稍后重试。" })

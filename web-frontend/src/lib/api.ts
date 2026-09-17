@@ -2,6 +2,8 @@ import { clearSession, readSession } from "./session"
 
 export const SESSION_EXPIRED_EVENT = "resume-web-session-expired"
 export const DEFAULT_REQUEST_TIMEOUT_MS = 15_000
+// AI 生成与文件导出类请求的真实上限，与后端 ai_client 的 120s httpx 超时对齐。
+export const SLOW_REQUEST_TIMEOUT_MS = 120_000
 
 type ApiEnvelope<T> = {
   code?: string
@@ -11,11 +13,17 @@ type ApiEnvelope<T> = {
 }
 
 export class ApiRequestError extends Error {
-  constructor(message: string, readonly status: number) {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code = "",
+  ) {
     super(message)
     this.name = "ApiRequestError"
   }
 }
+
+export type ApiRequestOptions = { timeoutMs?: number }
 
 export class ApiTimeoutError extends ApiRequestError {
   constructor() {
@@ -44,13 +52,13 @@ function notifySessionExpired(): void {
   if (typeof window !== "undefined") window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
 }
 
-function createRequestSignal(callerSignal?: AbortSignal | null): { signal: AbortSignal; didTimeout: () => boolean; cleanup: () => void } {
+function createRequestSignal(callerSignal?: AbortSignal | null, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS): { signal: AbortSignal; didTimeout: () => boolean; cleanup: () => void } {
   const controller = new AbortController()
   let timedOut = false
   const timeoutId = setTimeout(() => {
     timedOut = true
     controller.abort()
-  }, DEFAULT_REQUEST_TIMEOUT_MS)
+  }, timeoutMs)
   const abortFromCaller = () => controller.abort(callerSignal?.reason)
   if (callerSignal) {
     if (callerSignal.aborted) abortFromCaller()
@@ -72,14 +80,14 @@ function rethrowRequestFailure(reason: unknown, request: ReturnType<typeof creat
   throw new ApiRequestError(readMessage(undefined), 0)
 }
 
-export async function requestApi<T>(path: string, init: RequestInit = {}): Promise<T> {
+export async function requestApi<T>(path: string, init: RequestInit = {}, options: ApiRequestOptions = {}): Promise<T> {
   const session = readSession()
   const headers = {
     "Content-Type": "application/json",
     ...(init.headers as Record<string, string> | undefined),
     ...(session ? { Authorization: `Bearer ${session.token}` } : {}),
   }
-  const request = createRequestSignal(init.signal)
+  const request = createRequestSignal(init.signal, options.timeoutMs)
   try {
     let response: Response
     try {
@@ -104,7 +112,7 @@ export async function requestApi<T>(path: string, init: RequestInit = {}): Promi
       notifySessionExpired()
     }
     if (!response.ok || body.code !== "ok") {
-      throw new ApiRequestError(readMessage(body), response.status)
+      throw new ApiRequestError(readMessage(body), response.status, body.code ?? "")
     }
 
     return body.data as T
@@ -113,13 +121,13 @@ export async function requestApi<T>(path: string, init: RequestInit = {}): Promi
   }
 }
 
-export async function downloadApi(path: string, init: RequestInit = {}): Promise<Blob> {
+export async function downloadApi(path: string, init: RequestInit = {}, options: ApiRequestOptions = {}): Promise<Blob> {
   const session = readSession()
   const headers = {
     ...(init.headers as Record<string, string> | undefined),
     ...(session ? { Authorization: `Bearer ${session.token}` } : {}),
   }
-  const request = createRequestSignal(init.signal)
+  const request = createRequestSignal(init.signal, options.timeoutMs)
   try {
     let response: Response
     try {
@@ -138,7 +146,7 @@ export async function downloadApi(path: string, init: RequestInit = {}): Promise
         if (request.didTimeout() && isAbortError(reason)) throw new ApiTimeoutError()
         if (isAbortError(reason)) throw reason
       }
-      throw new ApiRequestError(readMessage(body), response.status)
+      throw new ApiRequestError(readMessage(body), response.status, body?.code ?? "")
     }
 
     try {

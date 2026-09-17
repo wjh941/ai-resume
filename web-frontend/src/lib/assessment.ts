@@ -1,4 +1,4 @@
-import { requestApi } from "./api"
+import { requestApi, SLOW_REQUEST_TIMEOUT_MS } from "./api"
 
 export type AssessmentQuestion = {
   key: string
@@ -102,5 +102,5 @@ export async function submitAssessment(
   return fromBackend(await requestApi<BackendAssessment>("/api/career/assessment/submit", {
     method: "POST",
     body: JSON.stringify({ answers, report_mode: reportMode }),
-  }))
+  }, { timeoutMs: SLOW_REQUEST_TIMEOUT_MS }))
 }
