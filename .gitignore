@@ -12,3 +12,4 @@ node_modules/
 dist/
 unpackage/
 coverage/
+scripts/_smoke_export.docx
