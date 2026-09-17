@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI 求职成长工作台 · ai-resume</title>
+<meta name="description" content="三端联动的求职工作台：岗位情报、简历草稿与导出、职业规划、经历证据、投递看板。FastAPI + Vue3 + uni-app，677+ 测试全绿。" />
+<style>
+  :root {
+    --bg: #0b1020; --surface: #131a30; --surface-soft: #1a2240;
+    --text: #e8ecf8; --text-muted: #9aa5c4; --line: #26304f;
+    --brand: #2563eb; --brand-soft: #3b82f6; --accent: #22c55e; --warn: #f59e0b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--text); font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif; line-height: 1.7; }
+  a { color: var(--brand-soft); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+  header.site { position: sticky; top: 0; z-index: 10; background: rgba(11,16,32,.86); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  header.site .wrap { display: flex; align-items: center; justify-content: space-between; height: 62px; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--text); }
+  .logo .mark { width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(135deg, var(--brand), #7c3aed); display: grid; place-items: center; font-size: 15px; }
+  nav.top a { margin-left: 18px; color: var(--text-muted); font-size: 14px; }
+  nav.top a:hover { color: var(--text); text-decoration: none; }
+
+  .hero { padding: 84px 0 64px; text-align: center; background: radial-gradient(1200px 400px at 50% -80px, rgba(37,99,235,.28), transparent), radial-gradient(800px 320px at 80% 0, rgba(124,58,237,.16), transparent); }
+  .hero h1 { font-size: clamp(30px, 5vw, 48px); line-height: 1.25; letter-spacing: 1px; }
+  .hero h1 .grad { background: linear-gradient(90deg, #60a5fa, #a78bfa); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero p.lead { margin: 18px auto 0; max-width: 720px; color: var(--text-muted); font-size: clamp(15px, 2vw, 18px); }
+  .hero .cta { margin-top: 32px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px; border-radius: 10px; font-size: 15px; font-weight: 600; border: 1px solid var(--line); transition: transform .15s ease, box-shadow .15s ease; }
+  .btn:hover { text-decoration: none; transform: translateY(-2px); }
+  .btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; box-shadow: 0 8px 24px rgba(37,99,235,.35); }
+  .btn.ghost { color: var(--text); background: var(--surface); }
+  .hero .meta { margin-top: 26px; color: var(--text-muted); font-size: 13px; }
+  .hero .meta b { color: var(--text); }
+
+  section { padding: 56px 0; border-top: 1px solid var(--line); }
+  section h2 { font-size: 24px; margin-bottom: 8px; }
+  section .sub { color: var(--text-muted); margin-bottom: 28px; }
+
+  .grid { display: grid; gap: 16px; }
+  .grid.three { grid-template-columns: repeat(3, 1fr); }
+  .grid.two { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 860px) { .grid.three, .grid.two { grid-template-columns: 1fr; } }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 22px; transition: transform .15s ease, border-color .15s ease; }
+  .card:hover { transform: translateY(-3px); border-color: #35426e; }
+  .card .icon { font-size: 22px; }
+  .card h3 { font-size: 16px; margin: 10px 0 6px; }
+  .card p { color: var(--text-muted); font-size: 14px; }
+  .card .tag { display: inline-block; margin-top: 12px; padding: 3px 10px; border-radius: 999px; background: var(--surface-soft); border: 1px solid var(--line); color: var(--brand-soft); font-size: 12px; }
+
+  .stack { display: flex; flex-wrap: wrap; gap: 10px; }
+  .chip { padding: 8px 14px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-size: 13px; color: var(--text-muted); }
+  .chip b { color: var(--text); font-weight: 600; }
+
+  .arch { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 24px; font-family: Consolas, "Courier New", monospace; font-size: 13px; color: var(--text-muted); overflow-x: auto; line-height: 2; }
+  .arch .hl { color: #7dd3fc; } .arch .ok { color: var(--accent); } .arch .dim { color: #5b6684; }
+
+  ol.steps { margin-left: 20px; color: var(--text-muted); font-size: 14px; }
+  ol.steps li { margin-bottom: 10px; }
+  ol.steps code { background: var(--surface-soft); border: 1px solid var(--line); padding: 2px 8px; border-radius: 6px; font-size: 13px; color: #a5d6ff; }
+  .demo-tip { margin-top: 16px; padding: 14px 16px; border-radius: 10px; background: rgba(34,197,94,.08); border: 1px solid rgba(34,197,94,.3); color: #b7e4c7; font-size: 14px; }
+
+  footer.site { border-top: 1px solid var(--line); padding: 30px 0 44px; color: var(--text-muted); font-size: 13px; text-align: center; }
+  footer.site .links a { margin: 0 10px; }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <div class="logo"><span class="mark">🚀</span>ai-resume</div>
+    <nav class="top">
+      <a href="#features">功能</a>
+      <a href="#stack">技术架构</a>
+      <a href="#quickstart">快速开始</a>
+      <a href="https://github.com/wjh941/ai-resume" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="wrap">
+    <h1>AI 求职成长<span class="grad">工作台</span></h1>
+    <p class="lead">把「岗位情报 → 简历草稿 → 职业规划 → 投递跟进」放进同一个工作台。三端联动、AI 辅助但绝不用假数据敷衍你——AI 不可用时明确降级并告知。</p>
+    <div class="cta">
+      <a class="btn primary" href="https://ai-resume-workbench.vercel.app" target="_blank" rel="noopener">在线体验 Web 工作台 →</a>
+      <a class="btn ghost" href="https://github.com/wjh941/ai-resume" target="_blank" rel="noopener">查看源码</a>
+    </div>
+    <p class="meta"><b>677+</b> 自动化测试全绿 · 后端 <b>244</b> / Web <b>270</b> / 小程序 <b>163</b> · 首屏 gzip <b>10.3KB</b></p>
+  </div>
+</div>
+
+<section id="features">
+  <div class="wrap">
+    <h2>六大核心能力</h2>
+    <p class="sub">每一个功能都围绕"真实求职者每天要做的事"设计。</p>
+    <div class="grid three">
+      <div class="card"><div class="icon">🎯</div><h3>岗位情报查询</h3><p>输入目标岗位，生成职责拆解、硬性要求、必备/加分技能与晋升路线；专业版叠加个人能力对比与证据映射。</p><span class="tag">24h 缓存 · 秒回重复查询</span></div>
+      <div class="card"><div class="icon">📝</div><h3>简历草稿与导出</h3><p>结构化简历编辑器，本地检查点自动保存；一键导出 Word，云端 PDF 不可用时自动降级为浏览器打印（另存为 PDF）。</p><span class="tag">PDF / DOCX / 导入解析</span></div>
+      <div class="card"><div class="icon">🗺️</div><h3>职业规划</h3><p>基于账户画像生成个人化行动计划（7/30/90 天）与技术、管理双轨晋升路径，VIP 投影分级展示。</p><span class="tag">按账号隔离缓存</span></div>
+      <div class="card"><div class="icon">🧾</div><h3>经历证据库</h3><p>把做过的事沉淀为可验证的经历条目，规划与简历自动引用，让"我能胜任"有据可依。</p><span class="tag">验证状态流转</span></div>
+      <div class="card"><div class="icon">📌</div><h3>投递看板</h3><p>投递记录、状态流转、下一步行动与面试记录时间线，沉淀完整的求职过程数据。</p><span class="tag">状态机驱动</span></div>
+      <div class="card"><div class="icon">🛡️</div><h3>诚实的 AI 降级</h3><p>AI 超时/限流/格式异常时给出中文化原因并降级为精简版，绝不编造数据；降级后可一键重试专业版。</p><span class="tag">全链路错误信封</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="stack">
+  <div class="wrap">
+    <h2>技术架构</h2>
+    <p class="sub">前后端分离 + 三端复用，全部托管在免费档也能稳定演示。</p>
+    <div class="arch">
+<span class="dim">浏览器 / 微信小程序</span><br>
+├── <span class="hl">Web 工作台</span>（Vue 3 + Vite + TypeScript 严格模式）→ <span class="ok">Vercel</span><br>
+└── <span class="hl">小程序</span>（uni-app，H5 + 微信小程序双构建）<br>
+<span class="dim">↓ HTTPS（CORS 白名单 / JWT / 错误信封）</span><br>
+<span class="hl">FastAPI 后端</span>（SQLite · ai_client 中继容错 · 分级报告投影）→ <span class="ok">Render 免费档</span><br>
+├── job_cache / job_plan_cache（市场级 + 个人化两级缓存）<br>
+└── LLM 中继（json_object 模式 + 宽容解析 + 优雅降级）<br>
+<span class="dim">CI</span>：GitHub Actions —— 后端保活 ping · Pages 自动部署 · 全量测试守护
+    </div>
+    <div class="stack" style="margin-top:22px">
+      <span class="chip"><b>后端</b> FastAPI · SQLite · httpx · Pydantic v2</span>
+      <span class="chip"><b>Web</b> Vue 3 · Vite · TypeScript · Vitest · vue-tsc</span>
+      <span class="chip"><b>小程序</b> uni-app · Vitest · vue-tsc</span>
+      <span class="chip"><b>部署</b> Vercel · Render · GitHub Actions</span>
+      <span class="chip"><b>工程</b> 677+ tests · 冒烟 E2E · 部署契约脚本</span>
+    </div>
+  </div>
+</section>
+
+<section id="quickstart">
+  <div class="wrap">
+    <h2>快速开始</h2>
+    <p class="sub">三条命令跑起本地环境，或用一键按钮部署自己的云端。</p>
+    <div class="grid two">
+      <div class="card">
+        <h3>本地运行</h3>
+        <ol class="steps">
+          <li><code>git clone https://github.com/wjh941/ai-resume</code></li>
+          <li>后端：<code>cd resume-backend</code> → 配置 <code>.env</code>（AI_API_KEY 等）→ <code>uvicorn main:app --reload</code></li>
+          <li>Web：<code>cd web-frontend</code> → <code>npm install && npm run dev</code></li>
+          <li>小程序：<code>cd resume-miniprogram</code> → <code>npm run dev:h5</code></li>
+        </ol>
+        <div class="demo-tip">🔑 演示登录：手机号 <b>13800138000</b>，验证码 <b>123456</b>（无需真实短信）。</div>
+      </div>
+      <div class="card">
+        <h3>一键云端部署</h3>
+        <ol class="steps">
+          <li>后端：点击下方 Deploy to Render（蓝图已备好 render.yaml）</li>
+          <li>前端：Vercel 导入仓库，Root Directory 设为 <code>web-frontend</code></li>
+          <li>回填环境变量：<code>VITE_API_BASE_URL</code> = Render 域名，<code>CORS_ORIGINS</code> = Vercel 域名</li>
+        </ol>
+        <p style="margin-top:18px"><a href="https://render.com/deploy?repo=https://github.com/wjh941/ai-resume" target="_blank" rel="noopener"><img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" height="32" /></a></p>
+        <p style="margin-top:10px;color:var(--text-muted);font-size:13px">免费档说明：后端闲置约 15 分钟休眠，首访需 30-50 秒唤醒（已内置唤醒提示与自动保活）。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="site">
+  <div class="wrap">
+    <div class="links">
+      <a href="https://ai-resume-workbench.vercel.app" target="_blank" rel="noopener">在线体验</a> ·
+      <a href="https://github.com/wjh941/ai-resume" target="_blank" rel="noopener">GitHub 仓库</a> ·
+      <a href="https://github.com/wjh941/ai-resume/blob/feature/ai-resume-demo/README.md" target="_blank" rel="noopener">README</a> ·
+      <a href="https://github.com/wjh941/ai-resume/blob/feature/ai-resume-demo/docs/interview-notes.md" target="_blank" rel="noopener">面试要点笔记</a>
+    </div>
+    <p style="margin-top:14px">ai-resume · AI 求职成长工作台 · 用真实工程实践打磨的求职工具</p>
+  </div>
+</footer>
+
+</body>
+</html>
