@@ -21,6 +21,7 @@ import type {
 } from "../../types/application"
 import { filterApplications } from "../../utils/application-filter"
 import { showErrorToast } from "../../utils/error-feedback"
+import { formatDateTime, splitIsoDateTime, toIsoDateTime, todayIsoDate } from "../../utils/format"
 
 type Query = { roleName?: string; city?: string; draftId?: string }
 
@@ -102,6 +103,66 @@ function emptyForm(query: Query = {}): ApplicationInput {
 function queryFromPage(): Query {
   const current = getCurrentPages().at(-1) as { options?: Query } | undefined
   return current?.options ?? {}
+}
+
+function pickerValue(event: unknown): string {
+  const detail = (event as { detail?: { value?: string } }).detail
+  return typeof detail?.value === "string" ? detail.value : ""
+}
+
+function onAppliedAtChange(event: unknown) {
+  form.value.appliedAt = pickerValue(event) || null
+}
+
+function onNextActionAtChange(event: unknown) {
+  form.value.nextActionAt = pickerValue(event) || null
+}
+
+const interviewParts = computed(() => splitIsoDateTime(form.value.nextInterviewAt))
+
+function onInterviewDateChange(event: unknown) {
+  const date = pickerValue(event)
+  form.value.nextInterviewAt = date ? toIsoDateTime(date, interviewParts.value.time || "09:00") : null
+}
+
+function onInterviewTimeChange(event: unknown) {
+  const time = pickerValue(event)
+  if (!time) return
+  form.value.nextInterviewAt = toIsoDateTime(interviewParts.value.date || todayIsoDate(), time)
+}
+
+function clearInterviewAt() {
+  form.value.nextInterviewAt = null
+}
+
+const reminderParts = computed(() => splitIsoDateTime(reminderAt.value))
+
+function onReminderDateChange(event: unknown) {
+  const date = pickerValue(event)
+  reminderAt.value = date ? toIsoDateTime(date, reminderParts.value.time || "09:00") : ""
+}
+
+function onReminderTimeChange(event: unknown) {
+  const time = pickerValue(event)
+  if (!time) return
+  reminderAt.value = toIsoDateTime(reminderParts.value.date || todayIsoDate(), time)
+}
+
+function onInterviewFilterChange(event: unknown) {
+  interviewDate.value = pickerValue(event)
+}
+
+const timelineParts = computed(() => splitIsoDateTime(timelineDraft.value.occurredAt))
+
+function onTimelineDateChange(event: unknown) {
+  const date = pickerValue(event)
+  if (date) timelineDraft.value.occurredAt = toIsoDateTime(date, timelineParts.value.time || "09:00")
+}
+
+function onTimelineTimeChange(event: unknown) {
+  const time = pickerValue(event)
+  if (!time) return
+  timelineDraft.value.occurredAt = toIsoDateTime(timelineParts.value.date || todayIsoDate(), time)
 }
 
 async function load() {
@@ -308,21 +369,52 @@ onMounted(async () => {
           </picker>
         </view>
         <view class="two-columns">
-          <view class="field"><text>投递日期</text><input v-model="form.appliedAt" placeholder="YYYY-MM-DD（可空）" /></view>
-          <view class="field"><text>下一步日期</text><input v-model="form.nextActionAt" placeholder="YYYY-MM-DD（可空）" /></view>
+          <view class="field"><text>投递日期</text>
+            <view class="picker-row">
+              <picker mode="date" :value="form.appliedAt || ''" @change="onAppliedAtChange">
+                <view class="picker">{{ form.appliedAt || "选择日期" }}</view>
+              </picker>
+              <text v-if="form.appliedAt" class="picker-clear" @click="form.appliedAt = null">清除</text>
+            </view>
+          </view>
+          <view class="field"><text>下一步日期</text>
+            <view class="picker-row">
+              <picker mode="date" :value="form.nextActionAt || ''" @change="onNextActionAtChange">
+                <view class="picker">{{ form.nextActionAt || "选择日期" }}</view>
+              </picker>
+              <text v-if="form.nextActionAt" class="picker-clear" @click="form.nextActionAt = null">清除</text>
+            </view>
+          </view>
         </view>
         <view class="two-columns">
           <view class="field"><text>联系人</text><input v-model="form.contactInfo" placeholder="姓名、电话或邮箱（可空）" /></view>
           <view class="field"><text>附件引用</text><input v-model="form.attachmentRef" placeholder="材料名称或本地引用（可空）" /></view>
         </view>
-        <view class="field"><text>下次面试时间</text><input v-model="form.nextInterviewAt" placeholder="YYYY-MM-DDTHH:mm:ss+08:00（可空）" /></view>
+        <view class="field"><text>下次面试时间</text>
+          <view class="picker-row">
+            <picker mode="date" :value="interviewParts.date" @change="onInterviewDateChange">
+              <view class="picker">{{ interviewParts.date || "选择日期" }}</view>
+            </picker>
+            <picker mode="time" :value="interviewParts.time" @change="onInterviewTimeChange">
+              <view class="picker">{{ interviewParts.time }}</view>
+            </picker>
+            <text v-if="form.nextInterviewAt" class="picker-clear" @click="clearInterviewAt">清除</text>
+          </view>
+        </view>
         <view class="field"><text>面试复盘</text><textarea v-model="form.interviewNotes" placeholder="记录真实提问、表现和改进点" /></view>
         <view class="field"><text>备注</text><textarea v-model="form.notes" placeholder="例如：需要准备作品集" /></view>
         <view v-if="form.id" class="reminder-row">
-          <input v-model="reminderAt" placeholder="提醒时间，例如 2026-08-25T09:30:00+08:00" />
-          <button size="mini" class="secondary" :loading="reminderSaving" :disabled="reminderSaving" @click="saveReminder">保存面试提醒</button>
+          <view class="picker-row">
+            <picker mode="date" :value="reminderParts.date" @change="onReminderDateChange">
+              <view class="picker">{{ reminderParts.date || "提醒日期" }}</view>
+            </picker>
+            <picker mode="time" :value="reminderParts.time" @change="onReminderTimeChange">
+              <view class="picker">{{ reminderParts.time }}</view>
+            </picker>
+          </view>
+          <button size="mini" class="secondary" :loading="reminderSaving" :disabled="reminderSaving || !reminderAt" @click="saveReminder">保存面试提醒</button>
         </view>
-        <text v-if="form.draftId" class="linked-draft">已关联草稿：{{ form.draftId }}</text>
+        <text v-if="form.draftId" class="linked-draft">已关联简历草稿</text>
         <button class="primary" :loading="saving" :disabled="saving" @click="save">保存投递计划</button>
       </view>
 
@@ -338,12 +430,17 @@ onMounted(async () => {
 
       <view class="field interview-filter">
         <text>按面试日期筛选</text>
-        <input v-model="interviewDate" placeholder="YYYY-MM-DD" />
+        <view class="picker-row">
+          <picker mode="date" :value="interviewDate" @change="onInterviewFilterChange">
+            <view class="picker">{{ interviewDate || "选择日期" }}</view>
+          </picker>
+          <text v-if="interviewDate" class="picker-clear" @click="interviewDate = ''">清除</text>
+        </view>
       </view>
 
       <view v-if="upcomingInterviews.length" class="interview-panel">
         <text class="panel-title">面试日程</text>
-        <text v-for="item in upcomingInterviews" :key="item.id" class="panel-item">{{ item.roleName }} · {{ item.company }} · {{ item.nextInterviewAt }}</text>
+        <text v-for="item in upcomingInterviews" :key="item.id" class="panel-item">{{ item.roleName }} · {{ item.company }} · {{ formatDateTime(item.nextInterviewAt) }}</text>
       </view>
 
       <text v-if="error" class="ui-error-tip">{{ error }}</text>
@@ -363,18 +460,25 @@ onMounted(async () => {
         <text v-if="item.city || item.source" class="detail">{{ [item.city, item.source].filter(Boolean).join(" · ") }}</text>
         <text v-if="item.appliedAt" class="detail">投递：{{ item.appliedAt }}</text>
         <text v-if="item.nextActionAt" class="next-action">下一步：{{ item.nextActionAt }}</text>
-        <text v-if="item.nextInterviewAt" class="next-action">面试：{{ item.nextInterviewAt }}</text>
+        <text v-if="item.nextInterviewAt" class="next-action">面试：{{ formatDateTime(item.nextInterviewAt) }}</text>
         <text v-if="item.contactInfo" class="detail">联系人：{{ item.contactInfo }}</text>
         <text v-if="item.attachmentRef" class="detail">附件：{{ item.attachmentRef }}</text>
         <text v-if="item.interviewNotes" class="detail">复盘：{{ item.interviewNotes }}</text>
         <text v-if="item.notes" class="detail">备注：{{ item.notes }}</text>
-        <text v-if="item.draftId" class="linked-draft">关联草稿：{{ item.draftId }}</text>
+        <text v-if="item.draftId" class="linked-draft">已关联简历草稿</text>
         <view v-if="item.timeline?.length" class="timeline-list">
-          <text v-for="event in item.timeline" :key="event.id" class="timeline-item">{{ event.occurredAt }} · {{ event.title }}<template v-if="event.description">：{{ event.description }}</template></text>
+          <text v-for="event in item.timeline" :key="event.id" class="timeline-item">{{ formatDateTime(event.occurredAt) }} · {{ event.title }}<template v-if="event.description">：{{ event.description }}</template></text>
         </view>
         <view v-if="timelineDraft.applicationId === item.id" class="timeline-editor">
           <input v-model="timelineDraft.title" placeholder="时间线标题" />
-          <input v-model="timelineDraft.occurredAt" placeholder="发生时间" />
+          <view class="picker-row">
+            <picker mode="date" :value="timelineParts.date" @change="onTimelineDateChange">
+              <view class="picker">{{ timelineParts.date || "发生日期" }}</view>
+            </picker>
+            <picker mode="time" :value="timelineParts.time" @change="onTimelineTimeChange">
+              <view class="picker">{{ timelineParts.time }}</view>
+            </picker>
+          </view>
           <textarea v-model="timelineDraft.description" placeholder="补充说明（可空）" />
           <button size="mini" class="secondary" :loading="timelineSaving" :disabled="timelineSaving" @click="saveTimeline">添加时间线</button>
         </view>
@@ -398,7 +502,7 @@ button { margin-top: 20rpx; border-radius: 12rpx; }.primary { color: #fff; backg
 .filter-row { display: flex; flex-wrap: wrap; gap: 10rpx; margin-top: 22rpx; }.filter-chip { margin: 0; padding: 8rpx 14rpx; color: #607286; background: #edf2f7; border-radius: 999rpx; font-size: 22rpx; }.filter-chip.active { color: #fff; background: #1677ff; }.empty,.error { display: block; margin-top: 20rpx; padding: 28rpx 22rpx; color: #86909c; background: #fff; border: 1rpx dashed #d9e0e8; border-radius: 16rpx; font-size: 24rpx; line-height: 1.6; text-align: center; }.error { color: #b3422a; background: #fff7f0; border-color: #ffd8bf; }
 .empty-illustration { display: flex; flex-direction: column; gap: 8rpx; width: 116rpx; margin: 0 auto 20rpx; padding: 20rpx; background: #eef6ff; border: 1rpx solid #d4e8ff; border-radius: 18rpx; }.empty-illustration view { height: 9rpx; background: #9fc8f7; border-radius: 999rpx; }.empty-illustration view:nth-child(2) { width: 76%; }.empty-illustration view:nth-child(3) { width: 54%; }.empty-helper { display: block; margin-top: 10rpx; color: #86909c; font-size: 23rpx; }.empty-action { margin: 20rpx auto 0; color: #fff; background: #1677ff; font-size: 24rpx; }
 .record-card { padding: 22rpx; }.record-role,.record-company { display: block; }.record-role { color: #1f2329; font-size: 29rpx; font-weight: 700; }.record-company { margin-top: 6rpx; color: #86909c; font-size: 22rpx; }.status { flex-shrink: 0; padding: 7rpx 12rpx; color: #1677ff; background: #e8f3ff; border-radius: 999rpx; font-size: 21rpx; }.detail,.next-action { display: block; margin-top: 12rpx; color: #4e5969; font-size: 23rpx; line-height: 1.55; }.next-action { color: #a56727; }.actions { justify-content: flex-end; margin-top: 18rpx; }.actions button { min-width: 110rpx; }
-.interview-filter { margin-top: 20rpx; }.interview-panel { margin-top: 20rpx; padding: 22rpx; background: #eef8ff; border: 1rpx solid #c7e5ff; border-radius: 16rpx; }.panel-title,.panel-item { display: block; }.panel-title { color: #245b99; font-size: 28rpx; font-weight: 700; }.panel-item { margin-top: 10rpx; color: #4e6682; font-size: 23rpx; line-height: 1.5; }.reminder-row { display: flex; align-items: center; gap: 12rpx; margin-top: 20rpx; }.reminder-row input { flex: 1; }.reminder-row button { flex-shrink: 0; }.timeline-list { margin-top: 16rpx; padding-top: 14rpx; border-top: 1rpx solid #e8edf3; }.timeline-item { display: block; margin-top: 8rpx; color: #5f6f82; font-size: 22rpx; line-height: 1.5; }.timeline-editor { display: grid; gap: 12rpx; margin-top: 16rpx; }.timeline-editor textarea { min-height: 90rpx; }.timeline-editor button { justify-self: start; margin-top: 0; }
+.interview-filter { margin-top: 20rpx; }.interview-panel { margin-top: 20rpx; padding: 22rpx; background: #eef8ff; border: 1rpx solid #c7e5ff; border-radius: 16rpx; }.panel-title,.panel-item { display: block; }.panel-title { color: #245b99; font-size: 28rpx; font-weight: 700; }.panel-item { margin-top: 10rpx; color: #4e6682; font-size: 23rpx; line-height: 1.5; }.reminder-row { display: flex; align-items: center; gap: 12rpx; margin-top: 20rpx; }.reminder-row input { flex: 1; }.reminder-row button { flex-shrink: 0; }.timeline-list { margin-top: 16rpx; padding-top: 14rpx; border-top: 1rpx solid #e8edf3; }.timeline-item { display: block; margin-top: 8rpx; color: #5f6f82; font-size: 22rpx; line-height: 1.5; }.timeline-editor { display: grid; gap: 12rpx; margin-top: 16rpx; }.timeline-editor textarea { min-height: 90rpx; }.timeline-editor button { justify-self: start; margin-top: 0; }.picker-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12rpx; }.picker-row picker { flex: 1; }.picker-clear { color: #245b99; font-size: 24rpx; padding: 0 8rpx; }
 @media (max-width: 360px) { .two-columns { grid-template-columns: 1fr; }.summary-card,.reminder-row { align-items: flex-start; flex-direction: column; }.reminder-row { gap: 10rpx; }.pending { align-items: flex-start; flex-direction: column; } }
 .summary-card { border-radius: var(--ui-card-radius); }
 .record-card { transition: border-color var(--ui-motion-fast) var(--ui-motion-ease), box-shadow var(--ui-motion-fast) var(--ui-motion-ease); }

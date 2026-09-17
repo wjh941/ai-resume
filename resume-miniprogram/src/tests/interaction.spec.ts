@@ -80,7 +80,7 @@ describe("runWithLoading", () => {
     expect(applications).toContain("const reminderSaving = ref(false)")
     expect(applications).toContain("const pendingDeleteId = ref(\"\")")
     expect(applications).toContain(':loading="timelineSaving" :disabled="timelineSaving"')
-    expect(applications).toContain(':loading="reminderSaving" :disabled="reminderSaving"')
+    expect(applications).toContain(':loading="reminderSaving" :disabled="reminderSaving || !reminderAt"')
     expect(planner).toContain(':loading="taskSaving" :disabled="taskSaving"')
     expect(planner).toContain(':loading="loading" :disabled="loading"')
     expect(membership).toContain(':loading="purchasing" :disabled="purchasing || !capabilities.payment.enabled"')
