@@ -61,6 +61,7 @@ const demoSourceNotice = "本地/演示数据不代表实时职位或真实市�
 const capabilityNotice = ref("")
 const capabilityRefreshing = computed(() => context.refreshing.value)
 const saving = ref(false)
+const favoriteNotice = ref("")
 const roleFieldError = ref("")
 let requestedCapabilityMode: "real" | "demo" | null = null
 const unique = (items: Array<string | undefined>): string[] => [...new Set(items.filter((item): item is string => Boolean(item?.trim())).map((item) => item.trim()))]
@@ -144,6 +145,7 @@ async function queryRole() {
 
   roleFieldError.value = ""
   capabilityNotice.value = ""
+  favoriteNotice.value = ""
   await runQuery()
 }
 
@@ -151,11 +153,13 @@ async function favorite() {
   if (!result.value || saving.value) return
   saving.value = true
   clearRetry()
+  favoriteNotice.value = ""
   try {
     await requestApi("/api/job-collection/favorites", {
       method: "POST",
       body: JSON.stringify({ role_name: result.value.role_name }),
     })
+    favoriteNotice.value = `已收藏「${result.value.role_name}」，可在收藏岗位中查看`
   } catch (reason) {
     error.value = getApiErrorMessage(reason, "岗位收藏未保存，请稍后重试")
   } finally {
@@ -187,6 +191,7 @@ async function favorite() {
       <AsyncButton class="notice-action" type="button" :loading="capabilityRefreshing" @click="retryCapabilities">重试能力状态</AsyncButton>
       <AsyncButton class="notice-action" type="button" @click="emit('navigate', 'membership')">查看会员权益</AsyncButton>
     </ErrorNotice>
+    <p v-if="favoriteNotice" class="notice-success" role="status" aria-live="polite"><BookmarkPlus :size="16" aria-hidden="true" />{{ favoriteNotice }}</p>
 
     <article v-if="result" class="job-result">
       <div class="result-heading">

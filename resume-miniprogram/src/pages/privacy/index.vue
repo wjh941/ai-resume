@@ -21,9 +21,9 @@ async function exportBackup(): Promise<void> {
   backupBusy.value = true
   try {
     await exportLocalBackupFile(serializeLocalBackup(resumeStore.exportBackup(), careerStore.exportBackup()))
-    uni.showToast({ title: "Backup file created", icon: "success" })
+    uni.showToast({ title: "备份文件已生成", icon: "success" })
   } catch (reason) {
-    showErrorToast(toUserMessage(reason, "Unable to create a backup file."))
+    showErrorToast(toUserMessage(reason, "备份文件创建失败，请稍后重试。"))
   } finally {
     backupBusy.value = false
   }
@@ -34,11 +34,11 @@ async function restoreBackup(): Promise<void> {
   try {
     const backup = parseLocalBackup(await importLocalBackupFile())
     if (!resumeStore.restoreBackup(backup.resume) || !careerStore.restoreBackup(backup.career)) {
-      throw new Error("The backup file is invalid or unsupported.")
+      throw new Error("备份文件无效或格式不受支持。")
     }
-    uni.showToast({ title: "Local backup restored", icon: "success" })
+    uni.showToast({ title: "本机备份已恢复", icon: "success" })
   } catch (reason) {
-    showErrorToast(toUserMessage(reason, "Unable to restore the backup file."))
+    showErrorToast(toUserMessage(reason, "备份文件恢复失败，请稍后重试。"))
   } finally {
     backupBusy.value = false
   }
@@ -46,8 +46,8 @@ async function restoreBackup(): Promise<void> {
 
 function confirmRestoreBackup(): void {
   uni.showModal({
-    title: "Restore local backup",
-    content: "Replace the current local resume and career-planning data on this device? Server records will not change.",
+    title: "恢复本机备份",
+    content: "将使用备份替换本机上的简历与职业规划数据；服务端记录不会变化。确定继续吗？",
     success: (result) => {
       if (result.confirm) void restoreBackup()
     },
@@ -56,8 +56,8 @@ function confirmRestoreBackup(): void {
 
 function clearLocalData(): void {
   uni.showModal({
-    title: "Clear local workspace",
-    content: "This clears local checkpoints and pending tracker entries from this device.",
+    title: "清理本机工作区",
+    content: "将清除本机上的草稿检查点、职业规划与待同步投递记录；服务端数据不受影响。确定继续吗？",
     success: (result) => {
       if (!result.confirm) return
       clearLocalCareerWorkspace()
@@ -65,7 +65,7 @@ function clearLocalData(): void {
       careerStore.resetPlanner(false)
       consultationStore.resetConsultation(false)
       applicationsStore.clearLocalData()
-      uni.showToast({ title: "Local workspace cleared", icon: "success" })
+      uni.showToast({ title: "本机工作区已清理", icon: "success" })
     },
   })
 }

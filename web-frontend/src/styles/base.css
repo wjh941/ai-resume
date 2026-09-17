@@ -223,6 +223,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .notice-error-actions { display: inline-flex; flex: 0 0 auto; align-items: center; }
 .notice-error--compact { padding: 9px 11px; font-size: 13px; }
 .notice-success { display: flex; gap: 10px; align-items: center; }
+.application-checkpoint { flex-wrap: wrap; }
+.application-checkpoint span { flex: 1 1 auto; }
 .notice-success::before { width: 13px; height: 7px; flex: 0 0 13px; content: ""; border-bottom: 2px solid currentColor; border-left: 2px solid currentColor; transform: rotate(-45deg) scale(0); transform-origin: center; animation: success-check 260ms var(--motion-ease) forwards; }
 .notice-error { color: color-mix(in srgb, var(--danger) 78%, var(--ink)); background: color-mix(in srgb, var(--danger) 11%, var(--surface)); }
 .notice-success { color: color-mix(in srgb, var(--success) 70%, var(--ink)); background: color-mix(in srgb, var(--success) 12%, var(--surface)); }

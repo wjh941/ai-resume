@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Building2, CalendarClock, ChevronDown, ChevronUp, Clock3, Pencil, Plus, RefreshCw, Save, Trash2, X } from "lucide-vue-next"
+import { Building2, CalendarClock, CheckCircle2, ChevronDown, ChevronUp, Clock3, Pencil, Plus, RefreshCw, Save, Trash2, X } from "lucide-vue-next"
 import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from "vue"
 
 import AsyncButton from "../components/AsyncButton.vue"
@@ -12,6 +12,7 @@ import { addTimelineEvent, deleteApplication, listApplications, listTimeline, sa
 import { getApiErrorMessage } from "../lib/api-error"
 import { createApplicationFormSnapshot, isApplicationFormDirty, type ApplicationFormValues, type ApplicationTimelineValues } from "../lib/application-form-state"
 import { appendTimelineEvent, removeApplication, replaceApplication } from "../lib/application-workflow"
+import { clearApplicationCheckpoint, readApplicationCheckpoint, writeApplicationCheckpoint, type ApplicationCheckpoint } from "../lib/application-checkpoint"
 import { formatDateTime } from "../lib/format"
 import { runPendingGuardedAction, resolveApplicationsCloseAction, resolveWorkspaceShortcut } from "../lib/keyboard-shortcuts"
 import { NAVIGATION_GUARD_KEY } from "../lib/navigation-guard"
@@ -44,6 +45,23 @@ const isDirty = computed(() => {
 })
 let unregisterNavigationGuard: (() => void) | null = null
 let navigationBlocked = false
+const restoredCheckpoint = ref<ApplicationCheckpoint | null>(null)
+
+/** 恢复本机检查点里的表单内容（字段都是 input 绑定格式的字符串，直接回填即可）。 */
+function applyRestoredCheckpoint(): void {
+  const saved = restoredCheckpoint.value
+  if (!saved) return
+  editingId.value = null
+  form.value = { company: saved.form.company, roleName: saved.form.roleName, city: saved.form.city, status: saved.form.status, source: saved.form.source, appliedAt: saved.form.appliedAt, nextActionAt: saved.form.nextActionAt, nextInterviewAt: saved.form.nextInterviewAt, interviewNotes: saved.form.interviewNotes, notes: saved.form.notes, contactInfo: saved.form.contactInfo, attachmentRef: saved.form.attachmentRef, draftId: saved.form.draftId }
+  timelineForm.value = { title: saved.timeline.title, description: saved.timeline.description, occurredAt: saved.timeline.occurredAt }
+  reminderAt.value = saved.reminderAt
+  restoredCheckpoint.value = null
+}
+
+function dismissRestoredCheckpoint(): void {
+  restoredCheckpoint.value = null
+  clearApplicationCheckpoint(window.localStorage)
+}
 
 function canLeaveForNavigation(): boolean {
   if (!isDirty.value) {
@@ -193,8 +211,15 @@ function handleBeforeUnload(event: BeforeUnloadEvent): void {
 onMounted(() => {
   if (navigation) unregisterNavigationGuard = navigation.register(canLeaveForNavigation)
   window.addEventListener("keydown", handleShortcut)
+  const saved = readApplicationCheckpoint(window.localStorage)
+  if (saved && !isDirty.value) restoredCheckpoint.value = saved
   void refresh()
 })
+watch([form, timelineForm, reminderAt], () => {
+  // 表单有未保存内容时持续落盘；回到干净状态（已保存或已放弃）即清除。
+  if (isDirty.value) writeApplicationCheckpoint(window.localStorage, createApplicationFormSnapshot(form.value, timelineForm.value, reminderAt.value))
+  else clearApplicationCheckpoint(window.localStorage)
+}, { deep: true })
 watch(isDirty, (dirty) => {
   if (dirty) window.addEventListener("beforeunload", handleBeforeUnload)
   else {
@@ -213,6 +238,12 @@ onBeforeUnmount(() => {
 <template>
   <section class="view-layout">
     <div class="view-heading"><div><h1 id="applications-title">投递管理</h1><p>保存投递意向、跟进状态和面试安排，让每一次行动都可复盘。</p></div><AsyncButton class="text-action" type="button" :loading="loading" @click="refresh"><RefreshCw :size="16" aria-hidden="true" />刷新</AsyncButton></div>
+    <p v-if="restoredCheckpoint" class="application-checkpoint notice-success" role="status">
+      <CheckCircle2 :size="16" aria-hidden="true" />
+      <span>检测到 {{ formatDateTime(new Date(restoredCheckpoint.savedAt).toISOString()) }} 未保存的投递填写内容（仅保存在本机）。</span>
+      <AsyncButton class="notice-action" type="button" @click="applyRestoredCheckpoint">恢复填写</AsyncButton>
+      <AsyncButton class="text-action compact" type="button" @click="dismissRestoredCheckpoint">放弃</AsyncButton>
+    </p>
     <form class="application-form workbench-form" :aria-describedby="error ? 'applications-error' : undefined" @submit.prevent="submit">
       <label><span>公司</span><input v-model.trim="form.company" maxlength="200" placeholder="例如：示例科技" /></label>
       <label><span>岗位</span><input v-model.trim="form.roleName" required maxlength="160" placeholder="例如：产品运营" :aria-invalid="Boolean(error && !form.roleName.trim())" /></label>
