@@ -347,6 +347,8 @@ Vercel 只能托管静态前端，FastAPI + SQLite 需要单独的常驻主机�
 3. 环境变量中设置 `VITE_API_BASE_URL=https://<你的 Render 后端域名>`（结尾不带斜杠；该值会编译进浏览器产物，只放公开地址，不要放密钥）；
 4. 部署完成后访问分配的 `*.vercel.app` 域名验证登录与岗位查询。
 
+> **部署契约已本地演练验证**：以 `VITE_API_BASE_URL` 构建、静态伺服产物、跨源白名单直连后端的完整路径（静态资源加载、OPTIONS 预检、匿名 POST、登录换 token、带 `Authorization` 的认证请求与 `X-Request-ID`/`Retry-After` 暴露头）均在本地预演通过。Render 侧记得在环境变量 `CORS_ORIGINS` 中填入 Vercel 域名（HTTPS，结尾不带斜杠，多个用英文逗号分隔）。
+
 ## 路线图
 
 Phase 1-10 的实现与待办见 [Phase10 变更记录](docs/phase10-changelog.md)。后续重点为真实 SMS/WeChat 推送、真实 PDF/Word 解析和病毒扫描、已授权岗位数据源，以及团队协作与导师评审；这些能力在当前版本均未启用。
