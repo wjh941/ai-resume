@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
-from typing import Literal, Protocol
+import re
+from typing import Any, Literal, Protocol, get_args, get_origin, TypeVar
 
 import httpx
+from pydantic import BaseModel
 
 from app.config import Settings
 from app.schemas.consultation import (
@@ -193,6 +195,87 @@ class DevelopmentAIClient(UnconfiguredAIClient):
         return score_assessment(answers)
 
 
+def _extract_llm_json(content: str) -> Any:
+    """容忍中继模型的常见包装：```json 围栏、前后杂文本、单键信封由调用方处理。"""
+    text = (content or "").strip()
+    if text.startswith("```"):
+        text = re.sub(r"^```[a-zA-Z0-9_-]*[ \t]*\r?\n?", "", text)
+        text = re.sub(r"\r?\n?[ \t]*```$", "", text)
+        text = text.strip()
+    try:
+        return json.loads(text)
+    except (TypeError, ValueError):
+        start, end = text.find("{"), text.rfind("}")
+        if start == -1 or end <= start:
+            raise
+        return json.loads(text[start : end + 1])
+
+
+def _coerce_scalar_str(item: Any) -> str:
+    if isinstance(item, str):
+        return item
+    if isinstance(item, dict):
+        parts = [str(v).strip() for v in item.values() if isinstance(v, str) and v.strip()]
+        if parts:
+            return "；".join(parts)
+        return json.dumps(item, ensure_ascii=False)
+    return str(item)
+
+
+def _coerce_for_model(model: type[BaseModel], data: Any) -> Any:
+    """按模型字段注解递归矫正：list[str] 里的 dict/标量压平为字符串。"""
+    if not isinstance(data, dict):
+        return data
+    fields = model.model_fields
+    coerced: dict[str, Any] = {}
+    for key, value in data.items():
+        field = fields.get(key)
+        if field is None:
+            coerced[key] = value
+            continue
+        annotation = field.annotation
+        origin = get_origin(annotation)
+        if origin is list:
+            (item_type,) = get_args(annotation)
+            if isinstance(value, list):
+                if item_type is str:
+                    coerced[key] = [_coerce_scalar_str(item) for item in value]
+                elif isinstance(item_type, type) and issubclass(item_type, BaseModel):
+                    coerced[key] = [_coerce_for_model(item_type, item) for item in value if isinstance(item, dict)]
+                else:
+                    coerced[key] = value
+            else:
+                coerced[key] = value
+        elif isinstance(annotation, type) and issubclass(annotation, BaseModel) and isinstance(value, dict):
+            coerced[key] = _coerce_for_model(annotation, value)
+        else:
+            coerced[key] = value
+    return coerced
+
+
+ModelT = TypeVar("ModelT", bound=BaseModel)
+
+
+def parse_llm_model(content: str, model: type[ModelT], invalid: AIServiceError) -> ModelT:
+    """把中继返回宽容地解析为指定模型：围栏/杂文本/单键信封/list[str] 畸形项统一处理。"""
+    try:
+        data = _extract_llm_json(content)
+    except (TypeError, ValueError) as error:
+        raise invalid from error
+    attempts = [data]
+    if isinstance(data, dict) and len(data) == 1:
+        inner = next(iter(data.values()))
+        if isinstance(inner, dict):
+            attempts.append(inner)
+    last_error: ValueError | None = None
+    for payload in attempts:
+        try:
+            return model.model_validate(_coerce_for_model(model, payload))
+        except ValueError as error:
+            last_error = error
+    raise invalid from last_error
+
+
 def _coerce_job_intelligence(content: str) -> JobIntelligence:
     """矫正不同质量上游模型的两类常见形状偏差后再校验，失败统一转 ai_invalid_response。
 
@@ -203,7 +286,7 @@ def _coerce_job_intelligence(content: str) -> JobIntelligence:
     """
     invalid = AIServiceError("ai_invalid_response", "AI 岗位情报返回格式异常，请稍后重试")
     try:
-        raw = json.loads(content)
+        raw = _extract_llm_json(content)
     except (TypeError, ValueError) as error:
         raise invalid from error
     if not isinstance(raw, dict):
@@ -285,10 +368,11 @@ class OpenAICompatibleClient:
                 ensure_ascii=False,
             ),
         )
-        try:
-            return ComparisonActionPlan.model_validate_json(content)
-        except ValueError as error:
-            raise AIServiceError("ai_invalid_response", "AI 职业规划结果格式异常，请稍后重试") from error
+        return parse_llm_model(
+            content,
+            ComparisonActionPlan,
+            AIServiceError("ai_invalid_response", "AI 职业规划结果格式异常，请稍后重试"),
+        )
 
     async def build_job_consultation(
         self,
@@ -320,7 +404,11 @@ class OpenAICompatibleClient:
                 ensure_ascii=False,
             ),
         )
-        return JobConsultationResponse.model_validate_json(content)
+        return parse_llm_model(
+            content,
+            JobConsultationResponse,
+            AIServiceError("ai_invalid_response", "AI 岗位咨询返回格式异常，请稍后重试"),
+        )
 
     async def review_resume_text(
         self,
@@ -343,7 +431,11 @@ class OpenAICompatibleClient:
                 ensure_ascii=False,
             ),
         )
-        return ResumeReviewResponse.model_validate_json(content)
+        return parse_llm_model(
+            content,
+            ResumeReviewResponse,
+            AIServiceError("ai_invalid_response", "AI 简历优化返回格式异常，请稍后重试"),
+        )
 
     async def build_career_advice(
         self,
@@ -365,7 +457,11 @@ class OpenAICompatibleClient:
                 ensure_ascii=False,
             ),
         )
-        return CareerAdviceResponse.model_validate_json(content)
+        return parse_llm_model(
+            content,
+            CareerAdviceResponse,
+            AIServiceError("ai_invalid_response", "AI 求职建议返回格式异常，请稍后重试"),
+        )
 
     async def rewrite_resume(
         self,
@@ -378,7 +474,11 @@ class OpenAICompatibleClient:
             "employers, dates, schools, certificates, projects, or stated metrics.",
             json.dumps({"mode": mode, "resume": resume.model_dump(), "target_job": job.model_dump()}, ensure_ascii=False),
         )
-        return ResumePayload.model_validate_json(content)
+        return parse_llm_model(
+            content,
+            ResumePayload,
+            AIServiceError("ai_invalid_response", "AI 简历改写返回格式异常，请稍后重试"),
+        )
 
     async def build_job_plan(
         self,
@@ -405,10 +505,11 @@ class OpenAICompatibleClient:
                         "resume": resume, "assessment": assessment, "expand_detail": expand_detail},
                        ensure_ascii=False),
         )
-        try:
-            return JobPlanResponse.model_validate_json(content)
-        except ValueError as error:
-            raise AIServiceError("ai_invalid_response", "AI 职业规划返回格式异常，请稍后重试") from error
+        return parse_llm_model(
+            content,
+            JobPlanResponse,
+            AIServiceError("ai_invalid_response", "AI 职业规划返回格式异常，请稍后重试"),
+        )
 
     async def _chat_completion(self, system_prompt: str, user_prompt: str) -> str:
         try:
