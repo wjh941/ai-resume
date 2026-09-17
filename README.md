@@ -327,6 +327,24 @@ npm run build:mp-weixin
 - `WORKER_ENABLED=true` 时应单独运行 APScheduler worker。默认推送模式为 `mock`，仅记录日志，当前不会真实调用 SMS 或 WeChat。
 - 生产配置、密钥、运营手机号白名单和导入文件限制都必须在后端环境变量或密钥管理器中设置，绝不能暴露到 H5。
 
+### 云端部署（Vercel 前端 + Render 后端）
+
+Vercel 只能托管静态前端，FastAPI + SQLite 需要单独的常驻主机。当前推荐的免费组合：
+
+**后端（Render 免费档）**
+
+1. Render Dashboard → New → Blueprint → 选择本仓库，会读取根目录 `render.yaml`；
+2. 按提示填入三个私密变量：`CORS_ORIGINS`（填 Vercel 域名，如 `https://ai-resume-web.vercel.app`）、`AI_API_KEY` 与 `AI_BASE_URL`（与本地 `.env` 同名变量一致）；
+3. 部署完成后记录服务地址（如 `https://ai-resume-backend.onrender.com`），`/health` 为健康检查端点。
+4. 注意：免费档磁盘不持久，重新部署或重启后 SQLite 数据会重置；持久化需付费档挂载磁盘或改用 `DATABASE_URL` 指向 PostgreSQL。
+
+**前端（Vercel）**
+
+1. Vercel Dashboard → Add New → Project → Import 本仓库；
+2. Root Directory 设为 `web-frontend`（构建命令 `npm run build`、输出目录 `dist` 会被自动识别，`vercel.json` 已含 SPA 重写）；
+3. 环境变量中设置 `VITE_API_BASE_URL=https://<你的 Render 后端域名>`（结尾不带斜杠；该值会编译进浏览器产物，只放公开地址，不要放密钥）；
+4. 部署完成后访问分配的 `*.vercel.app` 域名验证登录与岗位查询。
+
 ## 路线图
 
 Phase 1-10 的实现与待办见 [Phase10 变更记录](docs/phase10-changelog.md)。后续重点为真实 SMS/WeChat 推送、真实 PDF/Word 解析和病毒扫描、已授权岗位数据源，以及团队协作与导师评审；这些能力在当前版本均未启用。
