@@ -27,20 +27,31 @@ function asyncView(loader: () => Promise<{ default: Component }>): Component {
   })
 }
 
-const viewComponents: Record<WorkspaceView, Component> = {
-  overview: asyncView(() => import("./views/OverviewView.vue")),
-  resume: asyncView(() => import("./views/ResumeView.vue")),
-  career: asyncView(() => import("./views/CareerView.vue")),
-  jobs: asyncView(() => import("./views/JobsView.vue")),
-  applications: asyncView(() => import("./views/ApplicationsView.vue")),
-  evidence: asyncView(() => import("./views/EvidenceView.vue")),
-  membership: asyncView(() => import("./views/MembershipView.vue")),
-  assessment: asyncView(() => import("./views/AssessmentView.vue")),
-  comparison: asyncView(() => import("./views/ComparisonView.vue")),
-  insights: asyncView(() => import("./views/InsightsView.vue")),
-  account: asyncView(() => import("./views/AccountView.vue")),
+const viewLoaders: Record<WorkspaceView, () => Promise<{ default: Component }>> = {
+  overview: () => import("./views/OverviewView.vue"),
+  resume: () => import("./views/ResumeView.vue"),
+  career: () => import("./views/CareerView.vue"),
+  jobs: () => import("./views/JobsView.vue"),
+  applications: () => import("./views/ApplicationsView.vue"),
+  evidence: () => import("./views/EvidenceView.vue"),
+  membership: () => import("./views/MembershipView.vue"),
+  assessment: () => import("./views/AssessmentView.vue"),
+  comparison: () => import("./views/ComparisonView.vue"),
+  insights: () => import("./views/InsightsView.vue"),
+  account: () => import("./views/AccountView.vue"),
 }
+const viewComponents = Object.fromEntries(
+  (Object.keys(viewLoaders) as WorkspaceView[]).map((view) => [view, asyncView(viewLoaders[view])]),
+) as Record<WorkspaceView, Component>
 const ResumeEditorView = asyncView(() => import("./views/ResumeEditorView.vue"))
+
+// 指针悬停/键盘聚焦侧边栏时提前加载目标视图 chunk，点击时几乎零等待。
+const warmedViews = new Set<WorkspaceView>()
+function prefetchView(view: WorkspaceView): void {
+  if (warmedViews.has(view)) return
+  warmedViews.add(view)
+  void viewLoaders[view]().catch(() => warmedViews.delete(view))
+}
 
 const session = ref<Session | null>(readSession())
 const context = createCapabilityContext()
@@ -203,7 +214,7 @@ async function logout() {
 <template>
   <LoginPanel v-if="!session" :session-notice="sessionExpired ? '登录已过期，请重新登录后继续。' : accountDeletedNotice || undefined" @authenticated="session = $event" />
   <div v-else class="web-shell">
-    <WebSidebar :active-view="activeView" @navigate="navigateTo" />
+    <WebSidebar :active-view="activeView" @navigate="navigateTo" @prefetch="prefetchView" />
     <main class="web-workspace">
       <WebTopbar :user="session.user" :dark="dark" :logout-loading="logoutLoading" @logout="logout" @toggle-theme="dark = !dark" />
       <section class="workspace-stage" :aria-labelledby="editingDraftId ? 'resume-editor-title' : `${activeView}-title`">

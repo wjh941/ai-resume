@@ -34,6 +34,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   navigate: [view: WorkspaceView]
+  prefetch: [view: WorkspaceView]
 }>()
 
 const navigationGroups = [
@@ -81,6 +82,7 @@ function closeDrawer(): void { drawerOpen.value = false }
 function toggleGroup(label: string): void { collapsedGroups.value[label] = !collapsedGroups.value[label] }
 function isGroupCollapsed(label: string): boolean { return Boolean(collapsedGroups.value[label]) }
 function navigateTo(view: WorkspaceView): void { emit("navigate", view); closeDrawer() }
+function prefetchView(view: WorkspaceView): void { emit("prefetch", view) }
 function onKeydown(event: KeyboardEvent): void { if (event.key === "Escape") closeDrawer() }
 
 onMounted(() => window.addEventListener("keydown", onKeydown))
@@ -109,7 +111,7 @@ onUnmounted(() => window.removeEventListener("keydown", onKeydown))
         </button>
         <Transition name="group-swipe">
           <div v-if="!isGroupCollapsed(group.label)" class="navigation-group-items">
-            <button v-for="item in group.items" :key="item.key" class="navigation-item" :class="{ 'is-active': activeView === item.key }" type="button" :aria-current="activeView === item.key ? 'page' : undefined" @click="navigateTo(item.key)">
+            <button v-for="item in group.items" :key="item.key" class="navigation-item" :class="{ 'is-active': activeView === item.key }" type="button" :aria-current="activeView === item.key ? 'page' : undefined" @pointerenter="prefetchView(item.key)" @focus="prefetchView(item.key)" @click="navigateTo(item.key)">
               <component :is="item.icon" :size="19" stroke-width="1.8" aria-hidden="true" /><span>{{ item.label }}</span>
             </button>
           </div>

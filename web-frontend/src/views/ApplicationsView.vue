@@ -215,10 +215,20 @@ onMounted(() => {
   if (saved && !isDirty.value) restoredCheckpoint.value = saved
   void refresh()
 })
+let checkpointTimer: number | null = null
 watch([form, timelineForm, reminderAt], () => {
-  // 表单有未保存内容时持续落盘；回到干净状态（已保存或已放弃）即清除。
-  if (isDirty.value) writeApplicationCheckpoint(window.localStorage, createApplicationFormSnapshot(form.value, timelineForm.value, reminderAt.value))
-  else clearApplicationCheckpoint(window.localStorage)
+  // 回到干净状态（已保存或已放弃）立即清除；写入则防抖 300ms，
+  // 避免每次按键都同步写 localStorage 造成输入卡顿。
+  if (!isDirty.value) {
+    if (checkpointTimer !== null) { window.clearTimeout(checkpointTimer); checkpointTimer = null }
+    clearApplicationCheckpoint(window.localStorage)
+    return
+  }
+  if (checkpointTimer !== null) window.clearTimeout(checkpointTimer)
+  checkpointTimer = window.setTimeout(() => {
+    checkpointTimer = null
+    if (isDirty.value) writeApplicationCheckpoint(window.localStorage, createApplicationFormSnapshot(form.value, timelineForm.value, reminderAt.value))
+  }, 300)
 }, { deep: true })
 watch(isDirty, (dirty) => {
   if (dirty) window.addEventListener("beforeunload", handleBeforeUnload)
@@ -232,6 +242,7 @@ onBeforeUnmount(() => {
   unregisterNavigationGuard = null
   window.removeEventListener("keydown", handleShortcut)
   window.removeEventListener("beforeunload", handleBeforeUnload)
+  if (checkpointTimer !== null) { window.clearTimeout(checkpointTimer); checkpointTimer = null }
 })
 </script>
 
