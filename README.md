@@ -6,6 +6,8 @@
 
 **线上 Demo（Web 工作台）**：`https://ai-resume-workbench.vercel.app`（前端 Vercel + 后端 Render 免费档；后端闲置会休眠，首次访问约需 30-50 秒唤醒，属免费档正常行为）
 
+**项目主页（GitHub Pages）**：`https://wjh941.github.io/ai-resume/`（由 `site/` 静态站与 GitHub Actions 自动部署）
+
 ## 项目亮点
 
 **三端一体的求职工作台**：FastAPI 后端 + uni-app 小程序/H5 + Vue3 Web 工作台，单仓库、同一套 JWT 账号体系与 12 大类 / 204 岗位的本地知识库。
