@@ -4,6 +4,13 @@ export const SESSION_EXPIRED_EVENT = "resume-web-session-expired"
 export const DEFAULT_REQUEST_TIMEOUT_MS = 15_000
 // AI 生成与文件导出类请求的真实上限，与后端 ai_client 的 120s httpx 超时对齐。
 export const SLOW_REQUEST_TIMEOUT_MS = 120_000
+// 部署到 Vercel 等静态托管时，通过 VITE_API_BASE_URL 指向后端服务（如 https://xxx.onrender.com）；
+// 本地开发留空，继续走 Vite 代理的相对路径。
+const API_BASE_URL: string = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/+$/, "") ?? ""
+
+function apiUrl(path: string): string {
+  return `${API_BASE_URL}${path}`
+}
 
 type ApiEnvelope<T> = {
   code?: string
@@ -91,7 +98,7 @@ export async function requestApi<T>(path: string, init: RequestInit = {}, option
   try {
     let response: Response
     try {
-      response = await fetch(path, { ...init, headers, signal: request.signal })
+      response = await fetch(apiUrl(path), { ...init, headers, signal: request.signal })
     } catch (reason) {
       rethrowRequestFailure(reason, request)
     }
@@ -131,7 +138,7 @@ export async function downloadApi(path: string, init: RequestInit = {}, options:
   try {
     let response: Response
     try {
-      response = await fetch(path, { ...init, headers, signal: request.signal })
+      response = await fetch(apiUrl(path), { ...init, headers, signal: request.signal })
     } catch (reason) {
       rethrowRequestFailure(reason, request)
     }
@@ -177,7 +184,7 @@ export async function uploadApi<T>(
   try {
     let response: Response
     try {
-      response = await fetch(path, { method: "POST", headers, body: form, signal: request.signal })
+      response = await fetch(apiUrl(path), { method: "POST", headers, body: form, signal: request.signal })
     } catch (reason) {
       rethrowRequestFailure(reason, request)
     }
