@@ -25,6 +25,7 @@ import type {
 import { prepareResumeForJob } from "../../utils/resume-autofill"
 import { completeOnboarding, hasCompletedOnboarding } from "../../utils/onboarding"
 import { transitionJobRoleFeedback } from "../../utils/h5-feedback"
+import { goTab } from "../../utils/navigation"
 
 const roleName = ref("")
 const selectedRoles = ref<string[]>([])
@@ -408,7 +409,7 @@ function openKnowledgebase() {
 }
 
 function openAccount() {
-  uni.navigateTo({ url: "/pages/account/index" })
+  goTab("/pages/account/index")
 }
 
 function finishOnboarding(): void {

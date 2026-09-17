@@ -20,5 +20,17 @@
     { "path": "pages/operator-knowledge/index", "style": { "navigationBarTitleText": "运营知识库" } },
     { "path": "pages/error/index", "style": { "navigationBarTitleText": "页面恢复" } }
   ],
+  "tabBar": {
+    "color": "#7a8699",
+    "selectedColor": "#245b99",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      { "pagePath": "pages/job-search/index", "text": "岗位情报" },
+      { "pagePath": "pages/drafts/index", "text": "简历草稿" },
+      { "pagePath": "pages/evidence/index", "text": "经历证据" },
+      { "pagePath": "pages/account/index", "text": "账户中心" }
+    ]
+  },
   "globalStyle": { "navigationBarTextStyle": "black", "navigationBarBackgroundColor": "#ffffff", "backgroundColor": "#f7f8fa" }
 }

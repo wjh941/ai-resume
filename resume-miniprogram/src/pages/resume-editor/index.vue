@@ -20,6 +20,7 @@ import { validateResume } from "../../utils/validators"
 import { downloadExport } from "../../utils/download-export"
 import { notify } from "../../utils/notifications"
 import { showErrorToast } from "../../utils/error-feedback"
+import { redirectPage } from "../../utils/navigation"
 import { captureFocusRestore } from "../../utils/focus-restore"
 import type { ResumePayload } from "../../types/resume"
 import { defaultCapabilities, getCapabilities, isCapabilityEnabled, type Capabilities } from "../../services/capability-api"
@@ -56,7 +57,8 @@ function openApplicationTracker() {
   if (resume.value.job.targetRole) params.set("roleName", resume.value.job.targetRole)
   if (resume.value.basic.city) params.set("city", resume.value.basic.city)
   if (store.draft.id) params.set("draftId", store.draft.id)
-  uni.navigateTo({ url: `/pages/applications/index?${params}` })
+  // 简历已完成，投递是下一步动作；替换当前页避免“编辑→投递→岗位”循环把页面栈推满。
+  redirectPage(`/pages/applications/index?${params}`)
 }
 
 async function save(): Promise<boolean> {

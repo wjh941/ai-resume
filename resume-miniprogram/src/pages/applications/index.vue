@@ -21,6 +21,7 @@ import type {
 } from "../../types/application"
 import { filterApplications } from "../../utils/application-filter"
 import { showErrorToast } from "../../utils/error-feedback"
+import { goTab } from "../../utils/navigation"
 import { formatDateTime, splitIsoDateTime, toIsoDateTime, todayIsoDate } from "../../utils/format"
 
 type Query = { roleName?: string; city?: string; draftId?: string }
@@ -325,7 +326,7 @@ function remove(item: ApplicationRecord) {
   })
 }
 
-const openJobSearch = () => uni.navigateTo({ url: "/pages/job-search/index" })
+const openJobSearch = () => goTab("/pages/job-search/index")
 
 onMounted(async () => {
   applicationsStore.restorePending()

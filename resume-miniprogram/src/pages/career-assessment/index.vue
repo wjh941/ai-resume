@@ -10,6 +10,7 @@ import { getClientId } from "../../stores/session"
 import { useAssessmentStore } from "../../stores/assessment"
 import type { AssessmentQuestionGroup } from "../../types/assessment"
 import { getAssessmentStepTransition } from "../../utils/h5-feedback"
+import { redirectPage } from "../../utils/navigation"
 
 const store = useAssessmentStore()
 const currentStep = ref(0)
@@ -94,7 +95,8 @@ async function initialize() {
 }
 
 function openPlanner() {
-  uni.navigateTo({ url: "/pages/career-planner/index" })
+  // 测评与规划互为前后步，用替换跳转避免来回切换把页面栈推满。
+  redirectPage("/pages/career-planner/index")
 }
 
 onMounted(() => {
