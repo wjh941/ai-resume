@@ -33,9 +33,9 @@ def send_code(payload: PhoneCodeRequest, request: Request):
     try:
         result = request.app.state.sms_service.send_code(payload.phone)
     except SmsRateLimitError as error:
-        raise HTTPException(status_code=429, detail="Please wait before requesting another verification code.") from error
+        raise HTTPException(status_code=429, detail="验证码发送过于频繁，请稍后再试。") from error
     except (SmsConfigurationError, SmsDeliveryError) as error:
-        raise HTTPException(status_code=503, detail="SMS delivery is not configured or temporarily unavailable.") from error
+        raise HTTPException(status_code=503, detail="短信服务未配置或暂时不可用。") from error
     return success({"phone": payload.phone, "demo_code": result.demo_code, "message": result.message})
 
 
@@ -45,7 +45,7 @@ def login_phone(payload: PhoneLoginRequest, request: Request):
         request.app.state.sms_service.verify_code(payload.phone, payload.code)
         token, user = request.app.state.auth_service.issue_phone_login(payload.phone)
     except (VerificationCodeError, AuthenticationError) as error:
-        raise HTTPException(status_code=401, detail="Mobile number or verification code is invalid.") from error
+        raise HTTPException(status_code=401, detail="手机号或验证码不正确。") from error
     return _auth_response(token, user)
 
 
@@ -84,9 +84,9 @@ def wechat_login(request: Request):
 def wechat_callback(request: Request, code: str | None = None, state: str | None = None):
     settings = request.app.state.settings
     if not (settings.wechat_open_app_id and settings.wechat_open_app_secret and settings.wechat_open_redirect_uri):
-        raise HTTPException(status_code=503, detail="WeChat Open Platform is not configured.")
+        raise HTTPException(status_code=503, detail="微信开放平台尚未配置。")
     # TODO: Exchange the callback code only after the HTTPS redirect domain is whitelisted in WeChat Open Platform.
-    raise HTTPException(status_code=501, detail="WeChat OAuth callback deployment requires an HTTPS whitelisted redirect domain.")
+    raise HTTPException(status_code=501, detail="微信登录回调需要部署在 HTTPS 备案域名上。")
 
 
 @router.post("/logout")
@@ -95,7 +95,7 @@ def logout(request: Request, token: str | None = Depends(optional_bearer_token))
         try:
             request.app.state.auth_service.logout(token)
         except AuthenticationError as error:
-            raise HTTPException(status_code=401, detail="Authentication is invalid or expired") from error
+            raise HTTPException(status_code=401, detail="认证已失效或过期，请重新登录") from error
     return success({"logged_out": True})
 
 

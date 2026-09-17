@@ -149,7 +149,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if settings.production and origin and origin not in settings.cors_origins:
             response = JSONResponse(
                 status_code=403,
-                content=error("origin_forbidden", "Origin is not allowed."),
+                content=error("origin_forbidden", "请求来源不在允许列表中。"),
             )
             response.headers["X-Request-ID"] = request_id
             _add_security_headers(response, settings.production)
@@ -162,7 +162,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if not decision.allowed:
                 response = JSONResponse(
                     status_code=429,
-                    content=error("rate_limited", "Too many authentication attempts. Please try again later."),
+                    content=error("rate_limited", "认证尝试过于频繁，请稍后再试。"),
                     headers={"Retry-After": str(decision.retry_after_seconds)},
                 )
                 response.headers["X-Request-ID"] = request_id
@@ -224,61 +224,61 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.exception_handler(DraftNotFoundError)
     def draft_not_found(_: Request, __: DraftNotFoundError):
-        return JSONResponse(status_code=404, content=error("not_found", "Draft not found"))
+        return JSONResponse(status_code=404, content=error("not_found", "简历草稿不存在"))
 
     @app.exception_handler(ApplicationNotFoundError)
     def application_not_found(_: Request, __: ApplicationNotFoundError):
         return JSONResponse(
             status_code=404,
-            content=error("not_found", "Application not found"),
+            content=error("not_found", "投递记录不存在"),
         )
 
     @app.exception_handler(FavoriteJobNotFoundError)
     def favorite_job_not_found(_: Request, __: FavoriteJobNotFoundError):
-        return JSONResponse(status_code=404, content=error("not_found", "Favorite job not found"))
+        return JSONResponse(status_code=404, content=error("not_found", "收藏的岗位不存在"))
 
     @app.exception_handler(KnowledgebaseRoleNotFoundError)
     def knowledgebase_role_not_found(_: Request, __: KnowledgebaseRoleNotFoundError):
         return JSONResponse(
-            status_code=404, content=error('not_found', 'Knowledgebase role not found')
+            status_code=404, content=error('not_found', '知识库条目不存在')
         )
 
     @app.exception_handler(OperatorKnowledgeNotFoundError)
     def operator_knowledge_not_found(_: Request, __: OperatorKnowledgeNotFoundError):
-        return JSONResponse(status_code=404, content=error("not_found", "Knowledge item not found"))
+        return JSONResponse(status_code=404, content=error("not_found", "知识库条目不存在"))
 
     @app.exception_handler(CareerProfileNotFoundError)
     def career_profile_not_found(_: Request, __: CareerProfileNotFoundError):
         return JSONResponse(
             status_code=404,
-            content=error("not_found", "Career profile not found"),
+            content=error("not_found", "职业画像不存在"),
         )
 
     @app.exception_handler(CareerTaskNotFoundError)
     def career_task_not_found(_: Request, __: CareerTaskNotFoundError):
-        return JSONResponse(status_code=404, content=error("not_found", "Career task not found"))
+        return JSONResponse(status_code=404, content=error("not_found", "职业任务不存在"))
 
     @app.exception_handler(AssessmentNotFoundError)
     def assessment_not_found(_: Request, __: AssessmentNotFoundError):
         return JSONResponse(
             status_code=404,
-            content=error("not_found", "Career assessment not found"),
+            content=error("not_found", "职业测评记录不存在"),
         )
 
     @app.exception_handler(RequestValidationError)
     def request_validation_error(request: Request, _: RequestValidationError):
         logger.info("validation error: %s %s", request.method, request.url.path)
-        return JSONResponse(status_code=422, content=error("validation_error", "Request validation failed"))
+        return JSONResponse(status_code=422, content=error("validation_error", "提交的信息格式有误，请检查后重试"))
 
     @app.exception_handler(ValidationError)
     def model_validation_error(request: Request, _: ValidationError):
         logger.info("validation error: %s %s", request.method, request.url.path)
-        return JSONResponse(status_code=422, content=error("validation_error", "Request validation failed"))
+        return JSONResponse(status_code=422, content=error("validation_error", "提交的信息格式有误，请检查后重试"))
 
     @app.exception_handler(sqlite3.Error)
     def database_error(request: Request, exception: sqlite3.Error):
         log_event(request, logging.ERROR, "database_error", error_type=type(exception).__name__)
-        return JSONResponse(status_code=503, content=error("database_error", "Database operation failed"))
+        return JSONResponse(status_code=503, content=error("database_error", "数据处理暂时失败，请稍后重试"))
 
     try:
         # psycopg 是可选依赖（纯 SQLite 部署可不装）；缺失时跳过 PostgreSQL 错误映射。
@@ -287,7 +287,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         @app.exception_handler(PsycopgError)
         def postgres_database_error(request: Request, exception: PsycopgError):
             log_event(request, logging.ERROR, "database_error", error_type=type(exception).__name__)
-            return JSONResponse(status_code=503, content=error("database_error", "Database operation failed"))
+            return JSONResponse(status_code=503, content=error("database_error", "数据处理暂时失败，请稍后重试"))
     except ImportError:
         pass
 
@@ -296,19 +296,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         log_event(request, logging.INFO, "ai_rate_limited", retry_after_seconds=exception.retry_after_seconds)
         return JSONResponse(
             status_code=429,
-            content=error("rate_limited", "Too many AI requests. Please try again later."),
+            content=error("rate_limited", "AI 请求过于频繁，请稍后再试。"),
             headers={"Retry-After": str(exception.retry_after_seconds)},
         )
 
     @app.exception_handler(ExportEmptyError)
     def export_empty(request: Request, _: ExportEmptyError):
         logger.info("export error: %s %s (empty resume)", request.method, request.url.path)
-        return JSONResponse(status_code=422, content=error("export_empty", "Resume has no visible export content"))
+        return JSONResponse(status_code=422, content=error("export_empty", "简历还没有可导出的内容，请先补齐必填信息"))
 
     @app.exception_handler(ExportGenerationError)
     def export_generation_error(request: Request, exception: ExportGenerationError):
         log_event(request, logging.ERROR, "export_error", error_type=type(exception).__name__)
-        return JSONResponse(status_code=503, content=error("export_error", "Export could not be generated"))
+        return JSONResponse(status_code=503, content=error("export_error", "导出失败，请稍后重试"))
 
     @app.exception_handler(HTTPException)
     def http_error(request: Request, exception: HTTPException):
@@ -316,40 +316,40 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         code = {401: "unauthorized", 403: "forbidden", 404: "not_found", 422: "validation_error"}.get(
             exception.status_code, "request_error"
         )
-        message = exception.detail if isinstance(exception.detail, str) else "Request failed"
+        message = exception.detail if isinstance(exception.detail, str) else "请求失败，请稍后重试"
         return JSONResponse(status_code=exception.status_code, content=error(code, message))
 
     @app.exception_handler(Exception)
     def unexpected_error(request: Request, exception: Exception):
         log_event(request, logging.ERROR, "unexpected_error", error_type=type(exception).__name__)
-        return JSONResponse(status_code=500, content=error("internal_error", "Internal server error"))
+        return JSONResponse(status_code=500, content=error("internal_error", "服务暂时不可用，请稍后重试"))
 
     @app.exception_handler(RewriteFactViolation)
     def rewrite_fact_violation(_: Request, __: RewriteFactViolation):
         return JSONResponse(
             status_code=422,
-            content=error("rewrite_fact_violation", "AI rewrite changed immutable resume facts"),
+            content=error("rewrite_fact_violation", "AI 改写试图修改不可变更的简历事实，已拦截"),
         )
 
     @app.exception_handler(DownloadNotFoundError)
     def download_not_found(_: Request, __: DownloadNotFoundError):
-        return JSONResponse(status_code=404, content=error("not_found", "Download not found"))
+        return JSONResponse(status_code=404, content=error("not_found", "下载链接不存在或已过期"))
 
     @app.exception_handler(OrderNotFoundError)
     def order_not_found(_: Request, __: OrderNotFoundError):
-        return JSONResponse(status_code=404, content=error("not_found", "Order not found"))
+        return JSONResponse(status_code=404, content=error("not_found", "订单不存在"))
 
     @app.exception_handler(OrderExpiredError)
     def order_expired(_: Request, __: OrderExpiredError):
-        return JSONResponse(status_code=409, content=error("order_expired", "This unpaid order has expired."))
+        return JSONResponse(status_code=409, content=error("order_expired", "该订单已超时未支付，请重新下单。"))
 
     @app.exception_handler(PaymentCallbackConflictError)
     def payment_callback_conflict(_: Request, __: PaymentCallbackConflictError):
-        return JSONResponse(status_code=409, content=error("payment_callback_conflict", "Payment callback conflicts with the recorded transaction."))
+        return JSONResponse(status_code=409, content=error("payment_callback_conflict", "支付回调与已记录的交易不一致。"))
 
     @app.exception_handler(PaymentSignatureInvalidError)
     def payment_signature_invalid(_: Request, __: PaymentSignatureInvalidError):
-        return JSONResponse(status_code=403, content=error("payment_signature_invalid", "Payment callback signature is invalid."))
+        return JSONResponse(status_code=403, content=error("payment_signature_invalid", "支付回调签名无效。"))
 
     @app.exception_handler(VipPermissionError)
     def vip_permission_denied(_: Request, exception: VipPermissionError):
@@ -380,7 +380,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def pdf_renderer_unavailable(_: Request, __: PdfRendererUnavailableError):
         return JSONResponse(
             status_code=503,
-            content=error("pdf_renderer_unavailable", "PDF renderer is unavailable"),
+            content=error("pdf_renderer_unavailable", "PDF 渲染组件未安装，请配置 WeasyPrint 或 Playwright"),
         )
 
     @app.exception_handler(AIServiceError)

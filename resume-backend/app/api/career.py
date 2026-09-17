@@ -76,11 +76,11 @@ def project_job_plan_for_vip(plan: JobPlanResponse, vip: VipStatus) -> JobPlanRe
                         "nodes": [
                             node.model_copy(
                                 update={
-                                    "description": "Preview the current career stage and unlock detailed requirements with Basic.",
-                                    "salary_band": "Details available with Basic",
-                                    "standard_years": "Details available with Basic",
-                                    "competencies": ["Detailed competencies available with Basic"],
-                                    "case_detail": "Detailed roadmap available with Basic",
+                                    "description": "预览当前职业阶段，升级 Basic 会员可解锁详细要求。",
+                                    "salary_band": "升级 Basic 后可见详情",
+                                    "standard_years": "升级 Basic 后可见详情",
+                                    "competencies": ["升级 Basic 后可见详细能力要求"],
+                                    "case_detail": "升级 Basic 后可见详细路线图",
                                     "skills": [],
                                     "actions": [],
                                 }

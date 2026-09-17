@@ -5,6 +5,20 @@ const API_BASE_URL = import.meta.env.VITE_RESUME_API_URL || ""
 
 const DEFAULT_ERROR_MESSAGE = "服务暂时不可用，请稍后重试。"
 const RAW_ERROR_PATTERN = /traceback|stack trace|sqlite|sql error|internal server error|at \S+\.\w+ \(/i
+// 按后端错误码给出统一中文提示；后端 message 已中文化时优先展示后端原文。
+const CODE_ERROR_MESSAGES: Record<string, string> = {
+  validation_error: "提交的信息格式有误，请检查后重试。",
+  database_error: "数据处理暂时失败，请稍后重试。",
+  not_found: "内容不存在或已被删除。",
+  ai_not_configured: "AI 服务尚未配置，可先使用精简版功能。",
+  ai_rate_limited: "AI 请求过于频繁，请稍后再试。",
+  ai_timeout: "AI 生成耗时较长已中断，请稍后重试。",
+  ai_unavailable: "AI 服务暂时不可用，请稍后重试。",
+  ai_auth_failed: "AI 服务密钥无效，请联系管理员。",
+  ai_balance_exhausted: "AI 服务额度不足，请联系管理员。",
+  ai_invalid_response: "AI 返回内容格式异常，请稍后重试。",
+  vip_required: "该功能需要升级会员后使用。",
+}
 const CONFIGURATION_HINTS: Array<[RegExp, string]> = [
   [/sms delivery is not configured/i, "当前环境未配置 SMS 登录，请联系服务管理员。"],
   [/wechat.*not configured|https whitelisted redirect/i, "微信登录需要已配置的 HTTPS 回调域名。"],
@@ -38,6 +52,17 @@ export function isRetryableApiError(reason: unknown): boolean {
 }
 
 export function toUserMessage(reason: unknown, fallback = DEFAULT_ERROR_MESSAGE): string {
+  if (reason instanceof ApiRequestError && reason.code) {
+    const mapped = CODE_ERROR_MESSAGES[reason.code]
+    if (mapped) {
+      // 校验类错误的后端 detail 已是可执行的中文（如“仅支持 PDF 或 DOCX 格式的文件”），优先展示。
+      const detail = reason.message || ""
+      if (reason.code === "validation_error" && detail && detail.length <= 180 && !RAW_ERROR_PATTERN.test(detail) && /[\u4e00-\u9fff]/.test(detail)) {
+        return detail
+      }
+      return mapped
+    }
+  }
   const message = reason instanceof Error ? reason.message : typeof reason === "string" ? reason : ""
   if (!message || message.length > 180 || RAW_ERROR_PATTERN.test(message)) return fallback
   return CONFIGURATION_HINTS.find(([pattern]) => pattern.test(message))?.[1] || message

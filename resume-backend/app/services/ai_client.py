@@ -408,7 +408,7 @@ class OpenAICompatibleClient:
         try:
             return JobPlanResponse.model_validate_json(content)
         except ValueError as error:
-            raise AIServiceError("ai_invalid_response", "AI job plan response format is invalid") from error
+            raise AIServiceError("ai_invalid_response", "AI 职业规划返回格式异常，请稍后重试") from error
 
     async def _chat_completion(self, system_prompt: str, user_prompt: str) -> str:
         try:

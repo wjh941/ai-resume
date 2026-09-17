@@ -39,7 +39,7 @@ class DownloadService:
         try:
             output_path.relative_to(self._temp_directory)
         except ValueError as error:
-            raise ExportPathError("Export output path is outside controlled storage.") from error
+            raise ExportPathError("导出文件路径越界，已拒绝。") from error
         now = datetime.now(timezone.utc)
         expires_at = now + timedelta(minutes=self._expire_minutes)
         token = uuid4().hex

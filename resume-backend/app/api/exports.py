@@ -59,7 +59,7 @@ def export_word(
         result = request.app.state.download_service.register(access.user_id, output_path, filename)
     except (OSError, ExportPathError) as error:
         _discard_partial_output(output_path)
-        raise ExportGenerationError("Word export failed") from error
+        raise ExportGenerationError("Word 导出失败，请稍后重试") from error
     return success(result.model_dump(mode="json"))
 
 
@@ -91,7 +91,7 @@ async def export_pdf(
         raise
     except (OSError, ExportPathError) as error:
         _discard_partial_output(output_path)
-        raise ExportGenerationError("PDF export failed") from error
+        raise ExportGenerationError("PDF 导出失败，请稍后重试") from error
     return success(result.model_dump(mode="json"))
 
 

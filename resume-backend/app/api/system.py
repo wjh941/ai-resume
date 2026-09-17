@@ -191,10 +191,10 @@ def _storage_health(settings: Settings) -> dict[str, str]:
 def _require_local_setup(request: Request) -> None:
     settings = request.app.state.settings
     if not _setup_allowed(settings):
-        raise HTTPException(status_code=403, detail="Local model setup is disabled")
+        raise HTTPException(status_code=403, detail="本地模型安装入口已关闭")
     host = request.client.host if request.client else ""
     if host not in {"127.0.0.1", "::1"}:
-        raise HTTPException(status_code=403, detail="Local model setup only accepts loopback clients")
+        raise HTTPException(status_code=403, detail="本地模型安装仅允许本机访问")
 
 
 def _write_managed_env_values(path: Path, values: dict[str, str]) -> None:

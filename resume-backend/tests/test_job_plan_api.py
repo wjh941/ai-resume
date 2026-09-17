@@ -133,10 +133,10 @@ def test_free_job_plan_ignores_expand_detail(api_client, auth_headers):
     assert data["action_plan"]["thirty_day"] == []
     assert data["action_plan"]["ninety_day"] == []
     assert all(
-        node["salary_band"] == "Details available with Basic"
-        and node["standard_years"] == "Details available with Basic"
-        and node["competencies"] == ["Detailed competencies available with Basic"]
-        and node["case_detail"] == "Detailed roadmap available with Basic"
+        node["salary_band"] == "升级 Basic 后可见详情"
+        and node["standard_years"] == "升级 Basic 后可见详情"
+        and node["competencies"] == ["升级 Basic 后可见详细能力要求"]
+        and node["case_detail"] == "升级 Basic 后可见详细路线图"
         and node["skills"] == []
         and node["actions"] == []
         for track in data["promotion_tracks"]

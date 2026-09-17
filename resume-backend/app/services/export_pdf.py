@@ -144,7 +144,7 @@ def _entry(title: str, meta: str, description: str = "") -> str:
 
 async def _render_with_playwright(html: str, output_path: Path, browser_root: str) -> None:
     if browser_root and not chromium_is_available(browser_root):
-        raise PdfRendererUnavailableError("Chromium is not installed for the configured Playwright browser path")
+        raise PdfRendererUnavailableError("未安装 Playwright 所需的 Chromium，请先运行 playwright install chromium")
     # browser_root 留空时交由 playwright 自行解析默认浏览器缓存（`playwright install` 的落点）。
     previous_browsers_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
     if browser_root:
@@ -153,7 +153,7 @@ async def _render_with_playwright(html: str, output_path: Path, browser_root: st
         try:
             from playwright.async_api import async_playwright
         except ImportError as error:
-            raise PdfRendererUnavailableError("Playwright is not installed") from error
+            raise PdfRendererUnavailableError("未安装 Playwright，无法渲染 PDF") from error
 
         try:
             async with async_playwright() as playwright:
@@ -172,7 +172,7 @@ async def _render_with_playwright(html: str, output_path: Path, browser_root: st
         except PdfRendererUnavailableError:
             raise
         except Exception as error:
-            raise PdfRendererUnavailableError("Playwright could not render the PDF") from error
+            raise PdfRendererUnavailableError("PDF 渲染失败，请稍后重试") from error
     finally:
         # 恢复进程环境，避免测试或并发请求间的配置泄漏。
         if browser_root:
@@ -186,5 +186,5 @@ def _render_with_weasyprint(html: str, output_path: Path) -> None:
     try:
         from weasyprint import HTML
     except ImportError as error:
-        raise PdfRendererUnavailableError("WeasyPrint is not installed") from error
+        raise PdfRendererUnavailableError("未安装 WeasyPrint，无法渲染 PDF") from error
     HTML(string=html).write_pdf(output_path)

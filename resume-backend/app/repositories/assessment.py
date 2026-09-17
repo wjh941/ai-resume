@@ -156,9 +156,9 @@ class AssessmentRepository:
         try:
             year = int(insight["year"])
         except (KeyError, TypeError, ValueError) as error:
-            raise ValueError("Annual insight year is invalid") from error
+            raise ValueError("年度洞察的年份无效") from error
         if not 2000 <= year <= 2100:
-            raise ValueError("Annual insight year is invalid")
+            raise ValueError("年度洞察的年份无效")
 
         role_name = " ".join(str(insight.get("role_name", "")).split())
         if len(role_name) > 120:

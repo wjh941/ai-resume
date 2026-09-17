@@ -64,17 +64,17 @@ async def career_advice(
 async def extract_resume_pdf(file: UploadFile = File(...)):
     filename = (file.filename or "").casefold()
     if file.content_type != "application/pdf" and not filename.endswith(".pdf"):
-        raise HTTPException(status_code=422, detail="Only PDF files are supported")
+        raise HTTPException(status_code=422, detail="仅支持 PDF 格式的文件")
     content = await file.read()
     if not content or len(content) > 10 * 1024 * 1024:
-        raise HTTPException(status_code=422, detail="PDF file must be between 1 byte and 10 MB")
+        raise HTTPException(status_code=422, detail="PDF 文件大小需在 10 MB 以内")
     try:
         reader = PdfReader(BytesIO(content))
         text = "\n".join(page.extract_text() or "" for page in reader.pages).strip()
     except Exception as error:
-        raise HTTPException(status_code=422, detail="Unable to extract text from this PDF") from error
+        raise HTTPException(status_code=422, detail="无法解析该 PDF 的内容") from error
     if not text:
-        raise HTTPException(status_code=422, detail="No extractable text found in this PDF")
+        raise HTTPException(status_code=422, detail="该 PDF 中没有可提取的文字，可能是扫描件")
     return success({"text": text})
 
 

@@ -21,7 +21,7 @@ def test_draft_crud_is_scoped_to_authenticated_user(api_client, auth_headers):
 
     hidden = api_client.get(f"/api/draft/{draft_id}", headers=auth_headers("13900139000"))
     assert hidden.status_code == 404
-    assert hidden.json() == {"code": "not_found", "data": {}, "message": "Draft not found"}
+    assert hidden.json() == {"code": "not_found", "data": {}, "message": "简历草稿不存在"}
 
     removed = assert_success(
         api_client.delete(f"/api/draft/{draft_id}")

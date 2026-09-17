@@ -186,7 +186,7 @@ def _connect_postgres(url: str) -> PostgresConnection:
         from psycopg import connect as psycopg_connect
         from psycopg.rows import dict_row
     except ImportError as error:
-        raise RuntimeError("PostgreSQL support requires the psycopg package. Install resume-backend requirements.") from error
+        raise RuntimeError("启用 PostgreSQL 需要先安装 psycopg 依赖。") from error
     return PostgresConnection(
         psycopg_connect(url.replace("postgresql+psycopg://", "postgresql://", 1), row_factory=dict_row)
     )

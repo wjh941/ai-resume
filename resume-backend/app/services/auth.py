@@ -138,11 +138,11 @@ def current_user_principal(
     credentials: HTTPAuthorizationCredentials | None = Security(_bearer),
 ) -> AuthPrincipal:
     if credentials is None or credentials.scheme.lower() != "bearer":
-        raise HTTPException(status_code=401, detail="Authentication is required")
+        raise HTTPException(status_code=401, detail="请先登录")
     try:
         principal = request.app.state.auth_service.verify_principal(credentials.credentials)
     except AuthenticationError as error:
-        raise HTTPException(status_code=401, detail="Authentication is invalid or expired") from error
+        raise HTTPException(status_code=401, detail="认证已失效或过期，请重新登录") from error
     request.state.user_id = principal.user_id
     return principal
 

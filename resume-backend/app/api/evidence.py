@@ -65,5 +65,5 @@ def resume_readiness(payload: ResumeReadinessRequest, _: str = Depends(current_u
 def _not_found() -> JSONResponse:
     return JSONResponse(
         status_code=404,
-        content=error("not_found", "Evidence not found"),
+        content=error("not_found", "经历证据不存在"),
     )
