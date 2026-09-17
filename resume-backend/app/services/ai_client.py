@@ -193,6 +193,48 @@ class DevelopmentAIClient(UnconfiguredAIClient):
         return score_assessment(answers)
 
 
+def _coerce_job_intelligence(content: str) -> JobIntelligence:
+    """矫正不同质量上游模型的两类常见形状偏差后再校验，失败统一转 ai_invalid_response。
+
+    - salary_by_experience 的值必须是纯字符串（如 "8K-13K"）；部分模型会返回
+      {range, currency, unit, ...} 嵌套对象，这里取第一个非空字符串值压平。
+    - career_route 必须是字符串数组；部分模型会返回 {"entry": "...", ...} 对象，
+      这里按键顺序转为 "阶段: 描述" 列表。
+    """
+    invalid = AIServiceError("ai_invalid_response", "AI 岗位情报返回格式异常，请稍后重试")
+    try:
+        raw = json.loads(content)
+    except (TypeError, ValueError) as error:
+        raise invalid from error
+    if not isinstance(raw, dict):
+        raise invalid
+    salaries = raw.get("salary_by_experience")
+    if isinstance(salaries, dict):
+        flattened: dict[str, str] = {}
+        for range_key, value in salaries.items():
+            if isinstance(value, str):
+                flattened[str(range_key)] = value
+            elif isinstance(value, dict):
+                text = next((v for v in value.values() if isinstance(v, str) and v.strip()), "")
+                if text:
+                    flattened[str(range_key)] = text
+            else:
+                flattened[str(range_key)] = str(value)
+        raw["salary_by_experience"] = flattened
+    route = raw.get("career_route")
+    if isinstance(route, dict):
+        raw["career_route"] = [
+            f"{key}: {value}" if isinstance(value, str) and value.strip() else str(key)
+            for key, value in route.items()
+        ]
+    elif isinstance(route, str) and route.strip():
+        raw["career_route"] = [route]
+    try:
+        return JobIntelligence.model_validate(raw)
+    except ValueError as error:
+        raise invalid from error
+
+
 class OpenAICompatibleClient:
     """兼容 Ark 与 OpenAI Chat Completions；所有业务生成均通过这一真实云端入口。"""
 
@@ -203,11 +245,16 @@ class OpenAICompatibleClient:
 
     async def query_job(self, role_name: str) -> JobIntelligence:
         content = await self._chat_completion(
-            "Return only valid JSON matching JobIntelligence: role_name, salary_by_experience, "
-            "responsibilities, hard_requirements, required_skills, bonus_skills, career_route.",
+            "Return only valid JSON matching JobIntelligence with exactly these fields: "
+            "role_name (string), salary_by_experience (object mapping experience ranges like "
+            "\"0-1年\" to plain strings such as \"8K-13K\"; values must be strings, never nested "
+            "objects), responsibilities (array of strings), hard_requirements (array of strings), "
+            "required_skills (array of strings), bonus_skills (array of strings), career_route "
+            "(array of plain strings describing ordered career stages; must be an array, never "
+            "an object).",
             json.dumps({"role_name": role_name}, ensure_ascii=False),
         )
-        return JobIntelligence.model_validate_json(content)
+        return _coerce_job_intelligence(content)
 
     async def assess_career(
         self, questions: list[dict[str, object]], answers: dict[str, int]
