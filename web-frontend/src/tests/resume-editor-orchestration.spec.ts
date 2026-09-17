@@ -191,14 +191,14 @@ describe("createResumeEditorOrchestration", () => {
     await controller.hydrate(draft)
 
     await expect(controller.save()).resolves.toBe("invalid")
-    expect(controller.fieldErrors.value.jobTitle).toBeTruthy()
-    expect(controller.fieldErrors.value["basic.name"]).toBeTruthy()
+    expect(controller.fieldErrors.value?.jobTitle).toBeTruthy()
+    expect(controller.fieldErrors.value?.["basic.name"]).toBeTruthy()
     expect(saveRemote).not.toHaveBeenCalled()
 
     controller.draft.value!.resume.basic.name = "李四"
     await nextTick()
-    expect(controller.fieldErrors.value["basic.name"]).toBeUndefined()
-    expect(controller.fieldErrors.value.jobTitle).toBeTruthy()
+    expect(controller.fieldErrors.value?.["basic.name"]).toBeUndefined()
+    expect(controller.fieldErrors.value?.jobTitle).toBeTruthy()
   })
 
   it("flushes locally before the manual remote save and clears on success", async () => {

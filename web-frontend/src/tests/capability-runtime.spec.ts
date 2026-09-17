@@ -359,7 +359,7 @@ describe("shared capability context runtime", () => {
     expect(context.refreshing.value).toBe(true)
     await wrapper.vm.$nextTick()
 
-    expect(retries.filter((button) => button.element.disabled)).toHaveLength(2)
+    expect(retries.filter((button) => (button.element as HTMLButtonElement).disabled)).toHaveLength(2)
     expect(retries.filter((button) => button.attributes("aria-busy") === "true")).toHaveLength(2)
 
     resolveHealth({ features: { job_matching: { enabled: true, mode: "real", notice: "Matching enabled" } } })

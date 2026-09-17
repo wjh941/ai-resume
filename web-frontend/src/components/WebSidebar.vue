@@ -74,7 +74,10 @@ const navigationGroups = [
 const drawerOpen = ref(false)
 const collapsedGroups = ref<Record<string, boolean>>({})
 const totalItems = navigationGroups.reduce((count, group) => count + group.items.length, 0)
-const activeIndex = computed(() => Math.max(0, navigationGroups.flatMap((group) => group.items).findIndex((item) => item.key === props.activeView)))
+const activeIndex = computed(() => {
+  const items = navigationGroups.flatMap((group) => group.items as ReadonlyArray<{ key: string }>)
+  return Math.max(0, items.findIndex((item) => item.key === props.activeView))
+})
 const workspaceProgress = computed(() => Math.round(((activeIndex.value + 1) / totalItems) * 100))
 
 function toggleDrawer(): void { drawerOpen.value = !drawerOpen.value }

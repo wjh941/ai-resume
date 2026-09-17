@@ -43,7 +43,7 @@ function disabled(notice: string): Capability {
 }
 
 export function defaultCapabilities(): Capabilities {
-  return Object.fromEntries(names.map(([name, , notice]) => [name, disabled(notice)])) as Capabilities
+  return Object.fromEntries(names.map(([name, , notice]) => [name, disabled(notice)])) as unknown as Capabilities
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

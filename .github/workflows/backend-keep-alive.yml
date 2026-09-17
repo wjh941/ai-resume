@@ -1,0 +1,28 @@
+# Render 免费档 15 分钟无流量即休眠，冷启动首访要等 30-50 秒。
+# 每 10 分钟 ping 一次 /health 让服务保持常驻（单服务 720h/月 < 免费 750h 额度；
+# GitHub Actions 免费额度约 4380 次/月 × 数秒 ≈ 数百分钟，远低于 2000 分钟上限）。
+name: Backend keep-alive
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: |
+          for attempt in 1 2 3; do
+            if curl -fsS --max-time 60 "https://ai-resume-backend-1ouv.onrender.com/health"; then
+              echo "backend alive"
+              exit 0
+            fi
+            echo "attempt $attempt failed, retrying in 15s"
+            sleep 15
+          done
+          echo "backend unreachable after 3 attempts (may be redeploying)"
+          exit 0

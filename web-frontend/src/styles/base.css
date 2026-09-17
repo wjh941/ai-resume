@@ -140,6 +140,16 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .form-error { display: block; margin-top: 6px; color: var(--danger); font-size: 12px; line-height: 1.45; }
 .local-save-status { min-height: 18px; color: var(--muted); font-size: 12px; }
 .form-success { margin: 0; color: var(--success); font-size: 13px; line-height: 1.5; }
+
+/* 免费托管冷启动唤醒横幅：全局置顶，弱化成状态提示而非错误。 */
+.backend-wake-banner { display: flex; gap: 10px; align-items: center; padding: 10px 16px; color: #8a5a12; background: #fff7e6; border-bottom: 1px solid #f0dcb4; font-size: 13px; line-height: 1.5; }
+.backend-wake-banner .wake-spinner { width: 16px; height: 16px; flex: 0 0 16px; }
+:root[data-theme="dark"] .backend-wake-banner { color: #f0c66a; background: #33290f; border-bottom-color: #55431a; }
+
+/* 数据持久性提示（工作台首页，可关闭，7 天免打扰）。 */
+.persistence-notice { display: flex; gap: 10px; align-items: center; padding: 10px 14px; margin-bottom: 16px; color: #8a5a12; background: #fff7e6; border: 1px solid #f0dcb4; border-radius: 10px; font-size: 13px; line-height: 1.5; }
+.persistence-notice span { flex: 1; }
+:root[data-theme="dark"] .persistence-notice { color: #f0c66a; background: #33290f; border-color: #55431a; }
 .action-status { min-height: 18px; }
 .visually-hidden-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .import-panel { display: grid; gap: 12px; margin-bottom: 18px; padding: 18px 20px; border: 1px solid color-mix(in srgb, var(--primary) 26%, transparent); border-radius: calc(var(--radius) + 4px); background: color-mix(in srgb, var(--primary) 6%, var(--surface)); }

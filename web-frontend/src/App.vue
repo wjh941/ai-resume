@@ -7,6 +7,7 @@ import WebTopbar from "./components/WebTopbar.vue"
 import LoadingSpinner from "./components/LoadingSpinner.vue"
 import AsyncViewError from "./components/AsyncViewError.vue"
 import { requestApi, SESSION_EXPIRED_EVENT } from "./lib/api"
+import { createBackendWakeMonitor } from "./lib/backend-wake"
 import { CAPABILITIES_KEY, createCapabilityContext } from "./lib/capabilities"
 import { NAVIGATION_GUARD_KEY, createNavigationGuardContext } from "./lib/navigation-guard"
 import { clearSession, readSession, type Session } from "./lib/session"
@@ -22,7 +23,7 @@ function asyncView(loader: () => Promise<{ default: Component }>): Component {
     suspensible: false,
     onError(error, retry, fail, attempts) {
       if (attempts <= 2) retry()
-      else fail(error)
+      else fail()
     },
   })
 }
@@ -57,6 +58,11 @@ const session = ref<Session | null>(readSession())
 const context = createCapabilityContext()
 provide(CAPABILITIES_KEY, context)
 void context.refresh()
+// 免费托管冷启动：进站先探活 /health，失败时轮询并在界面提示“服务唤醒中”，
+// 避免用户在冷启动窗口里看到一串超时报错。
+const backendWake = createBackendWakeMonitor({
+  requestFn: () => requestApi("/health", {}, { timeoutMs: 10_000 }).then(() => true),
+})
 const navigationContext = createNavigationGuardContext()
 provide(NAVIGATION_GUARD_KEY, navigationContext)
 const initialRoute: WorkspaceRoute = typeof window === "undefined"
@@ -171,6 +177,7 @@ onMounted(() => {
     if (readStoredTheme()) return
     dark.value = prefersDark
   })
+  void backendWake.probe()
 })
 
 onUnmounted(() => {
@@ -212,6 +219,10 @@ async function logout() {
 </script>
 
 <template>
+  <div v-if="backendWake.waking.value" class="backend-wake-banner" role="status" aria-live="polite">
+    <LoadingSpinner class="wake-spinner" label="正在唤醒后端服务" />
+    <span>后端服务正在唤醒（免费托管冷启动，预计 30-50 秒），已自动重试 {{ backendWake.attempts.value }} 次，稍候即可正常使用。</span>
+  </div>
   <LoginPanel v-if="!session" :session-notice="sessionExpired ? '登录已过期，请重新登录后继续。' : accountDeletedNotice || undefined" @authenticated="session = $event" />
   <div v-else class="web-shell">
     <WebSidebar :active-view="activeView" @navigate="navigateTo" @prefetch="prefetchView" />

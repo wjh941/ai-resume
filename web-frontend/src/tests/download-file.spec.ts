@@ -12,7 +12,7 @@ describe("triggerBlobDownload", () => {
     const revokeObjectURL = vi.fn()
     Object.defineProperty(URL, "createObjectURL", { configurable: true, value: createObjectURL })
     Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: revokeObjectURL })
-    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function () {
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
       expect(this.download).toBe("account.zip")
       expect(this.href).toContain("blob:account-data")
     })

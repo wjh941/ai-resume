@@ -1,8 +1,10 @@
+import type { ApplicationStatus } from "./applications"
+
 export interface ApplicationFormValues {
   company: string
   roleName: string
   city: string
-  status: string
+  status: ApplicationStatus
   source: string
   appliedAt: string
   nextActionAt: string

@@ -81,9 +81,16 @@ function fromResume(resume: BackendResume): ResumePayload {
     })),
     skills: resume.skills || { skills: [], certificates: [] },
     selfEvaluation: resume.self_evaluation || "",
-    sectionVisibility: resume.section_visibility || {
-      basic: true, job: true, education: true, employment: true,
-      projects: true, skills: true, selfEvaluation: true,
+    // 服务端以 snake_case 存储可见性（self_evaluation）；Web 端统一 camelCase。
+    // 历史版本曾透传 camelCase 键被后端丢弃，这里对缺键兜底为 true。
+    sectionVisibility: {
+      basic: resume.section_visibility?.basic ?? true,
+      job: resume.section_visibility?.job ?? true,
+      education: resume.section_visibility?.education ?? true,
+      employment: resume.section_visibility?.employment ?? true,
+      projects: resume.section_visibility?.projects ?? true,
+      skills: resume.section_visibility?.skills ?? true,
+      selfEvaluation: resume.section_visibility?.self_evaluation ?? true,
     },
   }
 }
@@ -120,7 +127,15 @@ function toResume(resume: ResumePayload): BackendResume {
     })),
     skills: resume.skills,
     self_evaluation: resume.selfEvaluation,
-    section_visibility: resume.sectionVisibility,
+    section_visibility: {
+      basic: resume.sectionVisibility.basic,
+      job: resume.sectionVisibility.job,
+      education: resume.sectionVisibility.education,
+      employment: resume.sectionVisibility.employment,
+      projects: resume.sectionVisibility.projects,
+      skills: resume.sectionVisibility.skills,
+      self_evaluation: resume.sectionVisibility.selfEvaluation,
+    },
   }
 }
 

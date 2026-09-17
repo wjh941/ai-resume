@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { Activity, ArrowUpRight, CircleCheck, CircleDot, FilePenLine, KanbanSquare, ListChecks } from "lucide-vue-next"
-import { computed, nextTick, ref, watch } from "vue"
+import { Activity, ArrowUpRight, CircleCheck, CircleDot, FilePenLine, KanbanSquare, ListChecks, ShieldAlert, X } from "lucide-vue-next"
+import { computed, nextTick, onMounted, ref, watch } from "vue"
 import { loadOverview, type ContinuationItem } from "../lib/dashboard"
 import { getActivationSteps } from "../lib/activation"
+import { markPersistenceNoticeDismissed, shouldShowPersistenceNotice } from "../lib/data-persistence-notice"
 import { useApiResource } from "../composables/useApiResource"
 import AnimatedNumber from "../components/AnimatedNumber.vue"
 import AsyncButton from "../components/AsyncButton.vue"
@@ -50,10 +51,26 @@ function openContinuation(item: ContinuationItem): void {
     emit("navigate", item.target)
   })
 }
+
+const showPersistenceNotice = ref(false)
+
+onMounted(() => {
+  showPersistenceNotice.value = shouldShowPersistenceNotice(window.localStorage)
+})
+
+function dismissPersistenceNotice(): void {
+  showPersistenceNotice.value = false
+  markPersistenceNoticeDismissed(window.localStorage)
+}
 </script>
 
 <template>
   <section class="view-layout">
+    <div v-if="showPersistenceNotice" class="persistence-notice" role="note">
+      <ShieldAlert :size="16" aria-hidden="true" />
+      <span>当前使用免费托管，数据库不长期持久（服务重启可能清空数据）。重要简历请在「简历草稿」中定期导出 Word 备份到本机。</span>
+      <AsyncButton class="text-action" type="button" aria-label="关闭数据持久性提示" @click="dismissPersistenceNotice"><X :size="15" aria-hidden="true" />知道了</AsyncButton>
+    </div>
     <div class="view-heading overview-hero growth-stage">
       <div><div class="section-kicker"><Activity :size="15" aria-hidden="true" />今日工作台</div><h1 id="overview-title">今天先完成一件重要的事</h1><p>把求职资料、目标岗位和投递节奏放在同一处推进。</p></div>
       <div class="heading-actions"><span v-if="!loading && !error" class="sync-status"><CircleCheck :size="15" aria-hidden="true" />数据已同步</span><AsyncButton class="text-action" type="button" :loading="loading" @click="refresh">刷新概览</AsyncButton></div>

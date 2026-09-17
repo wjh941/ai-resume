@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
-import { Download, FileUp, Plus, Save, X } from "lucide-vue-next"
+import { Download, FileUp, Plus, Printer, Save, X } from "lucide-vue-next"
 
 import AsyncButton from "../components/AsyncButton.vue"
 import LoadingSpinner from "../components/LoadingSpinner.vue"
@@ -12,6 +12,8 @@ import {
 import { exportDraft, getDraft, importResumeFile, saveDraft, type DraftRecord, type ExportFormat, type ResumeImportPreview } from "../lib/drafts"
 import { toDraftSaveInput } from "../lib/draft-workflow"
 import { triggerBlobDownload } from "../lib/download-file"
+import { ApiRequestError } from "../lib/api"
+import ResumePrintView from "../components/ResumePrintView.vue"
 import {
   runPendingGuardedAction,
   resolveResumeEditorShortcutAction,
@@ -85,9 +87,10 @@ async function ensureSavedBeforeExport(): Promise<boolean> {
   if (!isDirty.value) return true
   const result = await saveEditor()
   if (result === "invalid") {
-    activateInvalidSummary(fieldErrors.value)
+    const currentErrors = fieldErrors.value ?? {}
+    activateInvalidSummary(currentErrors)
     await nextTick()
-    focusFirstInvalidResumeField(fieldErrors.value)
+    focusFirstInvalidResumeField(currentErrors)
     actionError.value = "简历还有必填项未补全，导出前请先修正"
     return false
   }
@@ -110,10 +113,26 @@ async function exportResume(kind: ExportFormat): Promise<void> {
     triggerBlobDownload(blob, filename)
     actionNotice.value = `已导出「${filename}」，可在浏览器下载中找到`
   } catch (caught) {
+    if (caught instanceof ApiRequestError && caught.code === "pdf_renderer_unavailable") {
+      // 免费托管没有云端 PDF 组件：降级为浏览器打印（可"另存为 PDF"），不把报错甩给用户。
+      await openPrintPreview()
+      actionNotice.value = "云端 PDF 组件不可用，已打开浏览器打印——在打印对话框选择「另存为 PDF」即可保存"
+      return
+    }
     actionError.value = caught instanceof Error && caught.message ? describeExportFailure(caught) : "导出失败，请稍后重试"
   } finally {
     exportingKind.value = ""
   }
+}
+
+const printOpen = ref(false)
+
+async function openPrintPreview(): Promise<void> {
+  if (!draft.value) return
+  printOpen.value = true
+  await nextTick()
+  window.print()
+  printOpen.value = false
 }
 
 function describeExportFailure(caught: Error): string {
@@ -210,14 +229,15 @@ async function save(): Promise<void> {
   resetInvalidSummary()
   const result = await saveEditor()
   if (result === "invalid") {
-    activateInvalidSummary(fieldErrors.value)
+    const currentErrors = fieldErrors.value ?? {}
+    activateInvalidSummary(currentErrors)
     await nextTick()
-    focusFirstInvalidResumeField(fieldErrors.value)
+    focusFirstInvalidResumeField(currentErrors)
   }
 }
 
 function cancel(): void {
-  runPendingGuardedAction(loading.value || saving.value, () => {
+  runPendingGuardedAction(Boolean(loading.value || saving.value), () => {
     if (!isDirty.value) {
       emit("cancel")
       return
@@ -250,7 +270,7 @@ function handleBeforeUnload(event: BeforeUnloadEvent): void {
 }
 
 function handleShortcut(event: KeyboardEvent): void {
-  const action = resolveResumeEditorShortcutAction(resolveWorkspaceShortcut(event), loading.value || saving.value)
+  const action = resolveResumeEditorShortcutAction(resolveWorkspaceShortcut(event), Boolean(loading.value || saving.value))
   if (!action) return
   event.preventDefault()
   if (action === "save") void save()
@@ -258,7 +278,7 @@ function handleShortcut(event: KeyboardEvent): void {
 }
 
 watch(fieldErrors, (currentErrors) => {
-  syncInvalidSummary(currentErrors)
+  syncInvalidSummary(currentErrors ?? {})
 }, { deep: true })
 
 onMounted(() => {
@@ -287,6 +307,7 @@ onBeforeUnmount(() => {
         <AsyncButton class="text-action" type="button" :disabled="loading || Boolean(saving || exportingKind) || Boolean(importing) || Boolean(importPreview)" @click="pickImportFile"><FileUp :size="16" aria-hidden="true" />导入简历</AsyncButton>
         <AsyncButton class="text-action" type="button" :loading="exportingKind === 'word'" :disabled="loading || Boolean(exportingKind) || Boolean(importing) || Boolean(importPreview)" @click="exportResume('word')"><Download :size="16" aria-hidden="true" />导出 Word</AsyncButton>
         <AsyncButton class="text-action" type="button" :loading="exportingKind === 'pdf'" :disabled="loading || Boolean(exportingKind) || Boolean(importing) || Boolean(importPreview)" @click="exportResume('pdf')"><Download :size="16" aria-hidden="true" />导出 PDF</AsyncButton>
+        <AsyncButton class="text-action" type="button" :disabled="loading || Boolean(exportingKind) || Boolean(importing) || Boolean(importPreview)" @click="openPrintPreview"><Printer :size="16" aria-hidden="true" />打印预览</AsyncButton>
         <AsyncButton class="primary-button compact" type="button" :loading="saving" :disabled="loading" @click="save"><Save :size="16" aria-hidden="true" />保存草稿</AsyncButton>
       </div>
       <input ref="importFileInput" type="file" accept=".pdf,.doc,.docx" class="visually-hidden-input" aria-hidden="true" tabindex="-1" @change="handleImportFile" />
@@ -323,30 +344,30 @@ onBeforeUnmount(() => {
         <div class="editor-grid">
           <label>
             <span>草稿名称</span>
-            <input id="resume-job-title" v-model.trim="draft.jobTitle" maxlength="160" :aria-invalid="Boolean(fieldErrors.jobTitle)" :aria-describedby="fieldErrors.jobTitle ? 'resume-job-title-error' : undefined" />
-            <small v-if="fieldErrors.jobTitle" id="resume-job-title-error" class="form-error">{{ fieldErrors.jobTitle }}</small>
+            <input id="resume-job-title" v-model.trim="draft.jobTitle" maxlength="160" :aria-invalid="Boolean(fieldErrors?.jobTitle)" :aria-describedby="fieldErrors?.jobTitle ? 'resume-job-title-error' : undefined" />
+            <small v-if="fieldErrors?.jobTitle" id="resume-job-title-error" class="form-error">{{ fieldErrors?.jobTitle }}</small>
           </label>
           <label><span>简历模板</span><select v-model="draft.templateId"><option value="business">商务模板</option><option value="technology">技术模板</option><option value="graduate">毕业生模板</option><option value="analytics">分析模板</option></select></label>
           <label>
             <span>姓名</span>
-            <input id="resume-basic-name" v-model.trim="draft.resume.basic.name" maxlength="80" :aria-invalid="Boolean(fieldErrors['basic.name'])" :aria-describedby="fieldErrors['basic.name'] ? 'resume-basic-name-error' : undefined" />
-            <small v-if="fieldErrors['basic.name']" id="resume-basic-name-error" class="form-error">{{ fieldErrors["basic.name"] }}</small>
+            <input id="resume-basic-name" v-model.trim="draft.resume.basic.name" maxlength="80" :aria-invalid="Boolean(fieldErrors?.['basic.name'])" :aria-describedby="fieldErrors?.['basic.name'] ? 'resume-basic-name-error' : undefined" />
+            <small v-if="fieldErrors?.['basic.name']" id="resume-basic-name-error" class="form-error">{{ fieldErrors?.["basic.name"] }}</small>
           </label>
           <label>
             <span>手机号</span>
-            <input id="resume-basic-phone" v-model.trim="draft.resume.basic.phone" maxlength="30" :aria-invalid="Boolean(fieldErrors['basic.phone'])" :aria-describedby="fieldErrors['basic.phone'] ? 'resume-basic-phone-error' : undefined" />
-            <small v-if="fieldErrors['basic.phone']" id="resume-basic-phone-error" class="form-error">{{ fieldErrors["basic.phone"] }}</small>
+            <input id="resume-basic-phone" v-model.trim="draft.resume.basic.phone" maxlength="30" :aria-invalid="Boolean(fieldErrors?.['basic.phone'])" :aria-describedby="fieldErrors?.['basic.phone'] ? 'resume-basic-phone-error' : undefined" />
+            <small v-if="fieldErrors?.['basic.phone']" id="resume-basic-phone-error" class="form-error">{{ fieldErrors?.["basic.phone"] }}</small>
           </label>
           <label>
             <span>邮箱</span>
-            <input id="resume-basic-email" v-model.trim="draft.resume.basic.email" type="email" maxlength="160" :aria-invalid="Boolean(fieldErrors['basic.email'])" :aria-describedby="fieldErrors['basic.email'] ? 'resume-basic-email-error' : undefined" />
-            <small v-if="fieldErrors['basic.email']" id="resume-basic-email-error" class="form-error">{{ fieldErrors["basic.email"] }}</small>
+            <input id="resume-basic-email" v-model.trim="draft.resume.basic.email" type="email" maxlength="160" :aria-invalid="Boolean(fieldErrors?.['basic.email'])" :aria-describedby="fieldErrors?.['basic.email'] ? 'resume-basic-email-error' : undefined" />
+            <small v-if="fieldErrors?.['basic.email']" id="resume-basic-email-error" class="form-error">{{ fieldErrors?.["basic.email"] }}</small>
           </label>
           <label><span>城市</span><input v-model.trim="draft.resume.basic.city" maxlength="80" /></label>
           <label>
             <span>目标岗位</span>
-            <input id="resume-target-role" v-model.trim="draft.resume.job.targetRole" maxlength="120" :aria-invalid="Boolean(fieldErrors['job.targetRole'])" :aria-describedby="fieldErrors['job.targetRole'] ? 'resume-target-role-error' : undefined" />
-            <small v-if="fieldErrors['job.targetRole']" id="resume-target-role-error" class="form-error">{{ fieldErrors["job.targetRole"] }}</small>
+            <input id="resume-target-role" v-model.trim="draft.resume.job.targetRole" maxlength="120" :aria-invalid="Boolean(fieldErrors?.['job.targetRole'])" :aria-describedby="fieldErrors?.['job.targetRole'] ? 'resume-target-role-error' : undefined" />
+            <small v-if="fieldErrors?.['job.targetRole']" id="resume-target-role-error" class="form-error">{{ fieldErrors?.["job.targetRole"] }}</small>
           </label>
           <label><span>期望薪资</span><input v-model.trim="draft.resume.job.expectedSalary" maxlength="80" /></label>
           <label><span>工作形式</span><input v-model.trim="draft.resume.job.employmentType" maxlength="80" /></label>
@@ -411,5 +432,6 @@ onBeforeUnmount(() => {
       </div>
       <AsyncButton class="primary-button" type="submit" :loading="saving"><Save :size="17" aria-hidden="true" />保存草稿</AsyncButton>
     </form>
+    <ResumePrintView v-if="draft" :resume="draft.resume" :class="{ 'is-open': printOpen }" />
   </section>
 </template>
