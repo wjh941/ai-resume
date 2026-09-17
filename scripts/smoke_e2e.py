@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """端到端冒烟测试:登录 -> 建档 -> 推荐 -> 岗位情报 -> 简历草稿 -> Word 导出。"""
 import json
+import os
 import time
 import urllib.request
 
@@ -16,8 +17,11 @@ def call(method, path, token=None, payload=None, raw=False):
         req.add_header("Authorization", "Bearer " + token)
     data = json.dumps(payload).encode("utf-8") if payload is not None else None
     t0 = time.perf_counter()
+    # AI 已接入真实上游后，岗位情报/职业规划等步骤可能需要 1-2 分钟生成，
+    # 可用 SMOKE_TIMEOUT_SECONDS 环境变量覆盖。
+    timeout_seconds = int(os.getenv("SMOKE_TIMEOUT_SECONDS", "150"))
     try:
-        with OPENER.open(req, data=data, timeout=30) as resp:
+        with OPENER.open(req, data=data, timeout=timeout_seconds) as resp:
             body = resp.read()
             ms = (time.perf_counter() - t0) * 1000
             if raw:
