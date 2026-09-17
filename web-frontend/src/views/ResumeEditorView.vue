@@ -11,7 +11,7 @@ import {
 } from "../lib/draft-checkpoint"
 import { exportDraft, getDraft, importResumeFile, saveDraft, type DraftRecord, type ExportFormat, type ResumeImportPreview } from "../lib/drafts"
 import { toDraftSaveInput } from "../lib/draft-workflow"
-import { saveBlob } from "../lib/file-download"
+import { triggerBlobDownload } from "../lib/download-file"
 import {
   runPendingGuardedAction,
   resolveResumeEditorShortcutAction,
@@ -107,7 +107,7 @@ async function exportResume(kind: ExportFormat): Promise<void> {
   exportingKind.value = kind
   try {
     const { filename, blob } = await exportDraft(kind, props.draftId)
-    saveBlob(blob, filename)
+    triggerBlobDownload(blob, filename)
     actionNotice.value = `已导出「${filename}」，可在浏览器下载中找到`
   } catch (caught) {
     actionError.value = caught instanceof Error && caught.message ? describeExportFailure(caught) : "导出失败，请稍后重试"
