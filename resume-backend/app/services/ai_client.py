@@ -489,18 +489,38 @@ class OpenAICompatibleClient:
         assessment: dict[str, object] | None,
         expand_detail: bool,
     ) -> JobPlanResponse:
+        node_fields = '"title": str, "level": str, "description": str, "salary_band": str, "standard_years": str, "competencies": [str], "case_detail": str, "skills": [str], "actions": [str]'
+        if expand_detail:
+            level_rule = 'each track must contain exactly 4 nodes with "level" in this order: entry, junior, mid, senior'
+        else:
+            level_rule = "keep each track to 2-3 concise nodes"
+        skeleton = (
+            '{"role_name": str, "report_scope": "brief", '
+            '"sections": ['
+            '{"key": "market_overview", "title": str, "summary": str, "items": [str]}, '
+            '{"key": "responsibilities", ...}, {"key": "hard_skills", ...}, '
+            '{"key": "soft_competencies", ...}, {"key": "career_value", ...}, {"key": "risks", ...}'
+            f'] (exactly these 6 keys, one section each), '
+            '"comparison_items": [' 
+            '{"competency": str, "category": "hard"|"soft", "status": "high"|"transferable"|"needs_upskilling"|"long_shot", '
+            '"evidence": [str], "gap": str, "recommendation": str}'
+            '], '
+            '"promotion_tracks": ['
+            f'{{"key": "technical", "title": str, "nodes": [{node_fields}]}}, '
+            f'{{"key": "management", "title": str, "nodes": [{node_fields}]}}'
+            f'] ({level_rule}), '
+            '"action_plan": {"seven_day": [str], "thirty_day": [str], "ninety_day": [str]}}'
+        )
         content = await self._chat_completion(
-            "Return only valid JSON matching JobPlanResponse. Include exactly these six unique section "
-            "keys: market_overview (six-month demand, estimated salary range, entry threshold, competition), "
-            "responsibilities (complete core responsibility decomposition), hard_skills (mastered, partial, "
-            "and missing gaps), soft_competencies (logic, communication, teamwork, execution), career_value "
-            "(short and long term value), and risks (entry obstacles and industry risks). comparison_items must "
-            "use only high, transferable, needs_upskilling, or long_shot statuses and must distinguish hard and "
-            "soft competencies. promotion_tracks must contain technical and management. When expand_detail is true, "
-            "both tracks must contain exactly entry, junior, mid, senior nodes in that order; each node needs salary, "
-            "standard years, competencies, a realistic work case, skills, and learning actions. When false, keep "
-            "the same JSON shape concise. Treat market information as estimates, use supplied candidate context only, "
-            "and never invent candidate facts or evidence.",
+            "Return ONLY a single JSON object, no markdown fences, matching this exact skeleton "
+            "(field names and nesting must match exactly; use the job market as the information "
+            "source; never invent candidate facts or evidence; treat market numbers as estimates):\n"
+            f"{skeleton}\n"
+            "Section content requirements: market_overview covers six-month demand, estimated "
+            "salary range, entry threshold and competition; responsibilities decomposes core "
+            "responsibilities; hard_skills splits mastered/partial/missing gaps; "
+            "soft_competencies covers logic, communication, teamwork, execution; career_value "
+            "covers short and long term value; risks covers entry obstacles and industry risks.",
             json.dumps({"role_name": role_name, "profile": profile, "evidence": evidence,
                         "resume": resume, "assessment": assessment, "expand_detail": expand_detail},
                        ensure_ascii=False),
