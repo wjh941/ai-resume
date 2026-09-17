@@ -160,3 +160,46 @@ export async function downloadApi(path: string, init: RequestInit = {}, options:
     request.cleanup()
   }
 }
+
+export async function uploadApi<T>(
+  path: string,
+  file: File,
+  fieldName = "file",
+  options: ApiRequestOptions = {},
+): Promise<T> {
+  const session = readSession()
+  const form = new FormData()
+  form.append(fieldName, file)
+  // 浏览器会为 FormData 自动设置带 boundary 的 Content-Type，这里不要手动覆盖。
+  const headers: Record<string, string> = {}
+  if (session) headers.Authorization = `Bearer ${session.token}`
+  const request = createRequestSignal(undefined, options.timeoutMs)
+  try {
+    let response: Response
+    try {
+      response = await fetch(path, { method: "POST", headers, body: form, signal: request.signal })
+    } catch (reason) {
+      rethrowRequestFailure(reason, request)
+    }
+
+    if (response.status === 401) {
+      clearSession()
+      notifySessionExpired()
+    }
+
+    let body: ApiEnvelope<T>
+    try {
+      body = (await response.json()) as ApiEnvelope<T>
+    } catch (reason) {
+      if (request.didTimeout() && isAbortError(reason)) throw new ApiTimeoutError()
+      if (isAbortError(reason)) throw reason
+      throw new ApiRequestError(readMessage(undefined), response.status)
+    }
+    if (!response.ok || body.code !== "ok") {
+      throw new ApiRequestError(readMessage(body), response.status, body.code ?? "")
+    }
+    return body.data as T
+  } finally {
+    request.cleanup()
+  }
+}

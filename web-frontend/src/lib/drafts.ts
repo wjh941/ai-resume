@@ -1,4 +1,4 @@
-import { readItems, requestApi } from "./api"
+import { downloadApi, readItems, requestApi, SLOW_REQUEST_TIMEOUT_MS, uploadApi } from "./api"
 
 export type TemplateId = "business" | "technology" | "graduate" | "analytics"
 
@@ -168,4 +168,45 @@ export async function copyDraft(id: string): Promise<DraftRecord> {
 
 export async function deleteDraft(id: string): Promise<void> {
   await requestApi<{ id: string }>("/api/draft/" + encodeURIComponent(id), { method: "DELETE" })
+}
+
+export type ExportFormat = "word" | "pdf"
+
+export async function exportDraft(format: ExportFormat, draftId: string): Promise<{ filename: string; blob: Blob }> {
+  const result = await requestApi<{ filename: string; download_url: string }>(
+    `/api/export/${format}`,
+    { method: "POST", body: JSON.stringify({ draft_id: draftId }) },
+    { timeoutMs: SLOW_REQUEST_TIMEOUT_MS },
+  )
+  const blob = await downloadApi(result.download_url, {}, { timeoutMs: SLOW_REQUEST_TIMEOUT_MS })
+  return { filename: result.filename, blob }
+}
+
+export type ResumeImportPreview = {
+  id: string
+  status: string
+  originalFilename: string
+  parsedResume: ResumePayload
+}
+
+type BackendImportRecord = {
+  id: string
+  status: string
+  original_filename: string
+  parsed_resume: BackendResume
+}
+
+export async function importResumeFile(draftId: string, file: File): Promise<ResumeImportPreview> {
+  const record = await uploadApi<BackendImportRecord>(
+    "/api/draft/" + encodeURIComponent(draftId) + "/imports",
+    file,
+    "file",
+    { timeoutMs: SLOW_REQUEST_TIMEOUT_MS },
+  )
+  return {
+    id: record.id,
+    status: record.status,
+    originalFilename: record.original_filename,
+    parsedResume: fromResume(record.parsed_resume),
+  }
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
-import { Plus, Save, X } from "lucide-vue-next"
+import { Download, FileUp, Plus, Save, X } from "lucide-vue-next"
 
 import AsyncButton from "../components/AsyncButton.vue"
 import LoadingSpinner from "../components/LoadingSpinner.vue"
@@ -9,8 +9,9 @@ import {
   readDraftCheckpoint,
   writeDraftCheckpoint,
 } from "../lib/draft-checkpoint"
-import { getDraft, saveDraft, type DraftRecord } from "../lib/drafts"
+import { exportDraft, getDraft, importResumeFile, saveDraft, type DraftRecord, type ExportFormat, type ResumeImportPreview } from "../lib/drafts"
 import { toDraftSaveInput } from "../lib/draft-workflow"
+import { saveBlob } from "../lib/file-download"
 import {
   runPendingGuardedAction,
   resolveResumeEditorShortcutAction,
@@ -72,6 +73,94 @@ const skillsText = computed({
     if (draft.value) draft.value.resume.skills.skills = value.split(",").map((item) => item.trim()).filter(Boolean)
   },
 })
+
+const exportingKind = ref<ExportFormat | "">("")
+const actionNotice = ref("")
+const actionError = ref("")
+const importing = ref(false)
+const importPreview = ref<ResumeImportPreview | null>(null)
+const importFileInput = ref<HTMLInputElement | null>(null)
+
+async function ensureSavedBeforeExport(): Promise<boolean> {
+  if (!isDirty.value) return true
+  const result = await saveEditor()
+  if (result === "invalid") {
+    activateInvalidSummary(fieldErrors.value)
+    await nextTick()
+    focusFirstInvalidResumeField(fieldErrors.value)
+    actionError.value = "简历还有必填项未补全，导出前请先修正"
+    return false
+  }
+  if (result !== "saved") {
+    actionError.value = "简历草稿暂未保存，请检查登录状态后重试"
+    return false
+  }
+  return true
+}
+
+async function exportResume(kind: ExportFormat): Promise<void> {
+  if (exportingKind.value || loading.value || importing.value || importPreview.value) return
+  actionNotice.value = ""
+  actionError.value = ""
+  const saved = await ensureSavedBeforeExport()
+  if (!saved) return
+  exportingKind.value = kind
+  try {
+    const { filename, blob } = await exportDraft(kind, props.draftId)
+    saveBlob(blob, filename)
+    actionNotice.value = `已导出「${filename}」，可在浏览器下载中找到`
+  } catch (caught) {
+    actionError.value = caught instanceof Error && caught.message ? describeExportFailure(caught) : "导出失败，请稍后重试"
+  } finally {
+    exportingKind.value = ""
+  }
+}
+
+function describeExportFailure(caught: Error): string {
+  const message = caught.message || ""
+  if (message.includes("no visible export content")) return "简历还没有可导出的内容，请先补齐姓名、联系方式、目标岗位等必填信息"
+  if (message.includes("vip")) return message
+  if (message.includes("超时")) return "导出耗时较长已中断，请稍后重试"
+  return message.includes("暂时不可用") || message.length > 60 ? "导出服务暂时不可用，请稍后重试" : message
+}
+
+function pickImportFile(): void {
+  if (importing.value || exportingKind.value || loading.value || saving.value) return
+  importFileInput.value?.click()
+}
+
+async function handleImportFile(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ""
+  if (!file || importing.value || !draft.value) return
+  actionNotice.value = ""
+  actionError.value = ""
+  importing.value = true
+  try {
+    importPreview.value = await importResumeFile(props.draftId, file)
+  } catch (caught) {
+    const message = caught instanceof Error ? caught.message : ""
+    actionError.value = message.includes("超时")
+      ? "解析耗时较长已中断，请稍后重试"
+      : message && message.length <= 80 ? message : "暂时无法解析该简历文件，请确认是 PDF 或 Word 格式后重试"
+  } finally {
+    importing.value = false
+  }
+}
+
+function discardImportPreview(): void {
+  importPreview.value = null
+}
+
+async function applyImportPreview(): Promise<void> {
+  if (!draft.value || !importPreview.value) return
+  draft.value.resume = JSON.parse(JSON.stringify(importPreview.value.parsedResume))
+  importPreview.value = null
+  actionNotice.value = "已应用到当前简历，确认内容无误后记得保存"
+  await nextTick()
+  document.getElementById("resume-basic-name")?.focus()
+}
 
 async function load(): Promise<void> {
   loading.value = true
@@ -195,7 +284,29 @@ onBeforeUnmount(() => {
       </div>
       <div class="heading-actions">
         <AsyncButton class="text-action" type="button" :disabled="loading || saving" :aria-disabled="loading || saving || undefined" @click="cancel"><X :size="16" aria-hidden="true" />返回草稿</AsyncButton>
+        <AsyncButton class="text-action" type="button" :disabled="loading || Boolean(saving || exportingKind) || Boolean(importing) || Boolean(importPreview)" @click="pickImportFile"><FileUp :size="16" aria-hidden="true" />导入简历</AsyncButton>
+        <AsyncButton class="text-action" type="button" :loading="exportingKind === 'word'" :disabled="loading || Boolean(exportingKind) || Boolean(importing) || Boolean(importPreview)" @click="exportResume('word')"><Download :size="16" aria-hidden="true" />导出 Word</AsyncButton>
+        <AsyncButton class="text-action" type="button" :loading="exportingKind === 'pdf'" :disabled="loading || Boolean(exportingKind) || Boolean(importing) || Boolean(importPreview)" @click="exportResume('pdf')"><Download :size="16" aria-hidden="true" />导出 PDF</AsyncButton>
         <AsyncButton class="primary-button compact" type="button" :loading="saving" :disabled="loading" @click="save"><Save :size="16" aria-hidden="true" />保存草稿</AsyncButton>
+      </div>
+      <input ref="importFileInput" type="file" accept=".pdf,.doc,.docx" class="visually-hidden-input" aria-hidden="true" tabindex="-1" @change="handleImportFile" />
+    </div>
+
+    <p v-if="actionNotice" class="form-success action-status" role="status" aria-live="polite">{{ actionNotice }}</p>
+    <ErrorNotice v-if="actionError && (draft || loading)" :message="actionError" />
+
+    <div v-if="importPreview" class="import-panel" role="region" aria-label="简历导入解析预览">
+      <div class="import-heading"><strong>解析预览</strong><span class="import-filename">{{ importPreview.originalFilename }}</span></div>
+      <p class="import-copy">请先核对以下关键信息，确认后应用到当前简历；其余内容也会一并覆盖，应用后仍需手动保存。</p>
+      <div class="import-fields">
+        <label><span>姓名</span><input v-model.trim="importPreview.parsedResume.basic.name" /></label>
+        <label><span>手机号</span><input v-model.trim="importPreview.parsedResume.basic.phone" /></label>
+        <label><span>邮箱</span><input v-model.trim="importPreview.parsedResume.basic.email" /></label>
+        <label><span>目标岗位</span><input v-model.trim="importPreview.parsedResume.job.targetRole" /></label>
+      </div>
+      <div class="heading-actions import-actions">
+        <AsyncButton class="text-action" type="button" @click="discardImportPreview">暂不应用</AsyncButton>
+        <AsyncButton class="primary-button compact" type="button" @click="applyImportPreview">确认应用</AsyncButton>
       </div>
     </div>
 
