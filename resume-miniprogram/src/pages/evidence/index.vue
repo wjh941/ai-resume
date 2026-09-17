@@ -168,7 +168,7 @@ onMounted(() => {
         <view class="field"><text>证据说明</text><textarea v-model="form.proofNote" placeholder="例如：代码仓库、作品、截图、报告或证书" /></view>
         <view class="verified-row">
           <view><text class="verified-title">我确认以上信息真实准确</text><text class="verified-hint">确认后会优先用于岗位相关建议。</text></view>
-          <switch :checked="form.verified" color="#1677ff" @change="form.verified = $event.detail.value" />
+          <switch :checked="form.verified" color="#2563eb" @change="form.verified = $event.detail.value" />
         </view>
         <button class="primary" :loading="saving" :disabled="saving" @click="save">{{ form.id ? "保存修改" : "保存经历证据" }}</button>
       </view>
@@ -206,8 +206,8 @@ onMounted(() => {
 <style scoped>
 .page { min-height: 100vh; background: #f7f8fa; color: #1f2329; }
 .content { padding: 24rpx 24rpx 56rpx; }
-.hero { padding: 32rpx 24rpx; background: linear-gradient(145deg, #e8f3ff, #f9fcff); border: 1rpx solid #d6e8ff; border-radius: 22rpx; }
-.eyebrow { display: block; color: #1677ff; font-size: 21rpx; font-weight: 700; letter-spacing: 1rpx; }
+.hero { padding: 32rpx 24rpx; background: linear-gradient(145deg, #e8efff, #f9fcff); border: 1rpx solid #d6e8ff; border-radius: 22rpx; }
+.eyebrow { display: block; color: #2563eb; font-size: 21rpx; font-weight: 700; letter-spacing: 1rpx; }
 .title { display: block; margin-top: 10rpx; font-size: 42rpx; font-weight: 700; }
 .subtitle { display: block; margin-top: 12rpx; color: #5f6f82; font-size: 25rpx; line-height: 1.65; }
 .notice, .card { margin-top: 20rpx; padding: 24rpx; background: #fff; border: 1rpx solid #e5e6eb; border-radius: 18rpx; box-shadow: 0 8rpx 22rpx rgba(31, 35, 41, .04); }
@@ -218,8 +218,8 @@ onMounted(() => {
 input, textarea, .picker { box-sizing: border-box; width: 100%; color: #1f2329; background: #f8fafc; border: 1rpx solid #dfe7f1; border-radius: 12rpx; font-size: 26rpx; }
 input, .picker { height: 78rpx; padding: 0 18rpx; line-height: 78rpx; } textarea { min-height: 132rpx; padding: 16rpx; line-height: 1.55; }
 .verified-row { margin-top: 22rpx; padding: 18rpx; background: #f7faff; border-radius: 14rpx; }.verified-title, .verified-hint { display: block; }.verified-title { color: #334155; font-size: 25rpx; font-weight: 600; }.verified-hint { margin-top: 5rpx; color: #86909c; font-size: 21rpx; }
-button { margin-top: 20rpx; border-radius: 12rpx; }.primary { color: #fff; background: #1677ff; }.secondary { margin-top: 0; color: #4e5969; background: #f2f3f5; }.danger { margin-top: 0; color: #d4380d; background: #fff1f0; }
+button { margin-top: 20rpx; border-radius: 12rpx; }.primary { color: #fff; background: #2563eb; }.secondary { margin-top: 0; color: #4e5969; background: #f2f3f5; }.danger { margin-top: 0; color: #bf3f3a; background: #fdf1ef; }
 .empty { margin-top: 20rpx; padding: 30rpx 24rpx; color: #86909c; background: #fff; border: 1rpx dashed #d9e0e8; border-radius: 16rpx; font-size: 25rpx; line-height: 1.6; text-align: center; }
-.evidence-card { padding: 22rpx; }.evidence-title { display: block; color: #1f2329; font-size: 29rpx; font-weight: 700; }.evidence-kind { display: block; margin-top: 6rpx; color: #86909c; font-size: 21rpx; }.status { flex-shrink: 0; padding: 7rpx 12rpx; color: #c2410c; background: #fff7ed; border-radius: 999rpx; font-size: 21rpx; }.status.verified { color: #1677ff; background: #e8f3ff; }
+.evidence-card { padding: 22rpx; }.evidence-title { display: block; color: #1f2329; font-size: 29rpx; font-weight: 700; }.evidence-kind { display: block; margin-top: 6rpx; color: #86909c; font-size: 21rpx; }.status { flex-shrink: 0; padding: 7rpx 12rpx; color: #bf3f3a; background: #fdf1ef; border-radius: 999rpx; font-size: 21rpx; }.status.verified { color: #2563eb; background: #e8efff; }
 .detail, .proof { display: block; margin-top: 13rpx; color: #4e5969; font-size: 24rpx; line-height: 1.55; }.proof { color: #75869a; }.actions { justify-content: flex-end; margin-top: 18rpx; }.actions button { min-width: 110rpx; }
 </style>

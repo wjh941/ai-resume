@@ -94,10 +94,10 @@ function dateRange(startDate: string, endDate: string): string {
 .section { display: flex; flex-direction: column; gap: 12rpx; margin-top: 32rpx; color: #4e5969; line-height: 1.65; }
 .section-title { color: #1f2329; font-size: 30rpx; font-weight: 700; }
 .skill-list { display: flex; flex-wrap: wrap; gap: 12rpx; }
-.skill { padding: 8rpx 14rpx; color: #1677ff; background: #e8f3ff; border-radius: 999rpx; font-size: 23rpx; }
+.skill { padding: 8rpx 14rpx; color: #2563eb; background: #e8efff; border-radius: 999rpx; font-size: 23rpx; }
 .experience { display: flex; flex-direction: column; gap: 6rpx; padding: 16rpx 0; border-top: 1rpx solid #f2f3f5; }
 .experience-title { display: flex; justify-content: space-between; gap: 20rpx; color: #1f2329; font-weight: 600; }
-.template-technology .resume-header { border-color: #1677ff; }.template-technology .section-title { color: #1677ff; }
+.template-technology .resume-header { border-color: #2563eb; }.template-technology .section-title { color: #2563eb; }
 .template-graduate .resume-header { border-color: #36cfc9; }.template-graduate .section-title { color: #08979c; }
 .template-analytics .resume-header { border-color: #9254de; }.template-analytics .section-title { color: #722ed1; }
 </style>

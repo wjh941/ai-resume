@@ -93,8 +93,8 @@ onMounted(loadSources)
 <style scoped>
 .page { min-height: 100vh; background: #f4f7fb; color: #1f2937; }
 .content { padding: 24rpx 24rpx 54rpx; }
-.hero { padding: 34rpx 26rpx; background: linear-gradient(145deg, #e8f3ff, #f8fbff); border-radius: 24rpx; }
-.eyebrow { display: block; color: #1677ff; font-size: 21rpx; font-weight: 700; letter-spacing: 1rpx; }
+.hero { padding: 34rpx 26rpx; background: linear-gradient(145deg, #e8efff, #f8fbff); border-radius: 24rpx; }
+.eyebrow { display: block; color: #2563eb; font-size: 21rpx; font-weight: 700; letter-spacing: 1rpx; }
 .title { display: block; margin-top: 10rpx; font-size: 44rpx; font-weight: 700; }
 .subtitle, .hint, .source-detail, .disabled-reason { display: block; color: #6b7280; font-size: 24rpx; line-height: 1.6; }
 .subtitle { margin-top: 12rpx; }
@@ -102,10 +102,10 @@ onMounted(loadSources)
 .section-heading { display: flex; justify-content: space-between; gap: 16rpx; }
 .section-title { display: block; font-size: 30rpx; font-weight: 700; }
 .action-card .hint { margin-top: 10rpx; }
-.primary { margin-top: 20rpx; border-radius: 14rpx; background: #1677ff; color: #fff; font-size: 27rpx; }
+.primary { margin-top: 20rpx; border-radius: 14rpx; background: #2563eb; color: #fff; font-size: 27rpx; }
 .stats { display: flex; gap: 16rpx; margin-top: 20rpx; }
 .stats view { flex: 1; padding: 18rpx 12rpx; background: #f4f8fd; border-radius: 14rpx; text-align: center; }
-.stats text:first-child { display: block; color: #1677ff; font-size: 38rpx; font-weight: 700; }
+.stats text:first-child { display: block; color: #2563eb; font-size: 38rpx; font-weight: 700; }
 .stats text:last-child { color: #6b7280; font-size: 22rpx; }
 .source-row { display: flex; justify-content: space-between; gap: 18rpx; padding: 22rpx 0; border-bottom: 1rpx solid #edf1f5; }
 .source-row:last-child { border-bottom: 0; }
@@ -114,5 +114,5 @@ onMounted(loadSources)
 .disabled-reason { margin-top: 6rpx; color: #b7791f; }
 .badge { align-self: flex-start; padding: 6rpx 14rpx; border-radius: 999rpx; background: #fff7e6; color: #b7791f; font-size: 22rpx; }
 .badge.enabled { background: #e8f7ef; color: #16794b; }
-.error { display: block; margin-top: 14rpx; color: #d4380d; font-size: 24rpx; }
+.error { display: block; margin-top: 14rpx; color: #bf3f3a; font-size: 24rpx; }
 </style>

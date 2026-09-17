@@ -83,8 +83,8 @@ async function chooseTemplate(templateId: TemplateId) {
 .hero { margin-bottom: 28rpx; }.title { display: block; color: #1f2329; font-size: 42rpx; font-weight: 700; }.subtitle { display: block; margin-top: 12rpx; color: #86909c; font-size: 25rpx; line-height: 1.6; }
 .template-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20rpx; }
 .template-card { display: flex; flex-direction: column; gap: 16rpx; min-height: 340rpx; padding: 24rpx; background: #fff; border: 2rpx solid #e5e6eb; border-radius: 20rpx; box-shadow: 0 8rpx 24rpx rgba(31,35,41,.05); }
-.mini-header { display: flex; flex-direction: column; gap: 6rpx; padding: 16rpx; color: #fff; background: #4e5969; border-radius: 12rpx; font-size: 22rpx; }.card-technology .mini-header { background: #1677ff; }.card-graduate .mini-header { background: #36cfc9; }.card-analytics .mini-header { background: #9254de; }
+.mini-header { display: flex; flex-direction: column; gap: 6rpx; padding: 16rpx; color: #fff; background: #4e5969; border-radius: 12rpx; font-size: 22rpx; }.card-technology .mini-header { background: #2563eb; }.card-graduate .mini-header { background: #36cfc9; }.card-analytics .mini-header { background: #9254de; }
 .template-name { color: #1f2329; font-size: 30rpx; font-weight: 700; }.description { min-height: 70rpx; color: #86909c; font-size: 23rpx; line-height: 1.5; }
 .mini-lines { display: flex; flex-direction: column; gap: 10rpx; flex: 1; }.mini-lines view { height: 10rpx; background: #f2f3f5; border-radius: 999rpx; }.mini-lines view:nth-child(2) { width: 78%; }.mini-lines view:nth-child(3) { width: 58%; }
-.primary { color: #fff; background: #1677ff; }
+.primary { color: #fff; background: #2563eb; }
 </style>

@@ -151,7 +151,7 @@ onMounted(async () => {
       <textarea v-model="note" placeholder="可添加复盘备注" />
       <button class="primary" :loading="saving" :disabled="saving" @click="toggleFavorite">{{ currentFavorite ? "取消收藏" : "收藏岗位" }}</button>
     </view>
-    <view class="card subscription"><view><text class="section-title">岗位匹配提醒</text><text class="copy">{{ capabilities.jobMatching.notice }}</text></view><switch class="subscription-switch" :class="{ 'subscription-switch--pending': subscriptionSaving }" :disabled="subscriptionSaving || !capabilities.jobMatching.enabled" :checked="enabled" color="#1677ff" @change="updateSubscription" /></view>
+    <view class="card subscription"><view><text class="section-title">岗位匹配提醒</text><text class="copy">{{ capabilities.jobMatching.notice }}</text></view><switch class="subscription-switch" :class="{ 'subscription-switch--pending': subscriptionSaving }" :disabled="subscriptionSaving || !capabilities.jobMatching.enabled" :checked="enabled" color="#2563eb" @change="updateSubscription" /></view>
     <view class="card"><text class="section-title">匹配筛选条件</text><input v-model="matchFilter" maxlength="200" placeholder="上海、远程、数据平台" /><button :loading="subscriptionSaving" :disabled="subscriptionSaving || !capabilities.jobMatching.enabled" @click="saveSubscriptionFilter">保存筛选条件</button><text v-if="lastNotifyAt" class="copy">上次提醒：{{ lastNotifyAt }}</text></view>
       <text v-if="error" class="ui-error-tip" role="alert">{{ error }}</text>
     <view v-if="loading" class="notice"><LoadingSpinner size="sm" label="正在加载已收藏岗位" /><text>正在加载已收藏岗位</text></view>

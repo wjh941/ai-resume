@@ -28,5 +28,5 @@ const errorId = `${fieldId}-error`
 <style scoped>
 .field { margin: 20rpx 0; }
 .label { display: block; margin-bottom: 10rpx; color: #4e5969; font-size: 24rpx; }
-input { min-height: 76rpx; padding: 0 20rpx; background: #fff; border: 1px solid #e5e6eb; border-radius: 12rpx; }.invalid { border-color: #d4380d; background: #fff7f0; }.error { display: block; margin-top: 8rpx; color: #d4380d; font-size: 22rpx; line-height: 1.4; }
+input { min-height: 76rpx; padding: 0 20rpx; background: #fff; border: 1px solid #e5e6eb; border-radius: 12rpx; }.invalid { border-color: #bf3f3a; background: #fdf1ef; }.error { display: block; margin-top: 8rpx; color: #bf3f3a; font-size: 22rpx; line-height: 1.4; }
 </style>

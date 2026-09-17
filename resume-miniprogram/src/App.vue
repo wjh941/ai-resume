@@ -67,7 +67,7 @@ button:disabled, button[disabled] { background-color: var(--ui-disabled-bg) !imp
 .ui-loading-spinner { display: inline-flex; width: var(--ui-spinner-size-md); height: var(--ui-spinner-size-md); flex: 0 0 auto; align-items: center; justify-content: center; vertical-align: middle; }
 .ui-loading-spinner-sm { width: var(--ui-spinner-size-sm); height: var(--ui-spinner-size-sm); }
 .ui-loading-spinner-lg { width: var(--ui-spinner-size-lg); height: var(--ui-spinner-size-lg); }
-.ui-loading-spinner-ring { display: block; width: 100%; height: 100%; box-sizing: border-box; border: 4rpx solid var(--ui-spinner-track); border-top-color: #1677ff; border-radius: 50%; animation: ui-spinner-rotate 720ms linear infinite; }
+.ui-loading-spinner-ring { display: block; width: 100%; height: 100%; box-sizing: border-box; border: 4rpx solid var(--ui-spinner-track); border-top-color: #2563eb; border-radius: 50%; animation: ui-spinner-rotate 720ms linear infinite; }
 .ui-loading-block { display: flex; min-height: 72rpx; align-items: center; justify-content: center; gap: 12rpx; color: #64748b; }
 .page { animation: ui-page-enter var(--motion-slow) var(--ui-motion-ease-soft) both; }
 .skeleton-card, .export-skeleton, .loading-skeletons { transition: opacity var(--ui-motion-base) var(--ui-motion-ease), transform var(--ui-motion-base) var(--ui-motion-ease); }

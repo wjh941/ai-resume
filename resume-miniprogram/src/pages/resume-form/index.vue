@@ -231,15 +231,15 @@ async function prepareAndChooseTemplate() {
 .entry { margin-top: 18rpx; padding-top: 12rpx; border-top: 1px solid #f2f3f5; }
 textarea { width: 100%; min-height: 130rpx; margin: 16rpx 0; padding: 16rpx; box-sizing: border-box; color: #4e5969; background: #f7f8fa; border-radius: 12rpx; }
 .actions { display: flex; gap: 16rpx; padding-bottom: 48rpx; }.actions button { flex: 1; }
-.primary { color: #fff; background: #1677ff; }.secondary { color: #4e5969; background: #f2f3f5; }
+.primary { color: #fff; background: #2563eb; }.secondary { color: #4e5969; background: #f2f3f5; }
 .enrichment-card { background: #f7faff; border-color: #b7d8ff; }
 .enrichment-hint { display: block; margin-top: 14rpx; color: #4e5969; line-height: 1.6; }
 .enrichment-actions { display: flex; gap: 16rpx; margin-top: 20rpx; }.enrichment-actions button { flex: 1; font-size: 24rpx; }
 .evidence-entry { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; margin-top: 22rpx; padding: 18rpx; background: #eef6ff; border: 1rpx solid #cfe4ff; border-radius: 14rpx; }
-.evidence-entry-title, .evidence-entry-hint { display: block; }.evidence-entry-title { color: #245b99; font-size: 25rpx; font-weight: 700; }.evidence-entry-hint { margin-top: 5rpx; color: #66788b; font-size: 21rpx; }.evidence-entry button { flex-shrink: 0; }
+.evidence-entry-title, .evidence-entry-hint { display: block; }.evidence-entry-title { color: #1d4ed8; font-size: 25rpx; font-weight: 700; }.evidence-entry-hint { margin-top: 5rpx; color: #66788b; font-size: 21rpx; }.evidence-entry button { flex-shrink: 0; }
 .suggestion-list { margin-top: 16rpx; }.suggestion-card { margin-top: 12rpx; padding: 16rpx; background: #fff; border: 1rpx solid #d8e8f8; border-radius: 12rpx; }
-.suggestion-top { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; color: #245b99; font-size: 24rpx; font-weight: 700; }.suggestion-top text:last-child { color: #86909c; font-size: 20rpx; font-weight: 400; }
+.suggestion-top { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; color: #1d4ed8; font-size: 24rpx; font-weight: 700; }.suggestion-top text:last-child { color: #86909c; font-size: 20rpx; font-weight: 400; }
 .suggestion-description, .suggestion-risk { display: block; margin-top: 10rpx; color: #4e5969; font-size: 22rpx; line-height: 1.55; white-space: pre-line; }.suggestion-risk { color: #b26a00; }.suggestion-card button { margin-top: 12rpx; }
-.validation-summary { margin-bottom: 20rpx; padding: 16rpx 20rpx; color: #b42318; background: #fff7f0; border: 1rpx solid #ffccc7; border-radius: 12rpx; }.validation-summary text { display: block; font-size: 23rpx; line-height: 1.55; }
+.validation-summary { margin-bottom: 20rpx; padding: 16rpx 20rpx; color: #b42318; background: #fdf1ef; border: 1rpx solid #ffccc7; border-radius: 12rpx; }.validation-summary text { display: block; font-size: 23rpx; line-height: 1.55; }
 .local-save-status { display: block; min-height: 34rpx; margin-bottom: 12rpx; color: #66788b; font-size: 22rpx; text-align: right; }
 </style>

@@ -48,6 +48,6 @@ watch(() => props.text, () => {
 .expandable-text { display: block; min-width: 0; max-width: 100%; }
 .expandable-copy { display: block; max-width: 100%; overflow-wrap: anywhere; }
 .expandable-copy.is-collapsed { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: var(--expandable-lines); overflow-wrap: anywhere; }
-.expandable-toggle { width: auto; min-height: 48rpx; margin: 6rpx 0 0; padding: 0 4rpx; color: #1677ff; background: transparent; border: 0; font-size: 22rpx; line-height: 48rpx; text-align: left; }
+.expandable-toggle { width: auto; min-height: 48rpx; margin: 6rpx 0 0; padding: 0 4rpx; color: #2563eb; background: transparent; border: 0; font-size: 22rpx; line-height: 48rpx; text-align: left; }
 .expandable-toggle::after { border: 0; }
 </style>
