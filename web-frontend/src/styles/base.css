@@ -150,6 +150,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .persistence-notice { display: flex; gap: 10px; align-items: center; padding: 10px 14px; margin-bottom: 16px; color: #8a5a12; background: #fff7e6; border: 1px solid #f0dcb4; border-radius: 10px; font-size: 13px; line-height: 1.5; }
 .persistence-notice span { flex: 1; }
 :root[data-theme="dark"] .persistence-notice { color: #f0c66a; background: #33290f; border-color: #55431a; }
+
+/* AI 长任务阶段化等待提示。 */
+.staged-progress { display: flex; gap: 8px; align-items: center; margin: 10px 0 0; color: var(--text-secondary, #4e5969); font-size: 13px; line-height: 1.5; }
+.staged-progress .staged-progress-spinner { width: 15px; height: 15px; flex: 0 0 15px; }
 .action-status { min-height: 18px; }
 .visually-hidden-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .import-panel { display: grid; gap: 12px; margin-bottom: 18px; padding: 18px 20px; border: 1px solid color-mix(in srgb, var(--primary) 26%, transparent); border-radius: calc(var(--radius) + 4px); background: color-mix(in srgb, var(--primary) 6%, var(--surface)); }

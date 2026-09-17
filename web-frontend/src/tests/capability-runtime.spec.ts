@@ -181,7 +181,7 @@ describe.each([
     roleInput: 'input[maxlength="200"]',
     reasonId: "jobs-professional-mode-reason",
     result: { role_name: "Data analyst" },
-    simplifiedPayload: { role_name: "Data analyst", report_mode: "simplified" },
+    simplifiedPayload: { role_name: "Data analyst", report_mode: "simplified", force_refresh: false },
     // JobsView 的岗位查询走慢超时选项，requestApi 收到第三个参数。
     slowTimeoutOptions: { timeoutMs: 120_000 },
     demoResult: {

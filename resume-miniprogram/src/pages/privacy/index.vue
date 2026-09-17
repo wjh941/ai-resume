@@ -81,6 +81,7 @@ function clearLocalData(): void {
         <button :loading="backupBusy" :disabled="backupBusy" @click="exportBackup">导出本地备份</button>
         <button :loading="backupBusy" :disabled="backupBusy" class="secondary" @click="confirmRestoreBackup">恢复本地备份</button>
       </view>
+      <text class="description hint-line">提示：服务端使用免费托管，云端数据不保证长期持久（服务重启可能清空）。重要简历请及时导出 Word 备份到本机。</text>
     </view>
     <view class="section">
       <text class="section-title">清理本机数据</text>
@@ -95,5 +96,5 @@ function clearLocalData(): void {
 </template>
 
 <style scoped>
-.page { min-height: 100vh; box-sizing: border-box; padding: 28rpx; background: #f7f8fa; color: #1f2329; }.title,.section-title,.description { display: block; }.title { font-size: 40rpx; font-weight: 700; }.section { margin-top: 22rpx; padding: 24rpx; background: #fff; border: 1rpx solid #e5e6eb; border-radius: 12rpx; }.section-title { font-size: 30rpx; font-weight: 600; }.description { margin-top: 14rpx; color: #4e5969; font-size: 25rpx; line-height: 1.6; }.backup-actions { display: flex; gap: 14rpx; margin-top: 22rpx; }.backup-actions button { flex: 1; margin: 0; font-size: 24rpx; }.secondary { color: #2563eb; background: #eef6ff; border: 1rpx solid #b7d8ff; }.danger { margin-top: 22rpx; color: #bf3f3a; background: #fdf1ef; border: 1rpx solid #ffccc7; }
+.page { min-height: 100vh; box-sizing: border-box; padding: 28rpx; background: #f7f8fa; color: #1f2329; }.title,.section-title,.description { display: block; }.title { font-size: 40rpx; font-weight: 700; }.section { margin-top: 22rpx; padding: 24rpx; background: #fff; border: 1rpx solid #e5e6eb; border-radius: 12rpx; }.section-title { font-size: 30rpx; font-weight: 600; }.description { margin-top: 14rpx; color: #4e5969; font-size: 25rpx; line-height: 1.6; }.backup-actions { display: flex; gap: 14rpx; margin-top: 22rpx; }.backup-actions button { flex: 1; margin: 0; font-size: 24rpx; }.secondary { color: #2563eb; background: #eef6ff; border: 1rpx solid #b7d8ff; }.hint-line { color: #8a5a12; }.danger { margin-top: 22rpx; color: #bf3f3a; background: #fdf1ef; border: 1rpx solid #ffccc7; }
 </style>

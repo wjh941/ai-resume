@@ -11,6 +11,7 @@ from app.schemas.resume import ResumePayload
 class JobQueryRequest(BaseModel):
     role_name: str = Field(min_length=1, max_length=200)
     report_mode: ReportMode | None = None
+    force_refresh: bool = False
 
     @field_validator("role_name")
     @classmethod

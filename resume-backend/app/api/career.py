@@ -268,6 +268,14 @@ async def job_plan(
 ):
     profile, evidence, resume, assessment = _job_plan_context(request, user_id)
     expand_detail = payload.expand_detail and vip.allows("full_job_report")
+    settings = request.app.state.settings
+    plan_cache = request.app.state.job_plan_cache
+    cache_key = plan_cache.build_key(user_id, payload.role_name, expand_detail, settings.ai_provider)
+    cached_payload: dict[str, object] | None = None if payload.force_refresh else plan_cache.get(cache_key)
+    if cached_payload is not None:
+        cached_payload["cached"] = True
+        cached_payload["cache_notice"] = "结果来自 24 小时内的缓存；如资料有更新，可重新生成获取最新规划。"
+        return success(cached_payload)
     plan = await request.app.state.ai_client.build_job_plan(
         payload.role_name,
         profile,
@@ -307,4 +315,7 @@ async def job_plan(
         "资料范围：当前账户已验证经历、简历和本地职业规划规则。",
         professional_actions or concise_actions,
     ).model_dump(mode="json")
+    # 缓存的是 VIP 投影后的展示形态：同一账号同参数 24h 内重复请求不再触发 AI 生成。
+    plan_cache.put(cache_key, plan_payload)
+    plan_payload["cached"] = False
     return success(plan_payload)

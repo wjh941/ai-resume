@@ -5,8 +5,10 @@ import { computed, inject, ref, watch } from "vue"
 import { requestApi, SLOW_REQUEST_TIMEOUT_MS } from "../lib/api"
 import { getApiErrorMessage } from "../lib/api-error"
 import { useApiResource } from "../composables/useApiResource"
+import { createStagedProgress } from "../composables/staged-progress"
 import AsyncButton from "../components/AsyncButton.vue"
 import ExpandableText from "../components/ExpandableText.vue"
+import LoadingSpinner from "../components/LoadingSpinner.vue"
 import type { WorkspaceView } from "../components/WebSidebar.vue"
 import { CAPABILITIES_KEY, createCapabilityContext, isCapabilityEnabled } from "../lib/capabilities"
 import { readSession } from "../lib/session"
@@ -16,6 +18,7 @@ import { validateJobsQuerySnapshot } from "../lib/query-recovery"
 
 type JobResult = {
   role_name: string
+  cached?: boolean
   salary_by_experience?: Record<string, string>
   responsibilities?: string[]
   hard_requirements?: string[]
@@ -67,6 +70,7 @@ let requestedCapabilityMode: "real" | "demo" | null = null
 const unique = (items: Array<string | undefined>): string[] => [...new Set(items.filter((item): item is string => Boolean(item?.trim())).map((item) => item.trim()))]
 const emit = defineEmits<{ navigate: [view: WorkspaceView] }>()
 
+const forceRefresh = ref(false)
 const {
   data: result,
   loading,
@@ -76,13 +80,31 @@ const {
   retryable,
   clearRetry,
 } = useApiResource<JobResult>(async () => {
-  const nextResult = await requestApi<JobResult>("/api/job/query", {
-    method: "POST",
-    body: JSON.stringify({ role_name: roleName.value.trim(), report_mode: reportMode.value }),
-  }, { timeoutMs: SLOW_REQUEST_TIMEOUT_MS })
-  resultCapabilityMode.value = nextResult.report?.mode === "professional" ? requestedCapabilityMode : null
-  return nextResult
+  try {
+    const nextResult = await requestApi<JobResult>("/api/job/query", {
+      method: "POST",
+      body: JSON.stringify({ role_name: roleName.value.trim(), report_mode: reportMode.value, force_refresh: forceRefresh.value }),
+    }, { timeoutMs: SLOW_REQUEST_TIMEOUT_MS })
+    resultCapabilityMode.value = nextResult.report?.mode === "professional" ? requestedCapabilityMode : null
+    return nextResult
+  } finally {
+    forceRefresh.value = false
+  }
 }, { fallbackMessage: "岗位分析暂时不可用。请确认 AI 服务已配置，或稍后重试。" })
+
+async function refreshCachedResult(): Promise<void> {
+  if (loading.value) return
+  clearRetry()
+  forceRefresh.value = true
+  await runQuery()
+}
+// AI 完整分析通常 30-90 秒：阶段化提示让等待可预期，而不是一个静止的转圈。
+const queryStages = ["正在解析岗位画像与市场行情", "正在对比你的能力与岗位要求", "正在生成核验清单与建议"] as const
+const queryProgress = createStagedProgress(queryStages)
+watch(loading, (busy) => {
+  if (busy) queryProgress.start()
+  else queryProgress.stop()
+})
 const requiredSkills = computed(() => unique(result.value?.required_skills || []))
 const bonusSkills = computed(() => unique(result.value?.bonus_skills || []))
 const hardRequirements = computed(() => unique(result.value?.hard_requirements || []))
@@ -166,6 +188,13 @@ async function favorite() {
     saving.value = false
   }
 }
+
+// 降级为精简版后的一键升级：以专业模式重新查询同一岗位。
+async function regenerateProfessionalReport(): Promise<void> {
+  if (loading.value || capabilityRefreshing.value || !jobMatchingEnabled.value) return
+  reportMode.value = "professional"
+  await queryRole()
+}
 </script>
 
 <template>
@@ -183,6 +212,10 @@ async function favorite() {
         </div>
       </div>
       <AsyncButton class="primary-button compact" type="submit" :loading="loading"><Search :size="17" aria-hidden="true" />{{ loading ? "分析中" : "查询岗位" }}</AsyncButton>
+      <p v-if="loading" class="staged-progress" role="status" aria-live="polite">
+        <LoadingSpinner class="staged-progress-spinner" label="正在分析岗位" />
+        <span>{{ queryProgress.label.value }}…已等待 {{ queryProgress.elapsedSeconds.value }} 秒。完整分析通常需要 30-90 秒，请留在本页稍候。</span>
+      </p>
     </form>
     <ErrorNotice v-if="error" id="jobs-error" :message="error">
       <AsyncButton v-if="retryable" class="notice-action" type="button" @click="retryFailedRequest">重试查询</AsyncButton>
@@ -203,6 +236,10 @@ async function favorite() {
       </div>
 
       <div class="job-reference-notice" role="note"><strong>先看结论</strong><span>{{ result.report?.source_notice || "以下内容来自结构化岗位知识，用于准备和复核正式 JD。" }}</span><span v-if="hasProfessionalReport && resultCapabilityMode === 'demo'" class="source-notice demo-source-notice">{{ demoSourceNotice }}</span></div>
+      <div v-if="result.cached" class="mode-recovery-actions cached-row" role="status">
+        <span class="mode-notice">结果来自 24 小时内的缓存（同一岗位重复查询秒回）。</span>
+        <AsyncButton class="notice-action" type="button" :loading="loading" @click="refreshCachedResult">重新生成</AsyncButton>
+      </div>
 
       <div class="job-intelligence-grid">
         <section class="job-intelligence-card job-intelligence-card-primary"><div class="job-card-heading"><h3>硬性门槛</h3><span>筛选优先级高</span></div><ul v-if="hardRequirements.length" class="plain-list"><li v-for="item in hardRequirements" :key="item">{{ item }}</li></ul><p v-else class="job-muted">暂未提供硬性门槛，请以正式 JD 为准。</p></section>
@@ -219,7 +256,7 @@ async function favorite() {
 
       <section class="job-interview-panel"><div class="job-section-heading"><div><h3>面试核验清单</h3><p>不要只背技能名，按“场景—动作—结果—证据”准备回答。</p></div><strong>{{ interviewChecks.length }} 题</strong></div><div v-if="interviewChecks.length" class="interview-check-list"><details v-for="(check, index) in interviewChecks" :key="check.prompt" :open="index === 0"><summary><span>{{ String(index + 1).padStart(2, '0') }}</span><b>{{ check.label }}</b></summary><p>{{ check.prompt }}</p></details></div><p v-else class="job-muted">暂无可生成的核验问题，请先补充岗位职责或要求。</p></section>
 
-      <section class="report-actions"><div class="job-section-heading"><div><h3>下一步建议</h3><p v-if="hasProfessionalReport">专业版已结合岗位要点整理完整行动路径。</p><p v-else>先完成下面三步，再根据真实 JD 调整优先级。</p></div><span class="report-mode-label">{{ hasProfessionalReport ? resultModeLabel : '精简版' }}</span></div><ol v-if="reportActions.length"><li v-for="action in reportActions" :key="action">{{ action }}</li></ol><p v-else class="job-muted">暂无行动建议，请先整理一条与目标岗位相关的真实经历。</p><p>{{ result.report?.source_notice }}</p><p v-if="!hasProfessionalReport && result.report?.upgrade_notice" class="upgrade-notice">{{ result.report.upgrade_notice }}</p><details v-if="reportEvidence.length" class="report-evidence"><summary>查看专业证据映射（{{ reportEvidence.length }} 条）</summary><ul class="plain-list"><li v-for="evidence in reportEvidence" :key="`${evidence.title}-${evidence.scope}`"><strong>{{ evidence.title || '岗位要点' }}</strong><span>{{ evidence.detail }}</span></li></ul></details></section>
+      <section class="report-actions"><div class="job-section-heading"><div><h3>下一步建议</h3><p v-if="hasProfessionalReport">专业版已结合岗位要点整理完整行动路径。</p><p v-else>先完成下面三步，再根据真实 JD 调整优先级。</p></div><span class="report-mode-label">{{ hasProfessionalReport ? resultModeLabel : '精简版' }}</span></div><ol v-if="reportActions.length"><li v-for="action in reportActions" :key="action">{{ action }}</li></ol><p v-else class="job-muted">暂无行动建议，请先整理一条与目标岗位相关的真实经历。</p><p>{{ result.report?.source_notice }}</p><p v-if="!hasProfessionalReport && result.report?.upgrade_notice" class="upgrade-notice">{{ result.report.upgrade_notice }}<AsyncButton v-if="jobMatchingEnabled && !loading" class="notice-action" type="button" :disabled="capabilityRefreshing" @click="regenerateProfessionalReport">重新生成专业版</AsyncButton></p><details v-if="reportEvidence.length" class="report-evidence"><summary>查看专业证据映射（{{ reportEvidence.length }} 条）</summary><ul class="plain-list"><li v-for="evidence in reportEvidence" :key="`${evidence.title}-${evidence.scope}`"><strong>{{ evidence.title || '岗位要点' }}</strong><span>{{ evidence.detail }}</span></li></ul></details></section>
     </article>
     <div v-else-if="!loading" class="empty-board"><span class="empty-board-icon" aria-hidden="true"><BriefcaseBusiness :size="24" aria-hidden="true" /></span><div><h2>从一个目标岗位开始</h2><p>查询结果用于组织准备和核验方向，不代表实时岗位数量、薪资区间或录用概率。</p><p>输入具体岗位名称后开始整理能力要求。</p></div></div>
   </section>

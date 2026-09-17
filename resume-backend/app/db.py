@@ -333,6 +333,12 @@ def initialize_database(database_path: DatabaseTarget, *, timeout_seconds: float
                 created_at TEXT NOT NULL,
                 PRIMARY KEY (normalized_role, provider_mode)
             );
+            CREATE TABLE IF NOT EXISTS job_plan_cache (
+                cache_key TEXT PRIMARY KEY,
+                payload_json TEXT NOT NULL,
+                expires_at TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
             CREATE TABLE IF NOT EXISTS download_file (
                 token TEXT PRIMARY KEY,
                 user_id TEXT REFERENCES users(user_id),

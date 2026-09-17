@@ -75,7 +75,8 @@ async def query_job(
     cache = request.app.state.job_cache
     settings = request.app.state.settings
     provider_cache_key = settings.ai_provider
-    job = cache.get(role_name, provider_cache_key)
+    job = None if payload.force_refresh else cache.get(role_name, provider_cache_key)
+    cache_hit = job is not None
     if job is None:
         job = await request.app.state.ai_client.query_job(role_name)
         cache.put(role_name, provider_cache_key, job)
@@ -101,6 +102,7 @@ async def query_job(
         [*job.responsibilities, *job.career_route],
     )
     job_payload["report"] = report.model_dump(mode="json")
+    job_payload["cached"] = cache_hit
     return success(job_payload)
 
 

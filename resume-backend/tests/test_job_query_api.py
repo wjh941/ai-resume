@@ -20,7 +20,10 @@ def test_same_normalized_role_uses_unexpired_mock_cache(api_client):
     first = assert_success(api_client.post("/api/job/query", json={"role_name": " Data Engineer "}))
     second = assert_success(api_client.post("/api/job/query", json={"role_name": "data   engineer"}))
 
-    assert first == second
+    assert first["cached"] is False
+    assert second["cached"] is True
+    strip_cached = lambda body: {key: value for key, value in body.items() if key != "cached"}
+    assert strip_cached(second) == strip_cached(first)
     assert api_client.app.state.ai_client.job_query_count == 1
 
 

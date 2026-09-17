@@ -263,6 +263,7 @@ class JobPlanRequest(BaseModel):
     role_name: str = Field(min_length=1, max_length=120)
     expand_detail: bool = False
     report_mode: ReportMode | None = None
+    force_refresh: bool = False
 
     @field_validator("role_name")
     @classmethod

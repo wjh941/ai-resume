@@ -40,7 +40,7 @@ from app.services.job_catalog import JobCatalog
 from app.services.official_dataset_sync import OfficialDatasetSyncService
 from app.services.export_pdf import PdfRendererUnavailableError
 from app.api.exports import ExportEmptyError, ExportGenerationError
-from app.services.job_cache import JobCache
+from app.services.job_cache import JobCache, JobPlanCache
 from app.services.job_matching import JobMatcher
 from app.services.rewrite_guard import RewriteFactViolation
 from app.services.template_service import TemplateService
@@ -202,6 +202,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.template_service = TemplateService(TemplateRepository(database_target))
     app.state.ai_client = build_ai_client(settings)
     app.state.job_cache = JobCache(database_target, settings.cache_expire_day)
+    app.state.job_plan_cache = JobPlanCache(database_target, expire_hours=24)
     app.state.job_catalog = JobCatalog(database_target)
     app.state.job_matcher = JobMatcher()
     app.state.knowledgebase_repository = KnowledgebaseRepository(database_target)
