@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
-import { Download, FileUp, Plus, Printer, Save, X } from "lucide-vue-next"
+import { Download, FileUp, Plus, Printer, Save, Sparkles, X } from "lucide-vue-next"
 
 import AsyncButton from "../components/AsyncButton.vue"
 import LoadingSpinner from "../components/LoadingSpinner.vue"
@@ -9,10 +9,13 @@ import {
   readDraftCheckpoint,
   writeDraftCheckpoint,
 } from "../lib/draft-checkpoint"
-import { exportDraft, getDraft, importResumeFile, saveDraft, type DraftRecord, type ExportFormat, type ResumeImportPreview } from "../lib/drafts"
+import { exportDraft, getDraft, importResumeFile, saveDraft, type DraftRecord, type ExportFormat, type ResumeImportPreview, type ResumePayload } from "../lib/drafts"
 import { toDraftSaveInput } from "../lib/draft-workflow"
 import { triggerBlobDownload } from "../lib/download-file"
 import { ApiRequestError } from "../lib/api"
+import { getApiErrorMessage } from "../lib/api-error"
+import { aiRewriteResume, computeRewriteDiff, REWRITE_INSTRUCTIONS_MAX, type RewriteMode } from "../lib/rewrite"
+import { createStagedProgress } from "../composables/staged-progress"
 import ResumePrintView from "../components/ResumePrintView.vue"
 import {
   runPendingGuardedAction,
@@ -172,6 +175,72 @@ function discardImportPreview(): void {
   importPreview.value = null
 }
 
+// ---------- AI 按需改写：导入/填写的简历交给 AI 润色，自定义要求可见可改 ----------
+const rewritePanelOpen = ref(false)
+const rewriteMode = ref<RewriteMode>("light")
+const rewriteInstructions = ref("")
+const rewriteLoading = ref(false)
+const rewriteError = ref("")
+const rewriteResult = ref<ResumePayload | null>(null)
+const rewriteProgress = createStagedProgress([
+  "正在理解你的改写要求",
+  "正在围绕目标岗位润色表达",
+  "正在核对事实一致性",
+])
+watch(rewriteLoading, (busy) => {
+  if (busy) rewriteProgress.start()
+  else rewriteProgress.stop()
+})
+
+const rewriteDiff = computed(() => {
+  if (!draft.value || !rewriteResult.value) return []
+  return computeRewriteDiff(draft.value.resume, rewriteResult.value)
+})
+
+function toggleRewritePanel(): void {
+  if (loading.value || importing.value || importPreview.value || Boolean(exportingKind)) return
+  rewritePanelOpen.value = !rewritePanelOpen.value
+  if (!rewritePanelOpen.value) {
+    rewriteResult.value = null
+    rewriteError.value = ""
+  }
+}
+
+async function runRewrite(): Promise<void> {
+  if (rewriteLoading.value || !draft.value) return
+  rewriteLoading.value = true
+  rewriteError.value = ""
+  rewriteResult.value = null
+  try {
+    rewriteResult.value = await aiRewriteResume({
+      resume: draft.value.resume,
+      roleName: draft.value.resume.job.targetRole,
+      mode: rewriteMode.value,
+      instructions: rewriteInstructions.value,
+    })
+  } catch (caught) {
+    if (caught instanceof ApiRequestError && caught.code === "vip_required") {
+      rewriteError.value = "深度润色是会员功能——可先使用快速润色，或在会员页升级后重试"
+    } else {
+      rewriteError.value = getApiErrorMessage(caught, "AI 改写暂时不可用，请稍后重试")
+    }
+  } finally {
+    rewriteLoading.value = false
+  }
+}
+
+function applyRewrite(): void {
+  if (!draft.value || !rewriteResult.value) return
+  draft.value.resume = rewriteResult.value
+  rewriteResult.value = null
+  rewritePanelOpen.value = false
+  actionNotice.value = "已应用 AI 改写结果，确认无误后记得保存草稿"
+}
+
+function discardRewrite(): void {
+  rewriteResult.value = null
+}
+
 async function applyImportPreview(): Promise<void> {
   if (!draft.value || !importPreview.value) return
   draft.value.resume = JSON.parse(JSON.stringify(importPreview.value.parsedResume))
@@ -308,6 +377,7 @@ onBeforeUnmount(() => {
         <AsyncButton class="text-action" type="button" :loading="exportingKind === 'word'" :disabled="loading || Boolean(exportingKind) || Boolean(importing) || Boolean(importPreview)" @click="exportResume('word')"><Download :size="16" aria-hidden="true" />导出 Word</AsyncButton>
         <AsyncButton class="text-action" type="button" :loading="exportingKind === 'pdf'" :disabled="loading || Boolean(exportingKind) || Boolean(importing) || Boolean(importPreview)" @click="exportResume('pdf')"><Download :size="16" aria-hidden="true" />导出 PDF</AsyncButton>
         <AsyncButton class="text-action" type="button" :disabled="loading || Boolean(exportingKind) || Boolean(importing) || Boolean(importPreview)" @click="openPrintPreview"><Printer :size="16" aria-hidden="true" />打印预览</AsyncButton>
+        <AsyncButton class="text-action" type="button" :disabled="loading || Boolean(exportingKind) || Boolean(importing) || Boolean(importPreview)" @click="toggleRewritePanel"><Sparkles :size="16" aria-hidden="true" />AI 改写</AsyncButton>
         <AsyncButton class="primary-button compact" type="button" :loading="saving" :disabled="loading" @click="save"><Save :size="16" aria-hidden="true" />保存草稿</AsyncButton>
       </div>
       <input ref="importFileInput" type="file" accept=".pdf,.doc,.docx" class="visually-hidden-input" aria-hidden="true" tabindex="-1" @change="handleImportFile" />
@@ -315,6 +385,38 @@ onBeforeUnmount(() => {
 
     <p v-if="actionNotice" class="form-success action-status" role="status" aria-live="polite">{{ actionNotice }}</p>
     <ErrorNotice v-if="actionError && (draft || loading)" :message="actionError" />
+
+    <div v-if="rewritePanelOpen" class="rewrite-panel" role="region" aria-label="AI 按需改写">
+      <div class="import-heading"><strong>AI 按需改写</strong><span class="import-filename">以当前草稿内容为基础，不虚构事实</span></div>
+      <div class="rewrite-controls">
+        <div class="mode-switch" role="group" aria-label="改写深度">
+          <button type="button" :disabled="rewriteLoading" :class="{ 'is-selected': rewriteMode === 'light' }" @click="rewriteMode = 'light'">快速润色</button>
+          <button type="button" :disabled="rewriteLoading" :class="{ 'is-selected': rewriteMode === 'deep' }" @click="rewriteMode = 'deep'">深度润色（会员）</button>
+        </div>
+        <label class="rewrite-instructions">
+          <span>你的改写要求（可选，最多 {{ REWRITE_INSTRUCTIONS_MAX }} 字）</span>
+          <textarea v-model.trim="rewriteInstructions" rows="2" :maxlength="REWRITE_INSTRUCTIONS_MAX" placeholder="例如：突出项目管理经验，量化交付成果；语气专业但不过度自信" />
+        </label>
+        <AsyncButton class="primary-button compact" type="button" :loading="rewriteLoading" :disabled="loading || Boolean(importing) || Boolean(importPreview)" @click="runRewrite"><Sparkles :size="16" aria-hidden="true" />{{ rewriteLoading ? "改写中" : "开始改写" }}</AsyncButton>
+        <p v-if="rewriteLoading" class="staged-progress" role="status" aria-live="polite">
+          <LoadingSpinner class="staged-progress-spinner" label="AI 改写进行中" />
+          <span>{{ rewriteProgress.label.value }}…已等待 {{ rewriteProgress.elapsedSeconds.value }} 秒。</span>
+        </p>
+        <ErrorNotice v-if="rewriteError" :message="rewriteError" />
+      </div>
+      <div v-if="rewriteResult" class="rewrite-diff">
+        <div class="import-heading"><strong>改写预览</strong><span class="import-filename">{{ rewriteDiff.length ? `${rewriteDiff.length} 处文案变化` : "没有可预览的文案变化" }}</span></div>
+        <article v-for="(entry, index) in rewriteDiff" :key="`${entry.kind}-${entry.index}`" class="rewrite-diff-entry">
+          <h4>{{ entry.title }}</h4>
+          <p class="diff-before"><span>改前</span>{{ entry.before || "（空）" }}</p>
+          <p class="diff-after"><span>改后</span>{{ entry.after || "（空）" }}</p>
+        </article>
+        <div class="heading-actions import-actions">
+          <AsyncButton class="text-action" type="button" @click="discardRewrite">放弃</AsyncButton>
+          <AsyncButton class="primary-button compact" type="button" @click="applyRewrite">应用到当前草稿</AsyncButton>
+        </div>
+      </div>
+    </div>
 
     <div v-if="importPreview" class="import-panel" role="region" aria-label="简历导入解析预览">
       <div class="import-heading"><strong>解析预览</strong><span class="import-filename">{{ importPreview.originalFilename }}</span></div>

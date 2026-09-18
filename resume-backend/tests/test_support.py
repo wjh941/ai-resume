@@ -96,11 +96,14 @@ class TestAIClient:
         resume: ResumePayload,
         job: JobIntelligence,
         mode: Literal["light", "deep"],
+        instructions: str | None = None,
     ) -> ResumePayload:
         if self.rewrite_result is not None:
             return ResumePayload.model_validate(self.rewrite_result)
         rewritten = deepcopy(resume)
         suffix = f" Optimized for {job.role_name} keywords."
+        if instructions:
+            suffix += f" Custom: {instructions}"
         for item in [*rewritten.employment, *rewritten.projects]:
             if item.description:
                 item.description = f"{item.description}{suffix}"

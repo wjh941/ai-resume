@@ -178,6 +178,7 @@ async def rewrite_resume(
         payload.resume,
         payload.job,
         payload.mode,
+        payload.instructions,
     )
     validate_rewrite_facts(payload.resume, rewritten)
     rewritten_payload = rewritten.model_dump()

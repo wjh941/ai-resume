@@ -154,6 +154,21 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 /* AI 长任务阶段化等待提示。 */
 .staged-progress { display: flex; gap: 8px; align-items: center; margin: 10px 0 0; color: var(--text-secondary, #4e5969); font-size: 13px; line-height: 1.5; }
 .staged-progress .staged-progress-spinner { width: 15px; height: 15px; flex: 0 0 15px; }
+
+/* AI 按需改写面板。 */
+.rewrite-panel { margin-bottom: 16px; padding: 16px; background: var(--surface-soft, #f7f8fa); border: 1px solid var(--line, #e5e6eb); border-radius: 12px; }
+.rewrite-controls { display: grid; gap: 12px; margin-top: 12px; }
+.rewrite-instructions { display: grid; gap: 6px; font-size: 13px; }
+.rewrite-instructions textarea { width: 100%; resize: vertical; }
+.rewrite-diff { margin-top: 16px; display: grid; gap: 12px; }
+.rewrite-diff-entry { padding: 12px; border: 1px solid var(--line, #e5e6eb); border-radius: 10px; background: var(--surface, #fff); }
+.rewrite-diff-entry h4 { margin: 0 0 8px; font-size: 14px; }
+.diff-before, .diff-after { margin: 4px 0 0; font-size: 13px; line-height: 1.6; }
+.diff-before span, .diff-after span { display: inline-block; margin-right: 8px; padding: 1px 8px; border-radius: 999px; font-size: 12px; }
+.diff-before span { background: #fdf1ef; color: #bf3f3a; }
+.diff-after span { background: #e8f7ef; color: #16866a; }
+:root[data-theme="dark"] .diff-before span { background: #33290f; color: #f0a8a4; }
+:root[data-theme="dark"] .diff-after span { background: #10331f; color: #7ce0b0; }
 .action-status { min-height: 18px; }
 .visually-hidden-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .import-panel { display: grid; gap: 12px; margin-bottom: 18px; padding: 18px 20px; border: 1px solid color-mix(in srgb, var(--primary) 26%, transparent); border-radius: calc(var(--radius) + 4px); background: color-mix(in srgb, var(--primary) 6%, var(--surface)); }

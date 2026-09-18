@@ -70,6 +70,7 @@ class AIClient(Protocol):
         resume: ResumePayload,
         job: JobIntelligence,
         mode: Literal["light", "deep"],
+        instructions: str | None = None,
     ) -> ResumePayload: ...
 
 
@@ -132,7 +133,8 @@ class UnconfiguredAIClient:
         self._raise()
 
     async def rewrite_resume(
-        self, resume: ResumePayload, job: JobIntelligence, mode: Literal["light", "deep"]
+        self, resume: ResumePayload, job: JobIntelligence, mode: Literal["light", "deep"],
+        instructions: str | None = None,
     ) -> ResumePayload:
         self._raise()
 
@@ -468,10 +470,17 @@ class OpenAICompatibleClient:
         resume: ResumePayload,
         job: JobIntelligence,
         mode: Literal["light", "deep"],
+        instructions: str | None = None,
     ) -> ResumePayload:
+        custom_block = ""
+        if instructions and instructions.strip():
+            custom_block = (
+                " The candidate added these custom requirements; follow them faithfully as long as "
+                f"they do not conflict with the no-fabrication rule: {instructions.strip()}"
+            )
         content = await self._chat_completion(
             "Return only valid ResumePayload JSON. Improve wording only; never change immutable "
-            "employers, dates, schools, certificates, projects, or stated metrics.",
+            "employers, dates, schools, certificates, projects, or stated metrics." + custom_block,
             json.dumps({"mode": mode, "resume": resume.model_dump(), "target_job": job.model_dump()}, ensure_ascii=False),
         )
         return parse_llm_model(

@@ -57,3 +57,14 @@ class ResumeRewriteRequest(BaseModel):
     job: JobIntelligence
     mode: Literal["light", "deep"]
     report_mode: ReportMode | None = None
+    instructions: str | None = Field(default=None, max_length=200)
+
+    @field_validator("instructions")
+    @classmethod
+    def sanitize_instructions(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.replace("\r", " ").replace("\n", " ").replace("\t", " ")
+        cleaned = "".join(ch for ch in cleaned if ch.isprintable())
+        cleaned = " ".join(cleaned.split())
+        return cleaned or None

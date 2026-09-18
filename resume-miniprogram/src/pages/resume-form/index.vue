@@ -5,10 +5,12 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue"
 import FormField from "../../components/FormField.vue"
 import LoadingSpinner from "../../components/LoadingSpinner.vue"
 import { getEvidenceSuggestions } from "../../services/evidence-api"
-import { saveDraft } from "../../services/resume-api"
+import { aiRewriteResume, saveDraft, type RewriteMode } from "../../services/resume-api"
+import { toUserMessage } from "../../services/http"
 import { useResumeStore } from "../../stores/resume"
 import { getClientId } from "../../stores/session"
 import type { EvidenceSuggestion } from "../../types/evidence"
+import type { ResumePayload } from "../../types/resume"
 import {
   createRoleBasedInternshipDraft,
   createRoleBasedProjectDraft,
@@ -67,6 +69,76 @@ function addSuggestedInternship() {
   if (!activeJob.value) return
   resume.value.employment.push(createRoleBasedInternshipDraft(activeJob.value))
   uni.showToast({ title: "已添加实习草案，请替换待确认信息", icon: "none" })
+}
+
+// ---------- AI 按需改写 ----------
+const REWRITE_INSTRUCTIONS_MAX = 200
+const rewriteOpen = ref(false)
+const rewriteMode = ref<RewriteMode>("light")
+const rewriteInstructions = ref("")
+const rewriteLoading = ref(false)
+const rewriteError = ref("")
+const rewriteResult = ref<ResumePayload | null>(null)
+const rewriteSnapshot = ref<ResumePayload | null>(null)
+
+const rewriteDiff = computed(() => {
+  if (!rewriteSnapshot.value || !rewriteResult.value) return []
+  const entries: Array<{ title: string; before: string; after: string }> = []
+  rewriteResult.value.employment.forEach((item, index) => {
+    const old = rewriteSnapshot.value?.employment[index]
+    if (old && old.description !== item.description) {
+      entries.push({ title: [item.company, item.position].filter(Boolean).join(" · ") || "工作经历", before: old.description, after: item.description })
+    }
+  })
+  rewriteResult.value.projects.forEach((item, index) => {
+    const old = rewriteSnapshot.value?.projects[index]
+    if (old && old.description !== item.description) {
+      entries.push({ title: item.name || "项目", before: old.description, after: item.description })
+    }
+  })
+  if (rewriteSnapshot.value.selfEvaluation !== rewriteResult.value.selfEvaluation) {
+    entries.push({ title: "自我评价", before: rewriteSnapshot.value.selfEvaluation, after: rewriteResult.value.selfEvaluation })
+  }
+  return entries
+})
+
+function openRewrite() {
+  if (saving.value || rewriteLoading.value) return
+  rewriteSnapshot.value = JSON.parse(JSON.stringify(resume.value)) as ResumePayload
+  rewriteError.value = ""
+  rewriteResult.value = null
+  rewriteOpen.value = true
+}
+
+function closeRewrite() {
+  if (rewriteLoading.value) return
+  rewriteOpen.value = false
+}
+
+async function runRewrite() {
+  if (rewriteLoading.value) return
+  rewriteLoading.value = true
+  rewriteError.value = ""
+  rewriteResult.value = null
+  try {
+    rewriteResult.value = await aiRewriteResume(
+      resume.value,
+      activeJob.value?.roleName || "",
+      rewriteMode.value,
+      rewriteInstructions.value || undefined,
+    )
+  } catch (reason) {
+    rewriteError.value = toUserMessage(reason, "AI 改写暂时不可用，请稍后重试。")
+  } finally {
+    rewriteLoading.value = false
+  }
+}
+
+function applyRewrite() {
+  if (!rewriteResult.value) return
+  store.draft.resume = rewriteResult.value
+  rewriteOpen.value = false
+  uni.showToast({ title: "已应用改写，记得保存草稿", icon: "none" })
 }
 
 async function loadEvidenceSuggestions(roleName: string) {
@@ -218,7 +290,43 @@ async function prepareAndChooseTemplate() {
     </text>
     <view class="actions">
       <button :loading="saving" :disabled="saving" @click="save">保存草稿</button>
+      <button class="secondary" :disabled="saving" @click="openRewrite">AI 改写</button>
       <button class="primary" @click="prepareAndChooseTemplate">智能补全并选择模板</button>
+    </view>
+
+    <view v-if="rewriteOpen" class="rewrite-mask" @click="closeRewrite">
+      <view class="rewrite-sheet" @click.stop>
+        <text class="rewrite-title">AI 按需改写</text>
+        <text class="rewrite-hint">以当前草稿为底稿润色表达，不虚构任何事实。</text>
+        <view class="rewrite-modes">
+          <button size="mini" :class="{ 'mode-active': rewriteMode === 'light' }" :disabled="rewriteLoading" @click="rewriteMode = 'light'">快速润色</button>
+          <button size="mini" :class="{ 'mode-active': rewriteMode === 'deep' }" :disabled="rewriteLoading" @click="rewriteMode = 'deep'">深度润色（会员）</button>
+        </view>
+        <textarea
+          v-model="rewriteInstructions"
+          class="rewrite-input"
+          :maxlength="REWRITE_INSTRUCTIONS_MAX"
+          placeholder="你的要求（可选）：例如突出项目管理经验、量化交付成果"
+        />
+        <button v-if="!rewriteResult" class="primary" :loading="rewriteLoading" :disabled="rewriteLoading" @click="runRewrite">
+          {{ rewriteLoading ? "改写中，约需 30-90 秒" : "开始改写" }}
+        </button>
+        <text v-if="rewriteError" class="rewrite-error">{{ rewriteError }}</text>
+        <view v-if="rewriteResult" class="rewrite-preview">
+          <text class="rewrite-preview-title">改写预览（{{ rewriteDiff.length }} 处变化）</text>
+          <view v-for="(entry, index) in rewriteDiff" :key="index" class="rewrite-diff-entry">
+            <text class="rewrite-diff-title">{{ entry.title }}</text>
+            <text class="diff-before">改前：{{ entry.before || "（空）" }}</text>
+            <text class="diff-after">改后：{{ entry.after || "（空）" }}</text>
+          </view>
+          <text v-if="!rewriteDiff.length" class="rewrite-hint">本次没有产生文案变化。</text>
+          <view class="rewrite-actions">
+            <button size="mini" :disabled="rewriteLoading" @click="closeRewrite">放弃</button>
+            <button size="mini" class="primary" @click="applyRewrite">应用到草稿</button>
+          </view>
+        </view>
+        <button v-if="!rewriteResult" size="mini" class="secondary" :disabled="rewriteLoading" @click="closeRewrite">关闭</button>
+      </view>
     </view>
   </scroll-view>
 </template>
@@ -242,4 +350,19 @@ textarea { width: 100%; min-height: 130rpx; margin: 16rpx 0; padding: 16rpx; box
 .suggestion-description, .suggestion-risk { display: block; margin-top: 10rpx; color: #4e5969; font-size: 22rpx; line-height: 1.55; white-space: pre-line; }.suggestion-risk { color: #b26a00; }.suggestion-card button { margin-top: 12rpx; }
 .validation-summary { margin-bottom: 20rpx; padding: 16rpx 20rpx; color: #b42318; background: #fdf1ef; border: 1rpx solid #ffccc7; border-radius: 12rpx; }.validation-summary text { display: block; font-size: 23rpx; line-height: 1.55; }
 .local-save-status { display: block; min-height: 34rpx; margin-bottom: 12rpx; color: #66788b; font-size: 22rpx; text-align: right; }
+.rewrite-mask { position: fixed; inset: 0; z-index: 30; display: flex; align-items: flex-end; background: rgba(15, 23, 42, 0.45); }
+.rewrite-sheet { width: 100%; box-sizing: border-box; max-height: 82vh; overflow-y: auto; padding: 28rpx 28rpx 44rpx; background: #fff; border-radius: 24rpx 24rpx 0 0; display: flex; flex-direction: column; gap: 16rpx; }
+.rewrite-title { font-size: 32rpx; font-weight: 700; color: #1f2329; }
+.rewrite-hint { color: #66788b; font-size: 23rpx; line-height: 1.6; }
+.rewrite-modes { display: flex; gap: 14rpx; }.rewrite-modes button { flex: 1; font-size: 24rpx; }
+.mode-active { color: #1d4ed8; background: #e8efff; border: 1rpx solid #b7d8ff; }
+.rewrite-input { width: 100%; min-height: 120rpx; padding: 16rpx; box-sizing: border-box; color: #4e5969; background: #f7f8fa; border-radius: 12rpx; }
+.rewrite-error { color: #bf3f3a; font-size: 23rpx; line-height: 1.55; }
+.rewrite-preview { display: flex; flex-direction: column; gap: 14rpx; padding: 18rpx; background: #f7f8fa; border-radius: 14rpx; }
+.rewrite-preview-title { font-size: 26rpx; font-weight: 700; color: #1f2329; }
+.rewrite-diff-entry { padding: 14rpx; background: #fff; border: 1rpx solid #e5e6eb; border-radius: 12rpx; }
+.rewrite-diff-title { display: block; font-size: 24rpx; font-weight: 700; color: #1f2329; }
+.diff-before { display: block; margin-top: 8rpx; color: #8a4a44; font-size: 22rpx; line-height: 1.55; }
+.diff-after { display: block; margin-top: 6rpx; color: #16604a; font-size: 22rpx; line-height: 1.55; }
+.rewrite-actions { display: flex; gap: 14rpx; margin-top: 6rpx; }.rewrite-actions button { flex: 1; }
 </style>

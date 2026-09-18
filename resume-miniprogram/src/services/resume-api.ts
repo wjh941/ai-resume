@@ -274,8 +274,65 @@ export async function extractResumePdf(filePath: string): Promise<string> {
   })
 }
 
-export async function saveDraft(clientId: string, draft: ResumeDraft): Promise<{ id: string }> {
-  return request("/api/draft/save", "POST", {
+export type RewriteMode = "light" | "deep"
+
+function fromBackendResumePayload(payload: Record<string, unknown>): ResumePayload {
+  const basic = (payload.basic ?? {}) as Record<string, string>
+  const job = (payload.job ?? {}) as Record<string, string>
+  const visibility = (payload.section_visibility ?? {}) as Record<string, boolean>
+  const skills = (payload.skills ?? {}) as { skills?: string[]; certificates?: string[]; englishLevel?: string }
+  return {
+    version: 1,
+    basic: { name: basic.name ?? "", phone: basic.phone ?? "", email: basic.email ?? "", city: basic.city ?? "", gender: basic.gender ?? "" },
+    job: {
+      targetRole: job.target_role ?? "",
+      availability: job.employment_type ?? "",
+      expectedSalary: job.expected_salary ?? "",
+    },
+    education: ((payload.education ?? []) as Array<Record<string, string>>).map((item) => ({
+      school: item.school ?? "", major: item.major ?? "", degree: item.degree ?? "",
+      startDate: item.start_date ?? "", endDate: item.end_date ?? "", courses: item.courses ?? "",
+    })),
+    employment: ((payload.employment ?? []) as Array<Record<string, string>>).map((item) => ({
+      company: item.company ?? "", position: item.position ?? "",
+      startDate: item.start_date ?? "", endDate: item.end_date ?? "", description: item.description ?? "",
+    })),
+    projects: ((payload.projects ?? []) as Array<Record<string, string>>).map((item) => ({
+      name: item.name ?? "", role: item.role ?? "",
+      startDate: item.start_date ?? "", endDate: item.end_date ?? "", description: item.description ?? "",
+    })),
+    skills: { skills: skills.skills ?? [], certificates: skills.certificates ?? [], englishLevel: skills.englishLevel ?? "" },
+    selfEvaluation: (payload.self_evaluation as string | undefined) ?? "",
+    sectionVisibility: {
+      basic: visibility.basic ?? true, job: visibility.job ?? true,
+      education: visibility.education ?? true, employment: visibility.employment ?? true,
+      projects: visibility.projects ?? true, skills: visibility.skills ?? true,
+      selfEvaluation: visibility.self_evaluation ?? true,
+    },
+  }
+}
+
+/** AI 按需改写：以当前简历为底稿，围绕目标岗位与自定义要求润色；后端事实守卫防虚构。 */
+export async function aiRewriteResume(
+  resume: ResumePayload,
+  roleName: string,
+  mode: RewriteMode,
+  instructions?: string,
+): Promise<ResumePayload> {
+  const data = await request<Record<string, unknown>>("/api/resume/ai-rewrite", "POST", {
+    resume: toBackendResume(resume),
+    job: {
+      version: 1,
+      role_name: (roleName || resume.job.targetRole || "目标岗位").trim(),
+      required_skills: [],
+    },
+    mode,
+    instructions: instructions && instructions.trim() ? instructions.trim() : null,
+  })
+  return fromBackendResumePayload(data)
+}
+
+export async function saveDraft(clientId: string, draft: ResumeDraft): Promise<{ id: string }> {  return request("/api/draft/save", "POST", {
     id: draft.id, client_id: clientId, job_title: draft.jobTitle || draft.resume.job.targetRole,
     template_id: draft.templateId, resume: toBackendResume(draft.resume),
     job_intelligence: draft.jobIntelligence && {
