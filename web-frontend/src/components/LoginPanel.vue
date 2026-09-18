@@ -3,7 +3,7 @@ import { ArrowRight, KeyRound, Smartphone } from "lucide-vue-next"
 import { computed, inject, ref } from "vue"
 
 import { loginWithPassword, loginWithPhone, registerAccount } from "../lib/auth"
-import { requestApi } from "../lib/api"
+import { requestApi, SLOW_REQUEST_TIMEOUT_MS } from "../lib/api"
 import { CAPABILITIES_KEY, createCapabilityContext, isCapabilityEnabled } from "../lib/capabilities"
 import type { Session } from "../lib/session"
 import AsyncButton from "./AsyncButton.vue"
@@ -53,10 +53,14 @@ async function sendCode() {
   error.value = ""
   hint.value = ""
   try {
-    const response = await requestApi<{ message?: string; demo_code?: string }>("/api/auth/send-code", {
-      method: "POST",
-      body: JSON.stringify({ phone: phone.value }),
-    })
+    const response = await requestApi<{ message?: string; demo_code?: string }>(
+      "/api/auth/send-code",
+      {
+        method: "POST",
+        body: JSON.stringify({ phone: phone.value }),
+      },
+      { timeoutMs: SLOW_REQUEST_TIMEOUT_MS },
+    )
     hint.value = response.demo_code ? `本地演示验证码：${response.demo_code}` : response.message || "验证码已发送"
   } catch {
     error.value = "验证码暂时无法发送，请使用账号密码登录或稍后重试"

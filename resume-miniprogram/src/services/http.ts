@@ -161,7 +161,13 @@ function classifyResponse(statusCode: number | undefined, body: unknown): {
   return { kind: "http", statusCode: status, message }
 }
 
-async function requestOnce<T>(requestFn: UniRequest, path: string, method: string, data?: unknown): Promise<T> {
+async function requestOnce<T>(
+  requestFn: UniRequest,
+  path: string,
+  method: string,
+  data?: unknown,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+): Promise<T> {
   const token = getAuthToken()
   let response: { statusCode?: number; data: ApiEnvelope<unknown> | unknown }
   try {
@@ -169,7 +175,7 @@ async function requestOnce<T>(requestFn: UniRequest, path: string, method: strin
       url: apiUrl(path),
       method,
       data,
-      timeout: DEFAULT_TIMEOUT_MS,
+      timeout: timeoutMs,
       header: token ? { Authorization: `Bearer ${token}` } : {},
     })
   } catch (error) {
@@ -205,22 +211,24 @@ async function requestOnce<T>(requestFn: UniRequest, path: string, method: strin
   return envelope.data as T
 }
 
+export const SLOW_REQUEST_TIMEOUT_MS = 120_000
+
 export async function request<T>(
   path: string,
   method = "GET",
   data?: unknown,
-  options?: { query?: QueryParams },
+  options?: { query?: QueryParams; timeoutMs?: number },
 ): Promise<T> {
   const requestFn = (globalThis as typeof globalThis & { uni?: { request?: UniRequest } }).uni?.request
   if (!requestFn) throw new ApiRequestError("unsupported", "当前运行环境不支持网络请求")
   const fullPath = options?.query ? `${path}${buildQuery(options.query)}` : path
   try {
-    return await requestOnce<T>(requestFn, fullPath, method, data)
+    return await requestOnce<T>(requestFn, fullPath, method, data, options?.timeoutMs)
   } catch (error) {
     // 仅 GET 幂等请求自动重试一次，覆盖瞬时抖动；POST/PUT/DELETE 不重试。
     if (method === "GET" && isRetryableApiError(error)) {
       await sleep(GET_RETRY_DELAY_MS)
-      return requestOnce<T>(requestFn, fullPath, method, data)
+      return requestOnce<T>(requestFn, fullPath, method, data, options?.timeoutMs)
     }
     throw error
   }
