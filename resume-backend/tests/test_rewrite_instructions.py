@@ -93,6 +93,22 @@ def test_rewrite_without_instructions_keeps_clean_prompt():
     assert "custom requirements" not in system_prompt
 
 
+def test_envelope_echo_response_is_unwrapped():
+    """部分中继把整个输入信封回显而非裸 ResumePayload——应提取 resume 后解析。"""
+    envelope = {
+        "mode": "light",
+        "resume": make_resume_payload(),
+        "target_job": {"version": 1, "role_name": "Data Engineer", "required_skills": ["Python"]},
+    }
+    client = CapturingRewriteClient(json.dumps(envelope, ensure_ascii=False))
+    result = asyncio.run(client.rewrite_resume(
+        ResumePayload.model_validate(make_resume_payload()),
+        JobIntelligence.model_validate({"version": 1, "role_name": "Data Engineer", "required_skills": ["Python"]}),
+        "light",
+    ))
+    assert result.basic.name == make_resume_payload()["basic"]["name"]
+
+
 def test_fact_guard_survives_instructions_at_api_level(api_client):
     from copy import deepcopy
 

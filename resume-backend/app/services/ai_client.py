@@ -483,6 +483,14 @@ class OpenAICompatibleClient:
             "employers, dates, schools, certificates, projects, or stated metrics." + custom_block,
             json.dumps({"mode": mode, "resume": resume.model_dump(), "target_job": job.model_dump()}, ensure_ascii=False),
         )
+        # 部分中继模型会把整个输入信封原样回显（{mode, resume, target_job}），
+        # 先提取其中的 resume 对象再解析，避免把合法改写误判为格式异常。
+        try:
+            envelope = _extract_llm_json(content)
+        except Exception:  # noqa: BLE001 - 交由 parse_llm_model 统一处理
+            envelope = None
+        if isinstance(envelope, dict) and isinstance(envelope.get("resume"), dict) and "basic" in envelope["resume"]:
+            content = json.dumps(envelope["resume"], ensure_ascii=False)
         return parse_llm_model(
             content,
             ResumePayload,
