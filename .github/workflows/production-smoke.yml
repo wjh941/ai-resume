@@ -1,0 +1,27 @@
+# 生产环境冒烟：每 30 分钟验证后端可达性、CORS 白名单与登录链路。
+# 背景：Render 免费实例 + 环境变量手改曾造成过 "CORS 全拒导致线上不可用" 的事故，
+# 该工作流让这类问题在 30 分钟内自动暴露（Actions 历史标红），而不是等用户报告。
+# 注意：故意不做 AI 调用与业务写操作，避免消耗中继额度与污染生产数据。
+name: Production smoke
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch: {}
+
+permissions: {}
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install httpx
+        run: pip install httpx
+      - name: Run production smoke
+        run: python scripts/production_smoke.py

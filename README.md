@@ -134,6 +134,26 @@ flowchart TD
 
 详细的环境变量、AI 配置、HTTPS、生产部署和测试命令见下方对应章节。
 
+### 线上部署运维手册
+
+当前线上拓扑：Web 在 Vercel、后端在 Render（免费层）、项目主页与小程序 H5 预览在 GitHub Pages。以下每一条都来自真实事故复盘：
+
+**环境变量（Render → ai-resume-backend → Environment）**
+
+| 变量 | 要求 | 踩坑记录 |
+| --- | --- | --- |
+| `CORS_ORIGINS` | `https://ai-resume-workbench.vercel.app,https://wjh941.github.io` | 值外不要加引号、源末尾不要加 `/`、必须带 `https://`、逗号用英文；写错任何一个，浏览器端全线被 CORS 拦截（发生过 P0 事故）。后端解析已对引号容错 |
+| `JWT_SECRET` | 随机长字符串：`python -c "import secrets; print(secrets.token_urlsafe(48))"` | 不设置时使用公开仓库里的默认值，任何人可伪造任意用户 token（`/health` 会显示 `jwt_token_forgeable: true`，启动日志会告警） |
+| `DATABASE_URL` | 可选；接免费 Postgres（如 Neon）后所有数据跨部署持久 | 不设置时用 SQLite 临时磁盘：**每次部署/重启用户数据清零**（`/health` 会显示 `database_url_configured: false`） |
+| `AI_API_KEY` / `AI_BASE_URL` / `AI_MODEL` | AI 中继凭据 | 中继有方差，后端已做宽容解析与事实守卫 |
+
+**自动监控**：`Production smoke` workflow 每 30 分钟跑一次 `scripts/production_smoke.py`（健康检查、双源 CORS 预检、演示登录链路），任何一步失败 Actions 历史标红。故意不做 AI 调用与业务写操作。
+
+**小程序正式版**：微信后台「开发管理 → 服务器域名」需把后端域名加入 request 合法域名；H5 预览则依赖上表 `CORS_ORIGINS` 里的 `https://wjh941.github.io`。
+
+**演示模式现状**（`/health` 的 `critical_config` 可远程核实）：演示验证码 `123456`、演示支付、SQLite 临时盘。要转真实使用：设 `APP_ENV=production`、配真实 SMS 与 JWT_SECRET、接 Postgres。
+
+
 ## 功能
 
 - 岗位情报查询与关联岗位联想

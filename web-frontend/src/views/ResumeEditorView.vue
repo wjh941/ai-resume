@@ -402,7 +402,10 @@ onBeforeUnmount(() => {
           <LoadingSpinner class="staged-progress-spinner" label="AI 改写进行中" />
           <span>{{ rewriteProgress.label.value }}…已等待 {{ rewriteProgress.elapsedSeconds.value }} 秒。</span>
         </p>
-        <ErrorNotice v-if="rewriteError" :message="rewriteError" />
+        <div v-if="rewriteError" class="rewrite-error-row">
+          <ErrorNotice :message="rewriteError" />
+          <AsyncButton v-if="!rewriteError.includes('会员')" class="text-action" type="button" :disabled="rewriteLoading" @click="runRewrite">重试</AsyncButton>
+        </div>
       </div>
       <div v-if="rewriteResult" class="rewrite-diff">
         <div class="import-heading"><strong>改写预览</strong><span class="import-filename">{{ rewriteDiff.length ? `${rewriteDiff.length} 处文案变化` : "没有可预览的文案变化" }}</span></div>

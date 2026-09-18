@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse
 from app.api import account, ai, applications, assessment, auth, career, consultation, drafts, evidence, exports, job_collections, knowledgebase, membership, operator, system, templates
 from app.repositories.account_privacy import AccountPrivacyRepository
 from app.repositories.applications import ApplicationNotFoundError, ApplicationRepository
-from app.config import Settings, load_settings
+from app.config import Settings, load_settings, _DEFAULT_JWT_SECRET
 from app.db import initialize_database
 from app.repositories.assessment import AssessmentNotFoundError, AssessmentRepository
 from app.repositories.career_catalog import CareerCatalogRepository
@@ -102,6 +102,16 @@ def _log_api_access(request: Request, response: Response, started: float) -> Non
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or load_settings()
     configure_logging(settings.log_level)
+    if not settings.production and settings.jwt_secret == _DEFAULT_JWT_SECRET:
+        # 演示部署常见状态：JWT 密钥来自公开仓库的默认值，任何人可离线伪造任意用户 token。
+        # 不强制阻断（作品集演示需要零配置可跑），但必须在日志里亮明风险与修法。
+        logger.warning(
+            "JWT_SECRET is the well-known default; anyone can forge tokens for this deployment. "
+            "Set a random JWT_SECRET env var (e.g. `python -c \"import secrets; print(secrets.token_urlsafe(48))\"`) to fix."
+        )
+    if not settings.cors_origins:
+        logger.warning("CORS_ORIGINS is empty; every browser frontend will be blocked by CORS. "
+                       "Set it to the exact scheme+host origins, comma separated, no quotes/trailing slashes.")
     database_target = settings.database_target
     initialize_database(
         database_target,

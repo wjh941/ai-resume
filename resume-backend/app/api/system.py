@@ -8,7 +8,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
 
-from app.config import Settings, load_settings
+from app.config import Settings, load_settings, _DEFAULT_JWT_SECRET
 from app.db import connect
 from app.schemas.common import success
 from app.services.ai_client import build_ai_client
@@ -143,6 +143,7 @@ def health_summary(settings: Settings) -> dict[str, object]:
             "production": settings.production,
             "database_url_configured": bool(settings.database_url),
             "cors_origin_count": len(settings.cors_origins),
+            "jwt_token_forgeable": settings.jwt_secret == _DEFAULT_JWT_SECRET,
             "sms_configured": bool(settings.sms_http_endpoint and settings.sms_access_key and settings.sms_access_secret),
             "wechat_oauth_configured": bool(settings.wechat_open_app_id and settings.wechat_open_app_secret and settings.wechat_open_redirect_uri),
             "payment_callback_configured": bool(settings.payment_callback_secret),
