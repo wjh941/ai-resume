@@ -8,6 +8,9 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [vue()],
     build: {
+      // 兜底老 iOS/旧版 Safari：esbuild 把可选链、空值合并、类字段等语法
+      // 转译到 Safari 12 可解析的形态，避免新版语法导致整包解析失败黑屏。
+      target: "safari12",
       rollupOptions: {
         output: {
           // 把不常变动的框架与图标库拆成独立 chunk：业务迭代重新发版后，
