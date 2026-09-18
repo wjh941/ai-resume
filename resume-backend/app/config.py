@@ -113,7 +113,13 @@ def _read_bool(name: str, default: bool) -> bool:
 
 
 def _read_csv(name: str) -> tuple[str, ...]:
-    return tuple(item.strip() for item in os.getenv(name, "").split(",") if item.strip())
+    # 容忍控制台粘贴时的引号包裹与首尾空白：CORS 源是精确匹配，
+    # 一个多余的引号就会让整条白名单失效，因此在这里统一剥掉。
+    return tuple(
+        item.strip().strip("'\"").strip()
+        for item in os.getenv(name, "").split(",")
+        if item.strip()
+    )
 
 
 def _read_phone_allowlist(name: str) -> tuple[str, ...]:
