@@ -34,6 +34,7 @@
   .btn:hover { text-decoration: none; transform: translateY(-2px); }
   .btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; box-shadow: 0 8px 24px rgba(37,99,235,.35); }
   .btn.ghost { color: var(--text); background: var(--surface); }
+  .btn.compact-btn { margin-top: 14px; padding: 9px 16px; font-size: 14px; }
   .hero .meta { margin-top: 26px; color: var(--text-muted); font-size: 13px; }
   .hero .meta b { color: var(--text); }
 
@@ -75,6 +76,7 @@
   <div class="wrap">
     <div class="logo"><span class="mark">🚀</span>ai-resume</div>
     <nav class="top">
+      <a href="#experience">在线体验</a>
       <a href="#features">功能</a>
       <a href="#stack">技术架构</a>
       <a href="#quickstart">快速开始</a>
@@ -94,6 +96,33 @@
     <p class="meta"><b>677+</b> 自动化测试全绿 · 后端 <b>244</b> / Web <b>270</b> / 小程序 <b>163</b> · 首屏 gzip <b>10.3KB</b></p>
   </div>
 </div>
+
+<section id="experience">
+  <div class="wrap">
+    <h2>三端在线体验</h2>
+    <p class="sub">不需要配置任何环境——三个入口现在就能点开。</p>
+    <div class="grid three">
+      <div class="card">
+        <div class="icon">💻</div><h3>Web 工作台</h3>
+        <p>完整功能：岗位情报、简历草稿与导出、职业规划、投递看板、账户中心。桌面浏览器体验最佳。</p>
+        <a class="btn primary compact-btn" href="https://ai-resume-workbench.vercel.app" target="_blank" rel="noopener">打开 Web 工作台</a>
+      </div>
+      <div class="card">
+        <div class="icon">📱</div><h3>小程序 H5 版</h3>
+        <p>与微信小程序同源的 uni-app H5 构建，手机浏览器可直接体验四页 tabBar 与岗位查询、规划生成全流程。</p>
+        <a class="btn ghost compact-btn" href="./mini/" target="_blank" rel="noopener">打开 H5 预览</a>
+        <span class="tag">微信小程序请按 README 本地构建</span>
+      </div>
+      <div class="card">
+        <div class="icon">🛠️</div><h3>API 控制台</h3>
+        <p>FastAPI 自动生成的交互式文档（Swagger UI）：鉴权、岗位、草稿、导出、规划等全部端点可在线调用。</p>
+        <a class="btn ghost compact-btn" href="https://ai-resume-backend-1ouv.onrender.com/docs" target="_blank" rel="noopener">打开 API 文档</a>
+        <span class="tag"><a href="https://ai-resume-backend-1ouv.onrender.com/health" target="_blank" rel="noopener">健康检查 ↗</a></span>
+      </div>
+    </div>
+    <div class="demo-tip" style="margin-top:18px">🔑 三个入口通用演示登录：手机号 <b>13800138000</b>，验证码 <b>123456</b>。免费托管后端闲置休眠，首次请求可能需 30-50 秒唤醒。</div>
+  </div>
+</section>
 
 <section id="features">
   <div class="wrap">

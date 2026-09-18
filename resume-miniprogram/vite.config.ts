@@ -32,7 +32,10 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "")
   const localApiTarget =
     env.VITE_RESUME_API_URL || env.RESUME_API_URL || "http://127.0.0.1:8000"
+  // GitHub Pages 子路径部署：构建时设 MINI_PAGES_BASE=/ai-resume/mini/ 让 H5 资源指向子路径。
+  const pagesBase = env.MINI_PAGES_BASE || "/"
   return {
+    base: process.env.UNI_PLATFORM === "h5" ? pagesBase : "/",
     plugins: isVitest ? [] : [uni(), stripH5OnlyPublicAssets()],
     publicDir: "public",
     server: {

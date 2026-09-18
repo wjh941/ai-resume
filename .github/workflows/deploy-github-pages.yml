@@ -1,11 +1,16 @@
-# 项目主页（GitHub Pages）：site/ 目录为自包含静态站，无构建步骤。
+# 项目主页（GitHub Pages）：site/ 目录为自包含静态站。
+# 附带构建小程序 H5 版并入 site/mini/，作为可在线体验的三端入口之一。
 # 前提：仓库 Settings → Pages → Source 选 "GitHub Actions"。
 name: Deploy GitHub Pages
 
 on:
   push:
     branches: [feature/ai-resume-demo]
-    paths: ["site/**", ".github/workflows/deploy-github-pages.yml"]
+    paths:
+      - "site/**"
+      - "resume-miniprogram/src/**"
+      - "resume-miniprogram/package.json"
+      - ".github/workflows/deploy-github-pages.yml"
   workflow_dispatch: {}
 
 permissions:
@@ -26,6 +31,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: resume-miniprogram/package-lock.json
+      - name: Build mini-program H5 preview
+        working-directory: resume-miniprogram
+        env:
+          MINI_PAGES_BASE: /ai-resume/mini/
+          VITE_RESUME_API_URL: https://ai-resume-backend-1ouv.onrender.com
+        run: |
+          npm ci
+          npm run build:h5
+      - name: Merge H5 preview into site
+        run: |
+          rm -rf site/mini
+          cp -r resume-miniprogram/dist/build/h5 site/mini
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
