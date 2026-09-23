@@ -12,4 +12,7 @@ node_modules/
 dist/
 unpackage/
 coverage/
+coverage.json
+.coverage
 scripts/_smoke_export.docx
+.bench/

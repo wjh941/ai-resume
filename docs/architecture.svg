@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 800" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',system-ui,sans-serif">
+  <title>ai-resume 系统架构：三端 → FastAPI → SQLite/PostgreSQL</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    </marker>
+    <marker id="arrowAccent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <style>
+    .card { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.2; rx: 10; }
+    .title { font-size: 26px; font-weight: 700; fill: #0f172a; }
+    .subtitle { font-size: 14px; fill: #475569; }
+    .boxTitle { font-size: 15.5px; font-weight: 700; fill: #0f172a; }
+    .boxDetail { font-size: 12.5px; fill: #475569; }
+    .badge { font-size: 11.5px; font-weight: 600; }
+    .bandText { font-size: 14.5px; font-weight: 600; fill: #0f172a; }
+    .flow { stroke: #64748b; stroke-width: 1.6; fill: none; }
+    .flowSoft { stroke: #94a3b8; stroke-width: 1.4; fill: none; }
+  </style>
+
+  <!-- 背景：显式白底，GitHub 暗色模式下保持可读 -->
+  <rect x="0" y="0" width="1080" height="800" fill="#ffffff"/>
+  <rect x="0.6" y="0.6" width="1078.8" height="798.8" fill="none" stroke="#e2e8f0" rx="12"/>
+
+  <text x="24" y="42" class="title">ai-resume 系统架构</text>
+  <text x="24" y="66" class="subtitle">三端一体的求职工作台 · 单仓库 · 同一套 JWT 账号体系 · 本地岗位知识库 12 大类 / 204 岗位</text>
+
+  <!-- ============ 客户端层 ============ -->
+  <g>
+    <rect x="24" y="92" width="300" height="80" rx="10" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.4"/>
+    <text x="40" y="120" class="boxTitle">微信小程序</text>
+    <text x="40" y="142" class="boxDetail">uni-app + Pinia · 主包 448KB</text>
+    <text x="40" y="160" class="badge" fill="#2563eb">微信开发者工具导入构建产物</text>
+
+    <rect x="390" y="92" width="300" height="80" rx="10" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.4"/>
+    <text x="406" y="120" class="boxTitle">H5 移动端</text>
+    <text x="406" y="142" class="boxDetail">uni-app · 与小程序共享业务流程</text>
+    <text x="406" y="160" class="badge" fill="#2563eb">GitHub Pages 预览 · 本机 :5186</text>
+
+    <rect x="756" y="92" width="300" height="80" rx="10" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.4"/>
+    <text x="772" y="120" class="boxTitle">Web 工作台</text>
+    <text x="772" y="142" class="boxDetail">Vue 3 + Vite · Vitest 组件测试</text>
+    <text x="772" y="160" class="badge" fill="#2563eb">Vercel 托管 · 本机 :5174</text>
+  </g>
+
+  <line x1="174" y1="172" x2="174" y2="206" class="flow" marker-end="url(#arrow)"/>
+  <line x1="540" y1="172" x2="540" y2="206" class="flow" marker-end="url(#arrow)"/>
+  <line x1="906" y1="172" x2="906" y2="206" class="flow" marker-end="url(#arrow)"/>
+
+  <!-- ============ 接入带 ============ -->
+  <rect x="24" y="208" width="1032" height="42" rx="8" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="540" y="234" text-anchor="middle" class="bandText">HTTPS · JWT（sub + token_version + role）· CORS 白名单 · 每请求 X-Request-ID</text>
+
+  <line x1="540" y1="250" x2="540" y2="282" class="flow" marker-end="url(#arrow)"/>
+
+  <!-- ============ FastAPI 应用 ============ -->
+  <g>
+    <rect x="24" y="284" width="700" height="272" rx="10" fill="#f8fafc" stroke="#0f172a" stroke-width="1.6"/>
+    <text x="44" y="312" class="boxTitle" font-size="16">FastAPI 应用</text>
+    <text x="708" y="312" text-anchor="end" class="boxDetail">单进程 uvicorn · 结构化日志 · 全局异常处理</text>
+
+    <rect x="40" y="324" width="668" height="52" rx="7" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="56" y="346" class="boxTitle" font-size="13.5">路由层 app/api</text>
+    <text x="56" y="366" class="boxDetail">16 组业务路由：auth / career / job / drafts / evidence / applications / exports / membership / operator …</text>
+
+    <rect x="40" y="386" width="668" height="80" rx="7" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="56" y="408" class="boxTitle" font-size="13.5">服务层 app/services</text>
+    <text x="56" y="428" class="boxDetail">JWT 认证 · RBAC（运营白名单）· 每用户滑动窗口限流（429 + Retry-After）</text>
+    <text x="56" y="448" class="boxDetail">事实守卫（AI 润色不虚构经历）· 报告分级（精简版 / 专业版）· 岗位匹配引擎</text>
+
+    <rect x="40" y="476" width="668" height="64" rx="7" fill="#ffffff" stroke="#cbd5e1"/>
+    <text x="56" y="498" class="boxTitle" font-size="13.5">仓储层 app/repositories</text>
+    <text x="56" y="518" class="boxDetail">数据访问隔离 · owner-first 复合索引 · 所有业务表以 JWT sub 的 user_id 归属与过滤</text>
+  </g>
+
+  <!-- ============ 右列：AI / 知识库 / 导出 ============ -->
+  <line x1="724" y1="325" x2="754" y2="325" class="flowSoft" stroke-dasharray="5 4" marker-end="url(#arrowAccent)"/>
+  <line x1="724" y1="420" x2="754" y2="420" class="flow" marker-end="url(#arrow)"/>
+  <line x1="724" y1="515" x2="754" y2="515" class="flow" marker-end="url(#arrow)"/>
+
+  <g>
+    <rect x="756" y="285" width="300" height="80" rx="10" fill="#fffbeb" stroke="#d97706" stroke-width="1.4" stroke-dasharray="6 4"/>
+    <text x="772" y="313" class="boxTitle">AI 网关（可降级）</text>
+    <text x="772" y="335" class="boxDetail">OpenAI 兼容 / 火山方舟中继</text>
+    <text x="772" y="353" class="boxDetail">超时或格式异常自动降级 · 未配置返回明确错误</text>
+
+    <rect x="756" y="380" width="300" height="80" rx="10" fill="#ecfdf5" stroke="#059669" stroke-width="1.4"/>
+    <text x="772" y="408" class="boxTitle">本地岗位知识库</text>
+    <text x="772" y="430" class="boxDetail">12 大类 · 204 岗位 · 36 专业</text>
+    <text x="772" y="448" class="boxDetail">离线优先，AI 不可用时核心链路不受影响</text>
+
+    <rect x="756" y="475" width="300" height="80" rx="10" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.4"/>
+    <text x="772" y="503" class="boxTitle">导出服务</text>
+    <text x="772" y="525" class="boxDetail">Word（python-docx）· PDF（weasyprint）</text>
+    <text x="772" y="543" class="boxDetail">可选 playwright 渲染 · 临时 token 自动过期</text>
+  </g>
+
+  <line x1="274" y1="556" x2="194" y2="590" class="flow" marker-end="url(#arrow)"/>
+  <line x1="500" y1="556" x2="564" y2="590" class="flow" marker-end="url(#arrow)"/>
+
+  <!-- ============ 存储层 ============ -->
+  <g>
+    <rect x="24" y="592" width="340" height="72" rx="10" fill="#ecfeff" stroke="#0891b2" stroke-width="1.4"/>
+    <text x="40" y="618" class="boxTitle">SQLite（WAL 模式）</text>
+    <text x="40" y="640" class="boxDetail">本地 / 演示默认 · 单文件随仓库启动</text>
+    <text x="40" y="656" class="boxDetail">忙等待 SQLITE_TIMEOUT · 备份脚本见 scripts/</text>
+
+    <rect x="394" y="592" width="340" height="72" rx="10" fill="#eef2ff" stroke="#4f46e5" stroke-width="1.4"/>
+    <text x="410" y="618" class="boxTitle">PostgreSQL</text>
+    <text x="410" y="640" class="boxDetail">生产：DATABASE_URL 接入（Neon 等）跨部署持久</text>
+    <text x="410" y="656" class="boxDetail">同一套仓储层代码，方言差异由 Alembic 吸收</text>
+
+    <rect x="756" y="592" width="300" height="72" rx="10" fill="#f8fafc" stroke="#64748b" stroke-width="1.3" stroke-dasharray="6 4"/>
+    <text x="772" y="618" class="boxTitle">Alembic 迁移链</text>
+    <text x="772" y="640" class="boxDetail">20260819_phase8 → 20260821_phase12</text>
+    <text x="772" y="656" class="boxDetail">版本史与回滚策略见 docs/database-schema.md</text>
+  </g>
+
+  <line x1="734" y1="628" x2="754" y2="628" class="flow" marker-end="url(#arrow)"/>
+
+  <line x1="540" y1="664" x2="540" y2="690" class="flowSoft" stroke-dasharray="5 4" marker-end="url(#arrowAccent)"/>
+
+  <!-- ============ 可选 worker ============ -->
+  <rect x="24" y="692" width="1032" height="62" rx="10" fill="#ffffff" stroke="#94a3b8" stroke-width="1.3" stroke-dasharray="6 4"/>
+  <text x="44" y="717" class="boxTitle">APScheduler worker（可选 · WORKER_ENABLED=true 时独立进程）</text>
+  <text x="44" y="739" class="boxDetail">后台任务租约锁（多实例安全）· 推送分发：默认 mock 记录日志，真实 SMS / WeChat 预留分发接口 · 数据过期清理</text>
+
+  <text x="540" y="782" text-anchor="middle" class="boxDetail" fill="#94a3b8">部署拓扑：Web → Vercel · 后端 → Render 蓝图（render.yaml）· 项目主页 / H5 预览 → GitHub Pages · 详细运维见 README「线上部署运维手册」</text>
+</svg>

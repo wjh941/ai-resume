@@ -12,31 +12,39 @@
 
 **三端一体的求职工作台**：FastAPI 后端 + uni-app 小程序/H5 + Vue3 Web 工作台，单仓库、同一套 JWT 账号体系与 12 大类 / 204 岗位的本地知识库。
 
-```text
-┌─────────────────┐  ┌─────────────────┐  ┌──────────────────┐
-│  微信小程序 / H5  │  │  Web 工作台      │  │  运营端点          │
-│  uni-app + Pinia │  │  Vue3 + Vite     │  │  知识库/推送/订单   │
-└────────┬────────┘  └────────┬────────┘  └────────┬─────────┘
-         └────────────┬───────┴────────────────────┘
-                JWT (token_version) · HTTPS
-                      ┌─────▼─────┐
-                      │  FastAPI   │ RBAC · 每用户限流 · 结构化日志
-                      │  仓储层隔离  │──► SQLite (WAL) 或 PostgreSQL
-                      └─────┬─────┘
-              ┌─────────────┼──────────────┐
-        本地岗位知识库    AI 网关(可降级)   Word/PDF 导出
-```
+![ai-resume 系统架构：三端 → FastAPI（路由/服务/仓储三层）→ SQLite(WAL)/PostgreSQL，旁挂可降级 AI 网关、本地岗位知识库与导出服务](docs/architecture.svg)
 
 | 指标 | 数值 | 说明 |
 | --- | --- | --- |
-| 自动化测试 | **653 个**（后端 234 · 小程序 163 · Web 256） | 每阶段改动全量回归，0 失败基线 |
+| 自动化测试 | **711 个**（后端 253 · 小程序 165 · Web 293） | 每阶段改动全量回归，0 失败基线；Web 含 18 个组件真实挂载测试 |
+| 后端测试覆盖率 | **92%**（路由层 91% / 服务层 90% / 仓储层 92%） | `pytest --cov=app` 实测，见「测试与构建」 |
 | 小程序主包 | **854KB → 448KB（-47.5%）** | 构建期剔除 H5 专有产物 + `lazyCodeLoading` + 四页 tabBar |
-| 接口延迟 | 核心链路 **毫秒级**，AI 生成步 30~90s | AI 规划/匹配走中转模型，超时或格式异常自动降级精简版；可用 `scripts/smoke_e2e.py` 复现 10 步全链路 |
+| 接口延迟 | 核心链路 **P95 ≤ 190ms**（本机实测） | 登录 30ms · 缓存岗位查询 14ms · 草稿写入 29ms · 本地岗位匹配 188ms；AI 生成步为真实模型端到端耗时，见「性能基准」 |
 | Web 首屏 | 入口 25.5KB / gzip 10.3KB | Vue 与图标库独立 vendor 分块长期缓存，视图按需分块 + 悬停预热 |
 | 离线能力 | 投递记录本机队列 + 表单本地检查点 | 4xx 拒绝入队、毒丸隔离、GET 幂等重试语义 |
 | 云端部署 | Vercel 前端 + Render 后端蓝图 | `render.yaml` 一键建站，`VITE_API_BASE_URL` 指向后端，见「部署概览」 |
 
 工程取舍的完整讲述见 [面试/深度导读](docs/interview-notes.md)。
+
+## 性能基准
+
+本机隔离环境实测（单进程 uvicorn + SQLite WAL，premium 账号名下预置 1000 份完整简历草稿，不经代理直连回环）：
+
+| 场景 | P50 | P95 |
+| --- | --- | --- |
+| 登录全链路（send-code + login-phone） | 25ms | **30ms** |
+| 简历就绪检查（纯计算） | 11ms | 14ms |
+| 岗位查询（真实 AI 预热后缓存命中） | 11ms | 14ms |
+| 简历草稿写入（含额度事务校验） | 25ms | 29ms |
+| 职业规划（本地三档推荐引擎） | 40ms | 99ms |
+| 岗位匹配（本地 204 岗位目录） | 108ms | 188ms |
+| 草稿列表（1000 条全量 payload） | 233ms | 329ms |
+
+- **写入吞吐**：1000 条草稿 4 并发 12.8s（78 req/s），P99 = 77ms，零失败——WAL 单写者在该量级不是瓶颈。
+- **AI 并发排队**：5 用户同时发起 AI 润色，全部返回 45.6s（相对单用户基线放大 2.2x）；同一轮中事实守卫拦截 1 次不合规改写、上游格式异常被降级为明确错误，无静默失败。
+- **已知优化点**（如实记录）：草稿列表返回全量 payload，1000 条时响应体约 1.2MB；改为摘要列表 + 详情按需拉取可再压一个数量级。
+
+测试环境、方法、分位数全表与一键复现命令见 [docs/benchmarks.md](docs/benchmarks.md)（压测脚本在 `scripts/benchmarks/`，含零依赖 runner 与 Locust 场景）。
 
 ## 功能与使用指南
 
@@ -178,7 +186,9 @@ flowchart TD
 ai-resume/
 ├─ resume-backend/       # FastAPI、SQLite、导出服务与岗位推荐引擎
 ├─ resume-miniprogram/   # Uni-App Vue 3 小程序
-└─ docs/                 # 设计与实施文档
+├─ web-frontend/         # Vue3 独立 Web 工作台
+├─ scripts/              # 冒烟 / 部署契约验证 / 性能压测（benchmarks/）
+└─ docs/                 # 设计与实施文档（架构图、迁移记录、基准报告）
 ```
 
 ## 环境
@@ -297,6 +307,9 @@ TAVILY_API_KEY=
 ```powershell
 cd resume-backend
 .\.venv\Scripts\python.exe -m pytest tests -v
+
+# 覆盖率报告（实测总体 92%：路由层 app/api 91% · 服务层 app/services 90% · 仓储层 app/repositories 92%）
+.\.venv\Scripts\python.exe -m pytest tests -q --cov=app --cov-report=term --cov-report=html
 ```
 
 ### 前端
@@ -307,6 +320,8 @@ npm run test:unit
 npm run build:h5
 npm run build:mp-weixin
 ```
+
+Web 工作台测试除既有「源码契约」断言外，含 18 个真实挂载测试（`@vue/test-utils` + jsdom）：登录面板双模式与能力门控（`LoginPanel`）、异步按钮 pending 语义、长文本折叠可访问性、岗位对比胶囊选择器、错误提示 `role=alert` 契约，位于 `web-frontend/src/tests/*.mount.spec.ts`。
 
 ## 数据与隐私
 
@@ -346,7 +361,7 @@ npm run build:mp-weixin
 
 ## 部署概览
 
-- 本地开发默认使用 SQLite；生产环境通过 `DATABASE_URL` 使用 PostgreSQL，迁移与备份步骤见 [PostgreSQL 迁移说明](docs/POSTGRESQL_MIGRATION.md)。
+- 本地开发默认使用 SQLite；生产环境通过 `DATABASE_URL` 使用 PostgreSQL，迁移与备份步骤见 [PostgreSQL 迁移说明](docs/POSTGRESQL_MIGRATION.md)。Alembic 版本链（Phase 8 至今 5 个 revision）、每版业务变更与回滚策略见 [数据库版本管理与迁移记录](docs/database-schema.md)。
 - Docker 镜像自带 weasyprint PDF 渲染（默认 `PDF_RENDERER=weasyprint`）、PostgreSQL 驱动、alembic 迁移与 APScheduler worker，无需额外安装浏览器。
 - 知识库官方数据源的写入端点（创建目录角色、触发官方数据集同步）仅限运营账号（`require_operator`）；普通账号只读。小程序岗位知识库页会按角色隐藏初始化按钮。
 - Docker Compose 只提供服务编排，HTTPS 必须由外部 Nginx 或 Caddy 终止；完整上线检查见 [部署前检查](docs/DEPLOYMENT_PRECHECK.md)。
