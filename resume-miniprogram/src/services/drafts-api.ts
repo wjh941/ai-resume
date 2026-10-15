@@ -122,9 +122,30 @@ export function toResumeDraft(record: DraftRecord): ResumeDraft {
   }
 }
 
-export async function listDrafts(clientId: string): Promise<DraftRecord[]> {
-  const items = await request<BackendDraft[]>("/api/draft/list", "GET", undefined, { query: { client_id: clientId } })
-  return items.map(fromBackend)
+export type DraftListPage = {
+  items: DraftRecord[]
+  /** 该用户名下草稿总数(跨页),用于驱动"还有更多"判断。 */
+  total: number
+}
+
+type BackendDraftPage = {
+  items: BackendDraft[]
+  total: number
+  limit: number
+  offset: number
+}
+
+// 服务端分页:每页 20 条即可(草稿列表页滚动到底加载下一页);
+// 编辑/详情仍走 getDraft 按需拉取,这里只影响列表视图。
+export async function listDraftsPage(clientId: string, limit: number, offset = 0): Promise<DraftListPage> {
+  const payload = await request<BackendDraftPage | BackendDraft[]>("/api/draft/list", "GET", undefined, {
+    query: { client_id: clientId, limit, offset },
+  })
+  if (Array.isArray(payload)) {
+    // 后端契约:带 limit/offset 必返回 {items,total};数组分支仅为兼容旧形态的防御兜底。
+    return { items: payload.map(fromBackend), total: payload.length }
+  }
+  return { items: payload.items.map(fromBackend), total: payload.total }
 }
 
 export async function getDraft(clientId: string, draftId: string): Promise<DraftRecord> {

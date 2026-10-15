@@ -34,11 +34,12 @@ def list_drafts(
 ):
     """草稿列表,向后兼容分页。
 
-    - 不带 limit/offset:与历史版本完全一致,`data` 为草稿对象数组(web 端与小程序现行为)。
+    - 不带 limit/offset:与历史版本完全一致,`data` 为草稿对象数组
+      (现仅 web 仪表盘统计与经历证据页草稿下拉、历史调用方仍在用)。
     - 带 limit 或 offset(任一即视为选择分页):`data` 变为
       `{"items": [...], "total": N, "limit": L, "offset": O}`,
-      total 为该用户草稿总数;web-frontend 的类型已容忍该形态(`BackendDraft[] | { items? }`),
-      小程序本轮未切换、不传分页参数,不受影响。
+      total 为该用户草稿总数;两端列表视图均已切换到该形态
+      (web 简历中心按 total 驱动页码,小程序草稿页滚动到底按页加载,每页均 20 条)。
     """
     if limit is None and offset is None:
         return success(request.app.state.draft_repository.list(user_id))

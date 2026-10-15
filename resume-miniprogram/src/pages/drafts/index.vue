@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue"
+import { computed, onMounted, ref } from "vue"
 
 import LoadingSpinner from "../../components/LoadingSpinner.vue"
-import { useIncrementalList } from "../../composables/useIncrementalList"
 import {
   copyDraft,
   deleteDraft,
   getDraft,
-  listDrafts,
+  listDraftsPage,
   toResumeDraft,
   type DraftRecord,
 } from "../../services/drafts-api"
@@ -15,15 +14,16 @@ import { useResumeStore } from "../../stores/resume"
 import { getClientId } from "../../stores/session"
 import { showErrorToast } from "../../utils/error-feedback"
 
+// 列表改用服务端分页(每页 20 条):滚动到底(scrolltolower)加载下一页,total 驱动 hasMore;
+// 打开草稿仍走 getDraft 按需拉取完整内容,这里只影响列表传输量。
+const DRAFT_PAGE_SIZE = 20
+
 const resumeStore = useResumeStore()
 const drafts = ref<DraftRecord[]>([])
-const {
-  visibleItems: renderedItems,
-  hasMore,
-  showMore,
-  reset: resetVisibleItems,
-} = useIncrementalList(drafts)
+const totalDrafts = ref(0)
+const hasMore = computed(() => drafts.value.length < totalDrafts.value)
 const loading = ref(false)
+const loadingMore = ref(false)
 const error = ref("")
 const pendingAction = ref<"open" | "copy" | "delete" | "">("")
 const pendingDraftId = ref("")
@@ -32,12 +32,28 @@ async function load(): Promise<void> {
   loading.value = true
   error.value = ""
   try {
-    drafts.value = await listDrafts(getClientId())
-    resetVisibleItems()
+    const page = await listDraftsPage(getClientId(), DRAFT_PAGE_SIZE, 0)
+    drafts.value = page.items
+    totalDrafts.value = page.total
   } catch (reason) {
     error.value = reason instanceof Error ? reason.message : "Unable to load drafts"
   } finally {
     loading.value = false
+  }
+}
+
+async function showMore(): Promise<void> {
+  if (loading.value || loadingMore.value || !hasMore.value) return
+  loadingMore.value = true
+  try {
+    const page = await listDraftsPage(getClientId(), DRAFT_PAGE_SIZE, drafts.value.length)
+    // 服务端按 updated_at 倒序返回,新拉到的页接在已加载内容之后。
+    drafts.value = [...drafts.value, ...page.items]
+    totalDrafts.value = page.total
+  } catch (reason) {
+    showErrorToast(reason instanceof Error ? reason.message : "Unable to load more drafts")
+  } finally {
+    loadingMore.value = false
   }
 }
 
@@ -63,7 +79,9 @@ async function copy(item: DraftRecord): Promise<void> {
   pendingDraftId.value = item.id
   try {
     const copied = await copyDraft(getClientId(), item.id)
+    // 服务端按 updated_at 倒序返回,副本排在最前,本地前插与刷新结果一致。
     drafts.value.unshift(copied)
+    totalDrafts.value += 1
     uni.showToast({ title: "Draft copied", icon: "success" })
   } catch (reason) {
     showErrorToast(reason instanceof Error ? reason.message : "Unable to copy draft")
@@ -84,6 +102,7 @@ function remove(item: DraftRecord): void {
       try {
         await deleteDraft(getClientId(), item.id)
         drafts.value = drafts.value.filter((draft) => draft.id !== item.id)
+        totalDrafts.value = Math.max(0, totalDrafts.value - 1)
         uni.showToast({ title: "Draft deleted", icon: "success" })
       } catch (reason) {
         showErrorToast(reason instanceof Error ? reason.message : "Unable to delete draft")
@@ -123,7 +142,7 @@ onMounted(load)
       <text class="empty-helper">本机填写中的内容也会自动保留。</text>
       <button class="empty-action" @click="openResumeForm">前往填写简历</button>
     </view>
-    <view v-for="item in renderedItems" :key="item.id" class="draft ui-long-list-item">
+    <view v-for="item in drafts" :key="item.id" class="draft ui-long-list-item">
       <text class="draft-title">{{ item.jobTitle || item.resume.job.targetRole || "未命名草稿" }}</text>
       <text class="draft-meta">更新时间：{{ item.updatedAt }}</text>
       <view class="actions">
@@ -133,7 +152,7 @@ onMounted(load)
         <button size="mini" class="danger" :loading="pendingAction === 'delete' && pendingDraftId === item.id" :disabled="Boolean(pendingAction)" @click="remove(item)">删除</button>
       </view>
     </view>
-    <text v-if="hasMore" class="progressive-list-hint">继续下滑显示更多</text>
+    <text v-if="hasMore" class="progressive-list-hint">{{ loadingMore ? "正在加载更多草稿…" : "继续下滑显示更多" }}</text>
   </scroll-view>
 </template>
 

@@ -447,13 +447,19 @@ describe("interaction contracts", () => {
     const jobs = readFileSync(new URL("../views/JobsView.vue", import.meta.url), "utf8")
     const styles = readFileSync(new URL("../styles/base.css", import.meta.url), "utf8")
 
-    for (const source of [resume, applications, evidence, membership]) {
+    for (const source of [applications, evidence, membership]) {
       expect(source).toContain("useIncrementalList")
       expect(source).toContain("ProgressiveListSentinel")
     }
+    // 简历中心已切换为服务端分页(limit=20,total 驱动页码),列表天然有界,不再走客户端渐进渲染。
+    expect(resume).toContain("listDraftsPage")
+    expect(resume).toContain("totalPages")
+    expect(resume).not.toContain("useIncrementalList")
+    expect(resume).not.toContain("ProgressiveListSentinel")
     expect(styles).toContain("overflow-x: auto")
     expect(styles).toContain(".record-list, .task-list, .application-table, .evidence-list, .order-list")
     expect(styles).toContain("grid-template-columns: 40px minmax(220px, 1fr) 128px 170px minmax(250px, auto)")
+    expect(styles).toContain(".draft-pagination")
     expect(resume).toContain("本机编辑内容会自动保留，手动保存后同步到服务端。")
     expect(applications).toContain("可直接使用上方表单新增第一条记录。")
     expect(jobs).toContain("输入具体岗位名称后开始整理能力要求。")

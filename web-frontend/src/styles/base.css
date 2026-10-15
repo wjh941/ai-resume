@@ -355,6 +355,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .application-record { contain-intrinsic-size: auto 124px; }
 .evidence-list > article { contain-intrinsic-size: auto 132px; }
 .record-list > .record-row { contain-intrinsic-size: auto 82px; }
+/* 简历中心草稿列表的服务端分页控件(total 驱动页码)。 */
+.draft-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 14px; padding: 14px 4px 4px; border-top: 1px solid var(--line); }
+.draft-pagination-status { font-size: 13px; color: var(--muted); }
 .order-list > .order-row { contain-intrinsic-size: auto 72px; }
 .record-row, .task-row, .application-row { display: grid; align-items: center; gap: 16px; padding: 18px 4px; border-bottom: 1px solid var(--line); }
 .record-row:hover, .task-row:hover, .application-row:hover { background: var(--primary-tint); }

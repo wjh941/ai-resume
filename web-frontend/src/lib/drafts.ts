@@ -151,6 +151,37 @@ function fromBackend(item: BackendDraft): DraftRecord {
   }
 }
 
+export type DraftPage = {
+  items: DraftRecord[]
+  total: number
+  limit: number
+  offset: number
+}
+
+// 服务端分页页大小:简历中心列表视图使用;后端契约见 GET /api/draft/list(limit/offset)。
+export const DRAFT_PAGE_SIZE = 20
+
+type BackendDraftPage = {
+  items: BackendDraft[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export async function listDraftsPage(limit: number, offset = 0): Promise<DraftPage> {
+  const query = new URLSearchParams({ limit: String(limit), offset: String(offset) })
+  const payload = await requestApi<BackendDraftPage>(`/api/draft/list?${query.toString()}`)
+  return {
+    items: payload.items.map(fromBackend),
+    total: payload.total,
+    limit: payload.limit,
+    offset: payload.offset,
+  }
+}
+
+// 仪表盘(dashboard.ts)的草稿计数与逐份完整度检查、经历证据页(EvidenceView.vue)的
+// "选择简历草稿"下拉都需要看到全量草稿,因此这两个调用点保留不带分页参数的旧行为;
+// 只有简历中心列表视图(ResumeView.vue)走 listDraftsPage 分页。
 export async function listDrafts(): Promise<DraftRecord[]> {
   const payload = await requestApi<BackendDraft[] | { items?: BackendDraft[] }>("/api/draft/list")
   return readItems(payload).map(fromBackend)

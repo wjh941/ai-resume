@@ -54,6 +54,9 @@ export function buildOverviewState(input: DashboardInput): OverviewState {
 type ItemsResponse = RawApplication[] | RawTask[] | { items?: RawApplication[] | RawTask[] }
 type DraftListResponse = RawDraft[] | { items?: RawDraft[] }
 export async function loadOverview(request: Requester = requestApi, planId = "web-workspace"): Promise<OverviewState> {
+  // 草稿保留全量模式(不带 limit/offset):draftCount、逐份完整度检查(resumeComplete 遍历
+  // 每一份草稿)和续办候选都需要全部草稿,分页会导致计数与完整度判断失真;
+  // 服务端分页只用于简历中心列表视图(ResumeView 的 listDraftsPage)。
   const [applications, drafts, tasks] = await Promise.all([request<ItemsResponse>("/api/applications"), request<DraftListResponse>("/api/draft/list"), request<ItemsResponse>(`/api/career/tasks?plan_id=${encodeURIComponent(planId)}`)])
   return buildOverviewState({ applications: applications as DashboardInput["applications"], drafts, tasks: tasks as DashboardInput["tasks"] })
 }

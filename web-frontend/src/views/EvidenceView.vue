@@ -44,6 +44,8 @@ const {
   retryable,
   clearRetry,
 } = useApiResource(async () => {
+  // 草稿在这里保留全量模式:它们是"选择简历草稿"下拉的完整候选集(选中后按 id 反查取
+  // resume 做准备度检查),分页会让下拉缺少后面页的草稿;服务端分页只用于简历中心列表视图。
   const [evidence, draftList] = await Promise.all([listEvidence(), listDrafts()])
   items.value = evidence
   resetVisibleEvidence()

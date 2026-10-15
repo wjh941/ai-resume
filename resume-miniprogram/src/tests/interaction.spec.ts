@@ -234,7 +234,7 @@ describe("runWithLoading", () => {
     const jobSearch = readFileSync(new URL("../pages/job-search/index.vue", import.meta.url), "utf8")
     const progressiveScrollRoot = '<scroll-view class="page progressive-scroll-page" scroll-y @scrolltolower="showMore">'
     const editableProgressiveScrollRoot = '<scroll-view class="page progressive-scroll-page" scroll-y :scroll-top="pageScrollTop" @scroll="onListScroll" @scrolltolower="showMore">'
-    for (const page of [drafts, collection]) {
+    for (const page of [collection]) {
       expect(page).toContain("useIncrementalList")
       expect(page).toContain(progressiveScrollRoot)
       expect(page).toContain('v-for="item in renderedItems"')
@@ -247,7 +247,14 @@ describe("runWithLoading", () => {
       expect(page).not.toContain('@scroll="pageScrollTop = $event.detail.scrollTop"')
       expect(page).toContain('v-for="item in renderedItems"')
     }
-    expect(drafts).not.toContain('v-for="item in drafts"')
+    // 草稿列表已切换为服务端分页(每页 20 条):滚动到底拉下一页,total 驱动 hasMore,
+    // 已渲染条目天然有界,不再需要客户端 useIncrementalList 截断。
+    expect(drafts).toContain(progressiveScrollRoot)
+    expect(drafts).toContain("listDraftsPage")
+    expect(drafts).toContain("totalDrafts")
+    expect(drafts).toContain('v-for="item in drafts"')
+    expect(drafts).not.toContain("useIncrementalList")
+    expect(drafts).not.toContain('v-for="item in renderedItems"')
     expect(drafts).toContain('class="draft ui-long-list-item"')
     expect(applications).not.toContain('v-for="item in visibleApplications"')
     expect(evidence).not.toContain('v-for="item in evidence"')

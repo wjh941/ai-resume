@@ -4,7 +4,7 @@ import { ApiRequestError, requestApi } from "../lib/api"
 import { compareRoles, isCareerProfileMissingError, listCareerTasks, loadCareerRecommendations } from "../lib/career"
 import { getAssessmentQuestions, submitAssessment } from "../lib/assessment"
 import { getEvidenceSuggestions, listEvidence, saveEvidence } from "../lib/evidence"
-import { listDrafts } from "../lib/drafts"
+import { listDrafts, listDraftsPage } from "../lib/drafts"
 import { createMembershipOrder, listMembershipPackages, listOrders } from "../lib/membership"
 import { listApplications, listTimeline, saveApplication } from "../lib/applications"
 
@@ -62,6 +62,31 @@ describe("typed domain adapters", () => {
 
     expect(drafts).toHaveLength(1)
     expect(drafts[0]).toMatchObject({ id: "d-2", jobTitle: "Product Designer" })
+  })
+
+  it("requests the paged draft list and maps the pagination envelope", async () => {
+    requestMock.mockResolvedValue({
+      items: [{
+        id: "d-3",
+        job_title: "Growth Analyst",
+        template_id: "analytics",
+        resume: { basic: { name: "C" } },
+        job_intelligence: null,
+        created_at: "2026-08-24T00:00:00Z",
+        updated_at: "2026-08-24T02:00:00Z",
+      }],
+      total: 21,
+      limit: 20,
+      offset: 20,
+    })
+
+    const page = await listDraftsPage(20, 20)
+
+    expect(requestMock).toHaveBeenCalledWith("/api/draft/list?limit=20&offset=20")
+    expect(page.total).toBe(21)
+    expect(page.limit).toBe(20)
+    expect(page.offset).toBe(20)
+    expect(page.items[0]).toMatchObject({ id: "d-3", jobTitle: "Growth Analyst" })
   })
 
   it("posts an application with the existing backend field names", async () => {

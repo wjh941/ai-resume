@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { Copy, FilePenLine, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-vue-next"
-import { ref } from "vue"
+import { computed, ref } from "vue"
 
 import { ApiRequestError } from "../lib/api"
 import { getApiErrorMessage } from "../lib/api-error"
-import { copyDraft, deleteDraft, listDrafts, saveDraft, type DraftRecord, type TemplateId } from "../lib/drafts"
+import { copyDraft, deleteDraft, DRAFT_PAGE_SIZE, listDraftsPage, saveDraft, type DraftRecord, type TemplateId } from "../lib/drafts"
 import { prependDraft, removeDraftById } from "../lib/draft-workflow"
 import { formatDateTime, templateLabel } from "../lib/format"
 import { createEmptyDraftInput } from "../lib/resume-draft"
@@ -12,8 +12,6 @@ import { useApiResource } from "../composables/useApiResource"
 import AsyncButton from "../components/AsyncButton.vue"
 import ExpandableText from "../components/ExpandableText.vue"
 import LoadingSpinner from "../components/LoadingSpinner.vue"
-import ProgressiveListSentinel from "../components/ProgressiveListSentinel.vue"
-import { useIncrementalList } from "../composables/useIncrementalList"
 import type { WorkspaceView } from "../components/WebSidebar.vue"
 
 const emit = defineEmits<{
@@ -22,6 +20,9 @@ const emit = defineEmits<{
 }>()
 
 const drafts = ref<DraftRecord[]>([])
+const totalDrafts = ref(0)
+const pageIndex = ref(0)
+const totalPages = computed(() => Math.max(1, Math.ceil(totalDrafts.value / DRAFT_PAGE_SIZE)))
 const pendingAction = ref<"copy" | "delete" | "">("")
 const pendingDraftId = ref("")
 const createOpen = ref(false)
@@ -30,12 +31,6 @@ const createError = ref("")
 const createLimitReached = ref(false)
 const newJobTitle = ref("")
 const newTemplate = ref<TemplateId>("business")
-const {
-  visibleItems: renderedDrafts,
-  hasMore: hasMoreDrafts,
-  showMore: showMoreDrafts,
-  reset: resetVisibleDrafts,
-} = useIncrementalList(drafts)
 
 const {
   loading,
@@ -45,10 +40,20 @@ const {
   retryable,
   clearRetry,
 } = useApiResource(async () => {
-  drafts.value = await listDrafts()
-  resetVisibleDrafts()
+  // 列表走服务端分页(每页 20 条,total 驱动页码);编辑/详情仍由编辑视图按需拉取。
+  const page = await listDraftsPage(DRAFT_PAGE_SIZE, pageIndex.value * DRAFT_PAGE_SIZE)
+  drafts.value = page.items
+  totalDrafts.value = page.total
   return true
 }, { fallbackMessage: "暂时无法读取简历草稿，请稍后重试", immediate: true })
+
+async function goToPage(index: number): Promise<void> {
+  if (loading.value) return
+  const target = Math.min(Math.max(index, 0), totalPages.value - 1)
+  if (target === pageIndex.value) return
+  pageIndex.value = target
+  await refresh()
+}
 
 function openCreate(): void {
   createOpen.value = true
@@ -93,7 +98,15 @@ async function copy(item: DraftRecord): Promise<void> {
   clearRetry()
   error.value = ""
   try {
-    drafts.value = prependDraft(drafts.value, await copyDraft(item.id))
+    const copied = await copyDraft(item.id)
+    // 服务端按 updated_at 倒序返回:首页直接本地前插即可与下一页刷新结果一致;
+    // 非首页时副本落在更前的页,当前页内容整体后移一位,重新拉取当前页保持正确。
+    if (pageIndex.value === 0) {
+      drafts.value = prependDraft(drafts.value, copied)
+      totalDrafts.value += 1
+    } else {
+      await refresh()
+    }
   } catch (reason) {
     error.value = getApiErrorMessage(reason, "无法复制简历草稿，请稍后重试")
   } finally {
@@ -111,6 +124,12 @@ async function remove(item: DraftRecord): Promise<void> {
   try {
     await deleteDraft(item.id)
     drafts.value = removeDraftById(drafts.value, item.id)
+    totalDrafts.value = Math.max(0, totalDrafts.value - 1)
+    // 删掉的是当前页最后一条且还有前一页时,回退一页重新拉取。
+    if (!drafts.value.length && pageIndex.value > 0) {
+      pageIndex.value -= 1
+      await refresh()
+    }
   } catch (reason) {
     error.value = getApiErrorMessage(reason, "无法删除简历草稿，请稍后重试")
   } finally {
@@ -143,7 +162,7 @@ async function remove(item: DraftRecord): Promise<void> {
     <ErrorNotice v-if="error" :message="error"><AsyncButton v-if="retryable" class="notice-action" type="button" :loading="loading" @click="retryFailedRequest">重试读取</AsyncButton></ErrorNotice>
     <div v-else-if="loading" class="content-skeleton" aria-busy="true"><LoadingSpinner class="content-loading-spinner" label="正在读取简历草稿" /><span /><span /><span /></div>
     <div v-else-if="drafts.length" class="record-list record-surface">
-      <article v-for="draft in renderedDrafts" :key="draft.id" class="record-row">
+      <article v-for="draft in drafts" :key="draft.id" class="record-row">
         <span class="record-symbol record-coral"><FilePenLine :size="21" aria-hidden="true" /></span>
         <div><h2><ExpandableText :text="draft.jobTitle || '未命名简历'" :lines="1" :expand-at="36" label="简历名称" /></h2><p>模板：{{ templateLabel(draft.templateId) }} · 最近保存：{{ formatDateTime(draft.updatedAt, "时间待同步") }}</p></div>
         <div class="record-actions">
@@ -152,7 +171,11 @@ async function remove(item: DraftRecord): Promise<void> {
           <AsyncButton class="danger-action compact" type="button" :loading="pendingAction === 'delete' && pendingDraftId === draft.id" :disabled="Boolean(pendingAction)" :title="`删除 ${draft.jobTitle || '未命名简历'}`" :aria-label="`删除 ${draft.jobTitle || '未命名简历'}`" @click="remove(draft)"><Trash2 :size="15" aria-hidden="true" />删除</AsyncButton>
         </div>
       </article>
-      <ProgressiveListSentinel :has-more="hasMoreDrafts" @more="showMoreDrafts" />
+      <nav v-if="totalPages > 1" class="draft-pagination" aria-label="简历草稿分页">
+        <AsyncButton class="text-action compact" type="button" :disabled="loading || pageIndex === 0" aria-label="上一页" @click="goToPage(pageIndex - 1)">上一页</AsyncButton>
+        <span class="draft-pagination-status">第 {{ pageIndex + 1 }} / {{ totalPages }} 页 · 共 {{ totalDrafts }} 份</span>
+        <AsyncButton class="text-action compact" type="button" :disabled="loading || pageIndex >= totalPages - 1" aria-label="下一页" @click="goToPage(pageIndex + 1)">下一页</AsyncButton>
+      </nav>
     </div>
     <div v-else class="empty-board">
       <span class="empty-board-icon" aria-hidden="true"><FilePenLine :size="24" aria-hidden="true" /></span>
