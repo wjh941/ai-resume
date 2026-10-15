@@ -8,16 +8,16 @@
 from __future__ import annotations
 
 from app.schemas.consultation import (
+    IDENTITY_LABELS,
     AdviceTopic,
     CareerAdviceResponse,
     CareerGrowthRoute,
     CareerGrowthStage,
-    IDENTITY_LABELS,
     ConsultationSection,
     IdentityCode,
     IdentityPlan,
-    JobMatchReport,
     JobConsultationResponse,
+    JobMatchReport,
     PrioritySkillGap,
     ResumeReviewResponse,
 )

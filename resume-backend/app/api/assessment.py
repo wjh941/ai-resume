@@ -9,15 +9,14 @@ from app.schemas.assessment import (
 )
 from app.schemas.common import success
 from app.schemas.report import ReportMode
+from app.services.auth import current_user_id
+from app.services.career_assessment import assessment_questions
+from app.services.membership import VipStatus, get_current_vip, require_vip_feature
 from app.services.report_tiering import (
     ReportEvidenceInput,
     make_report_evidence,
     project_report,
 )
-from app.services.career_assessment import assessment_questions
-from app.services.auth import current_user_id
-from app.services.membership import VipStatus, get_current_vip, require_vip_feature
-
 
 router = APIRouter()
 

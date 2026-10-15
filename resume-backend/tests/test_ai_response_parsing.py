@@ -3,11 +3,10 @@ from __future__ import annotations
 import json
 
 import pytest
+from test_job_plan_api import make_job_plan
 
 from app.schemas.career import JobPlanResponse
-from app.schemas.job import JobIntelligence
 from app.services.ai_client import AIServiceError, _coerce_job_intelligence, parse_llm_model
-from test_job_plan_api import make_job_plan
 
 
 def _wrap_fence(payload: str) -> str:

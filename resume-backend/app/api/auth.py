@@ -12,7 +12,6 @@ from app.services.auth import (
 )
 from app.services.sms import SmsConfigurationError, SmsDeliveryError, SmsRateLimitError, VerificationCodeError
 
-
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 

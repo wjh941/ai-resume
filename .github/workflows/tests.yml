@@ -23,6 +23,11 @@ jobs:
           python -m pip install --upgrade pip
           # server 部署形态的 extras(与 Dockerfile 一致):测试模块顶层 import alembic
           pip install -r requirements.txt "SQLAlchemy>=2.0,<3" "alembic>=1.13,<2" "psycopg[binary]>=3.1,<4" pytest pytest-cov
+      # ruff 配置在 resume-backend/ruff.toml(门禁从宽:E4/E7/E9+F+I+B,行宽 110,排除 alembic 迁移)
+      - name: Ruff 静态检查
+        run: |
+          pip install ruff
+          ruff check . --output-format=github
       - name: 运行测试(覆盖率门禁 90%)
         run: pytest -q --cov=app --cov-report=term --cov-fail-under=90
 

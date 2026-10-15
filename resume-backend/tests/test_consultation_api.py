@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from conftest import grant_vip
 
+
 def assert_success(response):
     assert response.status_code == 200
     assert response.json()["code"] == "ok"

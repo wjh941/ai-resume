@@ -5,7 +5,6 @@ from fastapi import APIRouter, Depends, Request
 from app.schemas.common import success
 from app.services.auth import current_user_id
 
-
 router = APIRouter(prefix="/api/template", tags=["templates"])
 
 

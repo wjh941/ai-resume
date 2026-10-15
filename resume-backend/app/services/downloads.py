@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-import time
 from uuid import uuid4
 
 from app.db import connect
@@ -72,7 +72,8 @@ class DownloadService:
             output_path.relative_to(self._temp_directory)
         except ValueError:
             self._delete_records([token])
-            raise DownloadNotFoundError
+            # B904:补 raise ... from 会微调异常链显示,本轮不改动行为,先显式豁免。
+            raise DownloadNotFoundError  # noqa: B904
         if expires_at <= datetime.now(timezone.utc) or not output_path.is_file():
             self._delete_records([token])
             self._delete_file_if_owned(output_path)

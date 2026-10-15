@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request
 
-from app.repositories.knowledgebase import KnowledgebaseRoleNotFoundError
 from app.schemas.common import success
 from app.schemas.knowledgebase import KnowledgebaseRoleInput
 from app.services.auth import AuthPrincipal, require_operator
-
 
 router = APIRouter()
 

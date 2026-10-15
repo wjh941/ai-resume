@@ -9,7 +9,6 @@ from alembic.config import Config
 from app.config import load_settings
 from app.db import PostgresConnection
 
-
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 
 

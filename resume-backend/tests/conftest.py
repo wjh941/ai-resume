@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import os
+import sqlite3
+import sys
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from pathlib import Path
-from datetime import datetime, timedelta, timezone
-import sqlite3
-import sys
-
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
@@ -30,8 +29,9 @@ def api_client(tmp_path, monkeypatch):
     monkeypatch.setenv("AI_API_KEY", "")
     monkeypatch.setenv("AI_MODEL", "")
 
-    from main import create_app
     from test_support import TestAIClient
+
+    from main import create_app
 
     with TestClient(create_app()) as client:
         client.app.state.ai_client = TestAIClient()

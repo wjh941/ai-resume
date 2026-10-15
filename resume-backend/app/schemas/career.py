@@ -8,7 +8,6 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from app.schemas.consultation import IdentityCode
 from app.schemas.report import ReportMode
 
-
 MatchingLevel = Literal["high", "transferable", "needs_upskilling", "long_shot"]
 RecommendationTier = Literal["stretch", "stable", "safe"]
 JobPlanSectionKey = Literal[

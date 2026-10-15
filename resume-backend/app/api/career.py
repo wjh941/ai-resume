@@ -20,7 +20,6 @@ from app.services.auth import current_user_id
 from app.services.membership import VipPermissionError, VipStatus, get_current_vip
 from app.services.report_tiering import make_report_evidence, project_report
 
-
 router = APIRouter()
 
 

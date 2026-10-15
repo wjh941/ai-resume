@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Literal, Protocol, get_args, get_origin, TypeVar
+from typing import Any, Literal, Protocol, TypeVar, get_args, get_origin
 
 import httpx
 from pydantic import BaseModel
 
 from app.config import Settings
+from app.schemas.career import ComparisonActionPlan, JobPlanResponse
 from app.schemas.consultation import (
     AdviceTopic,
     CareerAdviceResponse,
@@ -17,7 +18,6 @@ from app.schemas.consultation import (
 )
 from app.schemas.job import JobIntelligence
 from app.schemas.resume import ResumePayload
-from app.schemas.career import ComparisonActionPlan, JobPlanResponse
 from app.services.career_assessment import score_assessment
 
 

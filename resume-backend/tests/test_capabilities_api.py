@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-
 FEATURE_NAMES = {
     "resume_import",
     "sms_login",

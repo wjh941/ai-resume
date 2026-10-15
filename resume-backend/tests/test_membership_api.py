@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-from io import BytesIO
 import sqlite3
 import threading
 from concurrent.futures import ThreadPoolExecutor
-
-from docx import Document
+from datetime import datetime, timedelta, timezone
+from io import BytesIO
 
 from conftest import grant_vip, make_draft_payload, make_resume_payload
+from docx import Document
+
 
 def _login_headers(api_client, phone: str) -> dict[str, str]:
     response = api_client.post(

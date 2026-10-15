@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import asynccontextmanager, suppress
 import logging
 import sqlite3
+from contextlib import asynccontextmanager, suppress
 from time import monotonic
 from uuid import uuid4
 
@@ -11,21 +11,45 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 
-from app.api import account, ai, applications, assessment, auth, career, consultation, drafts, evidence, exports, job_collections, knowledgebase, membership, operator, system, templates
+from app.api import (
+    account,
+    ai,
+    applications,
+    assessment,
+    auth,
+    career,
+    consultation,
+    drafts,
+    evidence,
+    exports,
+    job_collections,
+    knowledgebase,
+    membership,
+    operator,
+    system,
+    templates,
+)
+from app.api.exports import ExportEmptyError, ExportGenerationError
+from app.config import _DEFAULT_JWT_SECRET, Settings, load_settings
+from app.db import initialize_database
 from app.repositories.account_privacy import AccountPrivacyRepository
 from app.repositories.applications import ApplicationNotFoundError, ApplicationRepository
-from app.config import Settings, load_settings, _DEFAULT_JWT_SECRET
-from app.db import initialize_database
 from app.repositories.assessment import AssessmentNotFoundError, AssessmentRepository
 from app.repositories.career_catalog import CareerCatalogRepository
 from app.repositories.career_profiles import CareerProfileNotFoundError, CareerProfileRepository
 from app.repositories.career_tasks import CareerTaskNotFoundError, CareerTaskRepository
 from app.repositories.drafts import DraftNotFoundError, DraftRepository
 from app.repositories.evidence import EvidenceRepository
-from app.repositories.knowledgebase import KnowledgebaseRepository, KnowledgebaseRoleNotFoundError
 from app.repositories.job_collections import FavoriteJobNotFoundError, JobCollectionRepository
-from app.repositories.membership import MembershipRepository, OrderExpiredError, OrderNotFoundError, PaymentCallbackConflictError
+from app.repositories.knowledgebase import KnowledgebaseRepository, KnowledgebaseRoleNotFoundError
+from app.repositories.membership import (
+    MembershipRepository,
+    OrderExpiredError,
+    OrderNotFoundError,
+    PaymentCallbackConflictError,
+)
 from app.repositories.operator_knowledge import OperatorKnowledgeNotFoundError, OperatorKnowledgeRepository
 from app.repositories.password_accounts import PasswordAccountRepository
 from app.repositories.push_logs import PushLogRepository
@@ -34,27 +58,31 @@ from app.repositories.templates import TemplateRepository
 from app.repositories.users import UserRepository
 from app.schemas.common import error, success
 from app.services.ai_client import AIServiceError, build_ai_client
+from app.services.auth import AuthService, current_user_id
 from app.services.career_recommender import CareerRecommender
 from app.services.downloads import DownloadNotFoundError, DownloadService
-from app.services.job_catalog import JobCatalog
-from app.services.official_dataset_sync import OfficialDatasetSyncService
 from app.services.export_pdf import PdfRendererUnavailableError
-from app.api.exports import ExportEmptyError, ExportGenerationError
 from app.services.job_cache import JobCache, JobPlanCache
+from app.services.job_catalog import JobCatalog
 from app.services.job_matching import JobMatcher
-from app.services.rewrite_guard import RewriteFactViolation
-from app.services.template_service import TemplateService
-from app.services.auth import AuthService
-from app.services.sms import SmsService
-from app.services.auth import current_user_id
-from app.services.membership import MembershipPackageConflictError, MembershipService, PaymentChannelUnavailableError, PaymentDemoDisabledError, PaymentSignatureInvalidError, VipPermissionError, get_current_vip
-from app.services.rate_limit import InMemoryRateLimiter, RateLimitExceededError
-from app.services.push import PushDispatcher
-from app.services.resume_imports import ResumeImportService
+from app.services.membership import (
+    MembershipPackageConflictError,
+    MembershipService,
+    PaymentChannelUnavailableError,
+    PaymentDemoDisabledError,
+    PaymentSignatureInvalidError,
+    VipPermissionError,
+    get_current_vip,
+)
 from app.services.observability import configure_logging, log_event
+from app.services.official_dataset_sync import OfficialDatasetSyncService
+from app.services.push import PushDispatcher
+from app.services.rate_limit import InMemoryRateLimiter, RateLimitExceededError
+from app.services.resume_imports import ResumeImportService
+from app.services.rewrite_guard import RewriteFactViolation
+from app.services.sms import SmsService
+from app.services.template_service import TemplateService
 from app.services.web_search import build_web_search_client
-from pydantic import ValidationError
-
 
 logger = logging.getLogger("resume_api")
 

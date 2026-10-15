@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from conftest import grant_vip
 
+
 def test_role_comparison_uses_ai_for_each_seven_thirty_ninety_plan(api_client):
     grant_vip(api_client)
     profile = {

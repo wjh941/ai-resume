@@ -3,6 +3,20 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Literal
 
+from career_consultation_stub import (
+    build_career_advice,
+    build_job_consultation,
+    build_resume_review,
+)
+
+from app.schemas.career import (
+    CareerPlanComparisonItem,
+    ComparisonActionPlan,
+    JobPlanResponse,
+    JobPlanSection,
+    PromotionNode,
+    PromotionTrack,
+)
 from app.schemas.consultation import (
     AdviceTopic,
     CareerAdviceResponse,
@@ -12,19 +26,6 @@ from app.schemas.consultation import (
 )
 from app.schemas.job import JobIntelligence
 from app.schemas.resume import ResumePayload
-from app.schemas.career import (
-    CareerPlanComparisonItem,
-    ComparisonActionPlan,
-    JobPlanResponse,
-    JobPlanSection,
-    PromotionNode,
-    PromotionTrack,
-)
-from career_consultation_stub import (
-    build_career_advice,
-    build_job_consultation,
-    build_resume_review,
-)
 from app.services.career_assessment import score_assessment
 
 

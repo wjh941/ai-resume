@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from io import BytesIO
 import json
 import zipfile
+from io import BytesIO
 
 from conftest import make_draft_payload
 

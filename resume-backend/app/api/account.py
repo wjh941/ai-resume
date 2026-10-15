@@ -6,7 +6,6 @@ from fastapi.responses import StreamingResponse
 from app.schemas.common import success
 from app.services.auth import current_user_id
 
-
 router = APIRouter(prefix="/api/account", tags=["account"])
 
 

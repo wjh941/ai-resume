@@ -310,7 +310,12 @@ cd resume-backend
 
 # 覆盖率报告（实测总体 92%：路由层 app/api 91% · 服务层 app/services 90% · 仓储层 app/repositories 92%）
 .\.venv\Scripts\python.exe -m pytest tests -q --cov=app --cov-report=term --cov-report=html
+
+# Lint（CI 后端 job 同步执行；规则从宽：E4/E7/E9 + F + I + B 基础集，行宽 110，排除 alembic 迁移目录）
+.\.venv\Scripts\python.exe -m ruff check .
 ```
+
+ruff 配置独立放在 `resume-backend/ruff.toml`（该目录没有 pyproject.toml，依赖走 requirements.txt），豁免原因逐条写在配置注释里。
 
 ### 前端
 

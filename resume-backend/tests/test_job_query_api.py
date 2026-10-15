@@ -1,10 +1,9 @@
-from datetime import datetime, timedelta, timezone
 import sqlite3
+from datetime import datetime, timedelta, timezone
 
 from app.db import initialize_database
 from app.schemas.job import JobIntelligence
 from app.services.job_cache import JobCache
-
 
 TEST_PROVIDER_CACHE_KEY = "openai_compatible"
 
@@ -22,7 +21,8 @@ def test_same_normalized_role_uses_unexpired_mock_cache(api_client):
 
     assert first["cached"] is False
     assert second["cached"] is True
-    strip_cached = lambda body: {key: value for key, value in body.items() if key != "cached"}
+    def strip_cached(body):
+        return {key: value for key, value in body.items() if key != "cached"}
     assert strip_cached(second) == strip_cached(first)
     assert api_client.app.state.ai_client.job_query_count == 1
 

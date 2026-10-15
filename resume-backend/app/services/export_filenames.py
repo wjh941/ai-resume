@@ -4,7 +4,6 @@ import re
 
 from app.schemas.exports import ExportExtension
 
-
 _INVALID_FILENAME_CHARACTERS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 _WHITESPACE = re.compile(r"\s+")
 

@@ -1,13 +1,12 @@
 from __future__ import annotations
 
+import sqlite3
 from io import StringIO
 from pathlib import Path
-import sqlite3
 
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
-
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 PASSWORD = "correct-horse-battery-staple"

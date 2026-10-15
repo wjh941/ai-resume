@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 
-from app.repositories.drafts import DraftLimitReachedError, DraftNotFoundError
+from app.repositories.drafts import DraftLimitReachedError
 from app.schemas.common import success
 from app.schemas.draft import DraftCopyRequest, DraftSaveRequest, DraftVersionCreateRequest
 from app.services.auth import current_user_id
 from app.services.membership import VipPermissionError, VipStatus, get_current_vip
 from app.services.resume_imports import ResumeImportValidationError
-
 
 router = APIRouter(prefix="/api/draft", tags=["drafts"])
 

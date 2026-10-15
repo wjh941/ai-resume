@@ -10,10 +10,9 @@ from app.schemas.resume_quality import (
     EvidenceSuggestionResponse,
     ResumeReadinessRequest,
 )
+from app.services.auth import current_user_id
 from app.services.evidence_suggestions import build_evidence_suggestions
 from app.services.resume_readiness import inspect_resume_readiness
-from app.services.auth import current_user_id
-
 
 router = APIRouter(tags=["evidence"])
 

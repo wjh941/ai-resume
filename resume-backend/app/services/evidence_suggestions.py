@@ -3,7 +3,6 @@ from __future__ import annotations
 from app.schemas.evidence import ResumeEvidence
 from app.schemas.resume_quality import EvidenceSuggestion
 
-
 PENDING_MARKER = "[待确认]"
 PENDING_OUTCOME = "[待确认] 请补充真实成果或核验证据"
 PENDING_CONTEXT = "[待确认：补充真实场景]"

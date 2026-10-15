@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from pathlib import Path
 import sqlite3
 import subprocess
 import sys
 import zipfile
+from pathlib import Path
 
 import pytest
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 BACKUP_SCRIPT = PROJECT_ROOT / "scripts" / "backup-database.ps1"

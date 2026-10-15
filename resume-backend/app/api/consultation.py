@@ -10,7 +10,6 @@ from app.schemas.consultation import AdviceRequest, JobConsultationRequest, Resu
 from app.services.membership import VipStatus, require_vip_feature
 from app.services.rate_limit import enforce_ai_rate_limit
 
-
 router = APIRouter()
 
 

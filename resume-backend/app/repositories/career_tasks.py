@@ -5,7 +5,12 @@ from pathlib import Path
 from uuid import uuid4
 
 from app.db import connect
-from app.schemas.career import CareerTaskRecord, CareerTaskSaveRequest, CareerTaskUpdateRequest, ComparisonActionPlan
+from app.schemas.career import (
+    CareerTaskRecord,
+    CareerTaskSaveRequest,
+    CareerTaskUpdateRequest,
+    ComparisonActionPlan,
+)
 
 
 class CareerTaskNotFoundError(Exception):

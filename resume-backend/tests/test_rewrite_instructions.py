@@ -6,13 +6,13 @@ import asyncio
 import json
 
 import pytest
+from conftest import make_resume_payload
 from pydantic import ValidationError
 
 from app.config import Settings
 from app.schemas.job import JobIntelligence, ResumeRewriteRequest
 from app.schemas.resume import ResumePayload
 from app.services.ai_client import OpenAICompatibleClient
-from conftest import make_resume_payload
 
 
 def _request(instructions) -> ResumeRewriteRequest:

@@ -2,7 +2,6 @@
 """job/query 与 job/plan 的 24h 结果缓存行为：省 AI 调用、可强制刷新、按账号隔离。"""
 from __future__ import annotations
 
-import asyncio
 import copy
 
 from test_support import TestAIClient

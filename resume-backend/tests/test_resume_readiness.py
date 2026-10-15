@@ -1,6 +1,7 @@
+from conftest import make_resume_payload
+
 from app.schemas.resume import ResumePayload
 from app.services.resume_readiness import inspect_resume_readiness
-from conftest import make_resume_payload
 
 
 def test_readiness_blocks_missing_contact_and_warns_pending_text():

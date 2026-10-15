@@ -1,20 +1,19 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
 
-from app.config import Settings, load_settings, _DEFAULT_JWT_SECRET
+from app.config import _DEFAULT_JWT_SECRET, Settings, load_settings
 from app.db import connect
 from app.schemas.common import success
 from app.services.ai_client import build_ai_client
 from app.services.observability import log_event
 from app.services.rate_limit import enforce_client_error_rate_limit
-
 
 router = APIRouter(prefix="/api/system", tags=["system"])
 

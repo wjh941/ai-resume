@@ -4,10 +4,10 @@ import csv
 import hashlib
 import io
 import json
+import zipfile
 from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import urlparse
-import zipfile
 
 import httpx
 

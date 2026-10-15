@@ -4,6 +4,7 @@ from dataclasses import replace
 
 from fastapi.testclient import TestClient
 
+
 def test_health_declares_current_dashboard_capabilities(api_client):
     response = api_client.get("/health")
 

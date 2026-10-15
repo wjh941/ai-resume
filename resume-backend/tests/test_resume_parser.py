@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from docx import Document
 import pytest
+from docx import Document
 
 from app.services.resume_parser import ResumeParseError, parse_resume_file
 

@@ -17,8 +17,9 @@ def _client(monkeypatch, tmp_path, *, max_requests: str = "2", window_seconds: s
     monkeypatch.setenv("AI_RATE_LIMIT_MAX_REQUESTS", max_requests)
     monkeypatch.setenv("AI_RATE_LIMIT_WINDOW_SECONDS", window_seconds)
 
-    from main import create_app
     from test_support import TestAIClient
+
+    from main import create_app
 
     client = TestClient(create_app())
     client.app.state.ai_client = TestAIClient()

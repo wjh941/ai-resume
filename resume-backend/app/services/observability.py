@@ -5,7 +5,6 @@ import logging
 
 from fastapi import Request
 
-
 logger = logging.getLogger("resume_api")
 
 

@@ -3,9 +3,10 @@ from __future__ import annotations
 import asyncio
 
 import pytest
-from pydantic import ValidationError
-
 from conftest import grant_vip
+from pydantic import ValidationError
+from test_support import TestAIClient
+
 from app.schemas.career import (
     CareerPlanComparisonItem,
     ComparisonActionPlan,
@@ -14,7 +15,6 @@ from app.schemas.career import (
     PromotionNode,
     PromotionTrack,
 )
-from test_support import TestAIClient
 
 
 def make_job_plan(**changes) -> JobPlanResponse:

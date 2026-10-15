@@ -4,7 +4,6 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-
 PackageType = Literal["monthly", "quarterly", "annual"]
 PaymentChannel = Literal["demo", "wechat_pay", "alipay"]
 

@@ -4,19 +4,19 @@ from dataclasses import dataclass
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, Path as ApiPath, Request
+from fastapi import APIRouter, Depends, Request
+from fastapi import Path as ApiPath
 from fastapi.responses import FileResponse
 
 from app.schemas.common import success
 from app.schemas.exports import ExportRequest
 from app.schemas.resume import ResumePayload
+from app.services.auth import current_user_id
+from app.services.downloads import ExportPathError
 from app.services.export_filenames import build_export_filename
 from app.services.export_pdf import PdfRendererUnavailableError, render_pdf_resume
 from app.services.export_word import render_word_resume
-from app.services.downloads import ExportPathError
-from app.services.auth import current_user_id
 from app.services.membership import VipStatus, get_current_vip
-
 
 router = APIRouter(tags=["exports"])
 _TOKEN_PATTERN = r"^[0-9a-f]{32}$"

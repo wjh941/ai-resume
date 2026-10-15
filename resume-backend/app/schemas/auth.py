@@ -4,7 +4,6 @@ import re
 
 from pydantic import BaseModel, Field, field_validator
 
-
 _PHONE_PATTERN = re.compile(r"^1[3-9]\d{9}$")
 _ACCOUNT_PATTERN = re.compile(r"^[a-z][a-z0-9_.-]{2,31}$")
 

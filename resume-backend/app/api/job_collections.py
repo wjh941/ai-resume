@@ -6,7 +6,6 @@ from app.schemas.common import success
 from app.schemas.job_collections import FavoriteJobCreate, JobSubscriptionUpdate
 from app.services.auth import current_user_id
 
-
 router = APIRouter(prefix="/api/job-collection", tags=["job-collection"])
 
 

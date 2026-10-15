@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
-import sqlite3
 import re
+import sqlite3
+from pathlib import Path
 from typing import Any
 
 from app.services.career_catalog import ROLE_SEEDS, seed_career_catalog
-
 
 TEMPLATES = (
     ("business", "Business", "A clear, conservative business resume.", {"accent": "navy"}),

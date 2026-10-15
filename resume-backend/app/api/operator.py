@@ -6,7 +6,6 @@ from app.schemas.common import success
 from app.schemas.knowledgebase import OperatorKnowledgeCreate, OperatorKnowledgeUpdate
 from app.services.auth import AuthPrincipal, require_operator
 
-
 router = APIRouter(prefix="/api/operator", tags=["operator"])
 
 

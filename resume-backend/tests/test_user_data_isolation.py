@@ -1,21 +1,18 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
+from conftest import make_draft_payload
 
 from app.repositories.applications import ApplicationNotFoundError
-from app.repositories.drafts import DraftNotFoundError
 from app.repositories.assessment import AssessmentNotFoundError
 from app.repositories.career_profiles import CareerProfileNotFoundError
+from app.repositories.drafts import DraftNotFoundError
 from app.repositories.users import UserRecord
-from app.services.downloads import DownloadNotFoundError
 from app.schemas.application import ApplicationSaveRequest
 from app.schemas.career import CareerProfilePayload
-from app.schemas.evidence import ResumeEvidenceSaveRequest
 from app.schemas.draft import DraftSaveRequest
-
-from conftest import make_draft_payload
+from app.schemas.evidence import ResumeEvidenceSaveRequest
+from app.services.downloads import DownloadNotFoundError
 
 
 def _two_users(api_client) -> tuple[UserRecord, UserRecord]:

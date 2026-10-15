@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from docx import Document
-
 from conftest import make_draft_payload
+from docx import Document
 
 
 def _valid_pdf() -> bytes:

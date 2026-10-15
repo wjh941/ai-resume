@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections import defaultdict
 from copy import deepcopy
 
-
 INTEREST_LABELS = {
     "realistic": "实践执行",
     "investigative": "分析研究",

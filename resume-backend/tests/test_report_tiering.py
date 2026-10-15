@@ -3,7 +3,6 @@ from __future__ import annotations
 from app.services.membership import VipStatus
 from app.services.report_tiering import ReportEvidenceInput, project_report
 
-
 EVIDENCE = [
     ReportEvidenceInput(
         type="personal_evidence",

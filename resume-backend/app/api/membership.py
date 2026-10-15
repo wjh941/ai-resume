@@ -2,12 +2,10 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request
 
-from app.repositories.membership import OrderNotFoundError
 from app.schemas.common import success
 from app.schemas.membership import CreateOrderPayload, PaymentCallbackPayload
 from app.services.auth import current_user_id
 from app.services.membership import VipStatus, get_current_vip
-
 
 router = APIRouter(tags=["membership"])
 

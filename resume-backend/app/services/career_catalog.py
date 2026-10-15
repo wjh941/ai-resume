@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
 import json
 import sqlite3
+from dataclasses import dataclass, replace
 
 
 @dataclass(frozen=True)

@@ -9,11 +9,10 @@ from app.schemas.common import success
 from app.schemas.job import JobQueryRequest, ResumeRewriteRequest
 from app.services.auth import current_user_id
 from app.services.job_matching import MatchContext
-from app.services.rewrite_guard import validate_rewrite_facts
 from app.services.membership import VipPermissionError, VipStatus, get_current_vip
 from app.services.rate_limit import enforce_ai_rate_limit
 from app.services.report_tiering import make_report_evidence, project_report
-
+from app.services.rewrite_guard import validate_rewrite_facts
 
 router = APIRouter()
 
