@@ -85,6 +85,31 @@ class DraftRepository:
             ).fetchall()
         return [self._to_draft(row) for row in rows]
 
+    def list_paged(self, user_id: str, limit: int | None, offset: int = 0) -> dict:
+        """分页读取草稿列表,排序与 :meth:`list` 完全一致。
+
+        limit 传 None 表示从 offset 起取到底(SQLite 的 LIMIT -1 语义);
+        total 始终是该用户名下草稿总数(与分页窗口无关),供前端计算剩余页。
+        """
+        with connect(self.database_path) as connection:
+            total = connection.execute(
+                "SELECT COUNT(*) FROM user_draft WHERE user_id = ?", (user_id,)
+            ).fetchone()[0]
+            rows = connection.execute(
+                """
+                SELECT * FROM user_draft WHERE user_id = ?
+                ORDER BY updated_at DESC, id DESC
+                LIMIT ? OFFSET ?
+                """,
+                (user_id, -1 if limit is None else limit, offset),
+            ).fetchall()
+        return {
+            "items": [self._to_draft(row) for row in rows],
+            "total": int(total),
+            "limit": limit,
+            "offset": offset,
+        }
+
     def copy(self, user_id: str, draft_id: str, max_drafts: int | None = None) -> dict:
         source = self.get(user_id, draft_id)
         return self.save(

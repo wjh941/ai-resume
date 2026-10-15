@@ -26,8 +26,28 @@ def save_draft(
 
 
 @router.get("/list")
-def list_drafts(request: Request, user_id: str = Depends(current_user_id)):
-    return success(request.app.state.draft_repository.list(user_id))
+def list_drafts(
+    request: Request,
+    limit: int | None = Query(default=None, ge=1, description="每页条数;不传则保持旧行为返回全量数组"),
+    offset: int | None = Query(default=None, ge=0, description="起始偏移;仅在分页模式下生效,默认 0"),
+    user_id: str = Depends(current_user_id),
+):
+    """草稿列表,向后兼容分页。
+
+    - 不带 limit/offset:与历史版本完全一致,`data` 为草稿对象数组(web 端与小程序现行为)。
+    - 带 limit 或 offset(任一即视为选择分页):`data` 变为
+      `{"items": [...], "total": N, "limit": L, "offset": O}`,
+      total 为该用户草稿总数;web-frontend 的类型已容忍该形态(`BackendDraft[] | { items? }`),
+      小程序本轮未切换、不传分页参数,不受影响。
+    """
+    if limit is None and offset is None:
+        return success(request.app.state.draft_repository.list(user_id))
+    page = request.app.state.draft_repository.list_paged(
+        user_id,
+        limit=limit,
+        offset=offset if offset is not None else 0,
+    )
+    return success(page)
 
 
 @router.get("/{draft_id}/versions")
