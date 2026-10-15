@@ -175,47 +175,6 @@ class JobCollectionRepository:
             for row in rows
         ]
 
-    # F811:此处与上方 create_pending_alerts 是逐字节相同的副本(上方定义被本定义遮蔽),
-    # 去重属于逻辑改动,本轮不动行为,先显式豁免,留待后续重构删掉一份。
-    def create_pending_alerts(self) -> int:  # noqa: F811
-        now = datetime.now(timezone.utc)
-        alert_date = now.date().isoformat()
-        created = 0
-        with connect(self._database_path) as connection:
-            subscriptions = connection.execute(
-                """
-                SELECT user_id, match_filter, last_notify_at
-                FROM job_match_subscription
-                WHERE enabled = 1
-                """
-            ).fetchall()
-            for subscription in subscriptions:
-                last_notify_at = subscription["last_notify_at"]
-                if last_notify_at and str(last_notify_at).startswith(alert_date):
-                    continue
-                alert_key = f"{subscription['user_id']}:{alert_date}"
-                cursor = connection.execute(
-                    """
-                    INSERT OR IGNORE INTO job_match_alert
-                    (id, user_id, alert_key, match_filter, status, created_at)
-                    VALUES (?, ?, ?, ?, 'pending', ?)
-                    """,
-                    (
-                        str(uuid4()),
-                        subscription["user_id"],
-                        alert_key,
-                        subscription["match_filter"],
-                        now.isoformat(),
-                    ),
-                )
-                if cursor.rowcount:
-                    connection.execute(
-                        "UPDATE job_match_subscription SET last_notify_at = ? WHERE user_id = ?",
-                        (now.isoformat(), subscription["user_id"]),
-                    )
-                    created += 1
-        return created
-
     @staticmethod
     def _favorite_from_row(row) -> FavoriteJobRecord:
         return FavoriteJobRecord(
