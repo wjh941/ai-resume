@@ -2,6 +2,7 @@
 # 背景：Render 免费实例 + 环境变量手改曾造成过 "CORS 全拒导致线上不可用" 的事故，
 # 该工作流让这类问题在 30 分钟内自动暴露（Actions 历史标红），而不是等用户报告。
 # 注意：故意不做 AI 调用与业务写操作，避免消耗中继额度与污染生产数据。
+# 探针脚本内置 5xx 重试退避（吸收 Render 冷启动抖动），持续故障才会标红发邮件。
 name: Production smoke
 
 on:
@@ -11,14 +12,19 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: production-smoke
+  cancel-in-progress: false
+
 jobs:
   smoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Install httpx
