@@ -3,13 +3,17 @@ from __future__ import annotations
 from pathlib import Path
 import sqlite3
 import subprocess
+import sys
 import zipfile
+
+import pytest
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 BACKUP_SCRIPT = PROJECT_ROOT / "scripts" / "backup-database.ps1"
 
 
+@pytest.mark.skipif(sys.platform != "win32", reason="备份脚本是 PowerShell,仅 Windows 可跑")
 def test_windows_backup_script_creates_readable_sqlite_archive(tmp_path):
     database_path = tmp_path / "resume.db"
     backup_directory = tmp_path / "backups"
