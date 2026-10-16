@@ -8,6 +8,16 @@
 
 **项目主页（GitHub Pages）**：`https://wjh941.github.io/ai-resume/`（由 `site/` 静态站与 GitHub Actions 自动部署）
 
+## 🧪 质量信号
+
+三端约 700 个自动化测试（后端 255 / Web 296 / 小程序 166），GitHub Actions 对每次推送跑全量测试 + 覆盖率门禁（92%，fail-under 90）+ ruff：
+
+```text
+$ pytest -q --cov=app
+255 passed, 1 skipped in 91.46s
+TOTAL 4675  375  92%
+```
+
 ## 项目亮点
 
 **三端一体的求职工作台**：FastAPI 后端 + uni-app 小程序/H5 + Vue3 Web 工作台，单仓库、同一套 JWT 账号体系与 12 大类 / 204 岗位的本地知识库。
