@@ -1,5 +1,7 @@
 # AI 岗位查询与智能简历生成
 
+> **“机会只留给有准备的人——而准备，是可以被管理的。”**
+
 一个本地可运行的求职辅助 Demo，包含 Uni-App 微信小程序/H5 前端、独立 Web 工作台与 FastAPI 后端。
 
 仓库地址：`https://github.com/wjh941/ai-resume`
