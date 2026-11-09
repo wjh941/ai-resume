@@ -10,4 +10,5 @@ ENV PDF_RENDERER=weasyprint
 COPY app ./app
 COPY migrations ./migrations
 COPY alembic.ini main.py ./
-CMD ["sh", "-c", "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000"]
+# PORT 由 PaaS 注入(Render/HF),未注入时回落 8000;data/ 先建好,保证无 DATABASE_URL 时 sqlite 迁移可用
+CMD ["sh", "-c", "mkdir -p data && alembic upgrade head && exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]

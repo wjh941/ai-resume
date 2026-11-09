@@ -29,19 +29,25 @@
 
 ### 方案 A:Render 重新部署(推荐,2 分钟)
 
-原来的 `ai-resume-backend.onrender.com` 服务已 404(Render 侧被停/删)。登录 Render →
-**New → Web Service → 连接本仓库**:
+原来的 `ai-resume-backend.onrender.com` 服务已 404(Render 侧被停/删)。两种运行时都能用:
 
-- Root Directory: `resume-backend`
-- Build: `pip install -r requirements.txt`
-- Start: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-- 免费层 15 分钟无流量会休眠(冷启动 ~30s),演示前先自己访问一次唤醒
+**A1 Docker 运行时(2026-11-09 起零配置)**——仓库根目录已有 `Dockerfile`(上下文=仓库根,
+`resume-backend/Dockerfile` 那份供手动 `docker build resume-backend` 时用)。New → Web Service →
+Runtime 选 **Docker**,其余全部默认。端口自适应 `${PORT:-8000}`,启动时自动
+`mkdir -p data && alembic upgrade head`(无 DATABASE_URL 时回落 sqlite:./data/resume_demo.db)。
+若用旧版本代码(c879d91 之前),需手动设 Dockerfile Path = `resume-backend/Dockerfile`。
 
-### 方案 B:Hugging Face Spaces(免费、带 Docker、支持 weasyprint)
+**A2 Native Python 运行时**:Root Directory = `resume-backend`,Build =
+`pip install -r requirements.txt`,Start = `uvicorn main:app --host 0.0.0.0 --port $PORT`。
 
-仓库已带 `resume-backend/Dockerfile`。HF Space → New → **Docker** 类型 →
-把 `resume-backend/` 作为 Space 仓库推送即可,得到 `https://<你>-<space>.hf.space`。
-免费层 48h 无流量休眠,重建较慢(~3 分钟),适合当「常驻备份」。
+免费层 15 分钟无流量会休眠(冷启动 ~30s),演示前先自己访问一次唤醒。
+
+### 方案 B:Hugging Face Spaces(免费、带 Docker、原生支持 weasyprint)
+
+仓库根 `Dockerfile` 现在也满足 HF「Dockerfile 必须在仓库根」的约定。HF Space → New →
+**Docker** → 指向本仓库即可。**注意 HF 不注入 PORT**:要么在 Space Settings → Variables
+里设 `PORT=7860`,要么在 Space README 头部加 `app_port: 8000`。免费层 48h 无流量休眠,
+重建 ~3 分钟,适合当「常驻备份」。
 
 ## 上线后必做:补 CORS 白名单
 
