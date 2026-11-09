@@ -396,7 +396,7 @@ Vercel 只能托管静态前端，FastAPI + SQLite 需要单独的常驻主机�
 
 1. 点上方按钮（或 Render Dashboard → New → Blueprint → 选择本仓库），Render 读取根目录 `render.yaml`；
 2. 按提示填入三个私密变量：`CORS_ORIGINS`（填 Vercel 域名，如 `https://ai-resume-web.vercel.app`）、`AI_API_KEY` 与 `AI_BASE_URL`（与本地 `.env` 同名变量一致）；
-3. 部署完成后记录服务地址（如 `https://ai-resume-backend.onrender.com`），`/health` 为健康检查端点。
+3. 部署完成后记录服务地址——**Render 会给 URL 加随机后缀**（本仓库实际是 `https://ai-resume-backend-1ouv.onrender.com`，裸域名 `ai-resume-backend.onrender.com` 并不存在），以面板「Connect」显示为准；`/health` 为健康检查端点。
 4. 注意：免费档磁盘不持久，重新部署或重启后 SQLite 数据会重置；持久化需付费档挂载磁盘或改用 `DATABASE_URL` 指向 PostgreSQL。
 
 **前端（Vercel）**

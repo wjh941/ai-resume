@@ -27,20 +27,23 @@
 
 ## 后端复活方案(二选一)
 
-### 方案 A:Render 重新部署(推荐,2 分钟)
+### 方案 A:Render(2026-11-09 已解决——后端其实一直活着)
 
-原来的 `ai-resume-backend.onrender.com` 服务已 404(Render 侧被停/删)。两种运行时都能用:
+**关键教训:Render 给服务 URL 加随机后缀**。仓库蓝图(`render.yaml`)创建的服务实际地址是:
 
-**A1 Docker 运行时(2026-11-09 起零配置)**——仓库根目录已有 `Dockerfile`(上下文=仓库根,
-`resume-backend/Dockerfile` 那份供手动 `docker build resume-backend` 时用)。New → Web Service →
-Runtime 选 **Docker**,其余全部默认。端口自适应 `${PORT:-8000}`,启动时自动
-`mkdir -p data && alembic upgrade head`(无 DATABASE_URL 时回落 sqlite:./data/resume_demo.db)。
-若用旧版本代码(c879d91 之前),需手动设 Dockerfile Path = `resume-backend/Dockerfile`。
+> **https://ai-resume-backend-1ouv.onrender.com** ← 当前在线(`/health` 与 `/docs` 均验证通过,CORS 已放行 Vercel 前端)
 
-**A2 Native Python 运行时**:Root Directory = `resume-backend`,Build =
-`pip install -r requirements.txt`,Start = `uvicorn main:app --host 0.0.0.0 --port $PORT`。
+裸域名 `ai-resume-backend.onrender.com` 一直是 404——那不是本服务的地址,排查时曾被误判为「服务被停」。以 Dashboard 服务页「Connect」按钮显示的 URL 为准。
 
-免费层 15 分钟无流量会休眠(冷启动 ~30s),演示前先自己访问一次唤醒。
+当前 Render 工作区有两个后端服务(同仓库同分支):
+
+| 服务 | 运行时 | 区域 | 地址 | 状态 |
+| --- | --- | --- | --- | --- |
+| `ai-resume-backend` | Python 3(Blueprint 管理) | oregon | `ai-resume-backend-1ouv.onrender.com` | **主用**——env 齐全(CORS/AI Key 建仓时已填),随仓库自动同步 |
+| `ai-resume` | Docker(2026-11-09 新建) | singapore | `ai-resume-iv50.onrender.com` | 备用——根目录 Dockerfile,自带 weasyprint PDF;AI Key 未配 |
+
+二选一即可;若删 Blueprint 服务,注意 `render.yaml` 仍在仓库时后续蓝图同步可能重建它。
+免费层 15 分钟无流量休眠(冷启动 ~30s),演示前先自己访问一次唤醒。
 
 ### 方案 B:Hugging Face Spaces(免费、带 Docker、原生支持 weasyprint)
 
