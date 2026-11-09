@@ -42,8 +42,12 @@
 | `ai-resume-backend` | Python 3(Blueprint 管理) | oregon | `ai-resume-backend-1ouv.onrender.com` | **主用**——env 齐全(CORS/AI Key 建仓时已填),随仓库自动同步 |
 | `ai-resume` | Docker(2026-11-09 新建) | singapore | `ai-resume-iv50.onrender.com` | 备用——根目录 Dockerfile,自带 weasyprint PDF;AI Key 未配 |
 
-二选一即可;若删 Blueprint 服务,注意 `render.yaml` 仍在仓库时后续蓝图同步可能重建它。
-免费层 15 分钟无流量休眠(冷启动 ~30s),演示前先自己访问一次唤醒。
+**最终安排(2026-11-09 定):双服务并存,主备分工**——
+
+- **主用 = 蓝图服务(1ouv)**:env 齐全(AI Key 已配),随仓库推送自动同步,对外文档/简历一律引用它
+- **备用 = Docker 服务(iv50)**:新加坡区域(离用户更近,延迟低)+ 自带 weasyprint(PDF 导出能力更全),自动跟随分支部署,已配 CORS;**要在备用机启用 AI 功能,需在它 Environment 里补 `AI_API_KEY` / `AI_BASE_URL` / `AI_MODEL`(值与主用一致)**,切换时只需把引用域名换掉
+
+免费层各自 15 分钟无流量休眠(冷启动 ~30s),演示前先访问一次唤醒。
 
 ### 方案 B:Hugging Face Spaces(免费、带 Docker、原生支持 weasyprint)
 
